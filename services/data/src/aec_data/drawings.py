@@ -370,32 +370,58 @@ def _view_for_spec(meshes, spec: dict) -> tuple[list[np.ndarray], str, str]:
     return polys, spec.get("title", "PLAN"), f"cut @ {elev:.2f} m"
 
 
+def _plan_extras(grid, mn, mx, ox, oy, dh, scale):
+    """Grid lines + bubbles + overall dimensions for a plan cell, in sheet coords."""
+    extras = []
+    spanx = (mx[0] - mn[0]) * scale
+    for gx, lbl in grid["x"]:
+        if not (mn[0] - 0.5 <= gx <= mx[0] + 0.5):
+            continue
+        px = ox + (gx - mn[0]) * scale
+        extras.append(("line", px, oy - 9, px, oy + dh, True))
+        extras.append(("bub", px, oy - 9, 5.5, lbl))
+    for gy, lbl in grid["y"]:
+        if not (mn[1] - 0.5 <= gy <= mx[1] + 0.5):
+            continue
+        py = oy + dh - (gy - mn[1]) * scale
+        extras.append(("line", ox - 9, py, ox + spanx, py, True))
+        extras.append(("bub", ox - 9, py, 5.5, lbl))
+    # overall extents (mm)
+    extras.append(("dim", ox, oy + dh + 9, ox + spanx, oy + dh + 9, f"{round((mx[0]-mn[0])*1000)}"))
+    extras.append(("dim", ox - 18, oy, ox - 18, oy + dh, f"{round((mx[1]-mn[1])*1000)}"))
+    return extras
+
+
 def compose(meshes, specs: list[dict], page: str = "A3", cols: int = 2,
-            margin: float = 36.0, tb_h: float = 90.0) -> dict:
+            margin: float = 36.0, tb_h: float = 90.0, annotate: bool = True) -> dict:
     pw, ph = PAGES.get(page, PAGES["A3"])
     rows = max(1, -(-len(specs) // cols))
     area_x0, area_y0 = margin, margin
     area_w = pw - 2 * margin
     area_h = ph - 2 * margin - tb_h
     cell_w, cell_h = area_w / cols, area_h / rows
-    pad, label_h = 14.0, 20.0
+    pad, label_h, gut = 14.0, 20.0, 20.0
+    grid = grid_from_meshes(meshes) if annotate else {"x": [], "y": []}
 
     views = []
     for i, spec in enumerate(specs):
         polys, label, sub = _view_for_spec(meshes, spec)
+        is_plan = spec.get("kind", "plan") == "plan"
         col, row = i % cols, i // cols
         cx = area_x0 + col * cell_w
         cy = area_y0 + tb_h + row * cell_h  # y-down (top-left origin)
-        iw, ih = cell_w - 2 * pad, cell_h - 2 * pad - label_h
+        g = gut if (is_plan and annotate) else 0.0
+        iw, ih = cell_w - 2 * pad - g, cell_h - 2 * pad - label_h - g
         scale_text = "no geometry"
         placed: list[np.ndarray] = []
+        extras: list = []
         if polys:
             allp = np.vstack(polys)
             mn, mx = allp.min(axis=0), allp.max(axis=0)
             span = np.maximum(mx - mn, 1e-6)
             scale = min(iw / span[0], ih / span[1])
             dh = span[1] * scale
-            ox = cx + pad + (iw - span[0] * scale) / 2
+            ox = cx + pad + g + (iw - span[0] * scale) / 2
             oy = cy + pad + label_h
             for poly in polys:
                 pts = np.empty_like(poly, dtype=float)
@@ -404,8 +430,10 @@ def compose(meshes, specs: list[dict], page: str = "A3", cols: int = 2,
                 placed.append(pts)
             ratio = round(1.0 / (scale * 0.000352778))
             scale_text = f"1:{ratio}"
+            if is_plan and annotate:
+                extras = _plan_extras(grid, mn, mx, ox, oy, dh, scale)
         views.append({"label": label, "sub": sub, "scale_text": scale_text,
-                      "rect": (cx, cy, cell_w, cell_h), "polys": placed})
+                      "rect": (cx, cy, cell_w, cell_h), "polys": placed, "extras": extras})
     return {"page": (pw, ph), "tb_h": tb_h, "margin": margin, "views": views}
 
 
@@ -424,6 +452,25 @@ def render_sheet_svg(layout: dict, meta: dict) -> str:
         for poly in v["polys"]:
             pts = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in poly)
             out.append(f'<polyline points="{pts}" fill="none" stroke="#111" stroke-width="0.7"/>')
+        # grid / dimension annotations
+        for e in v.get("extras", []):
+            if e[0] == "line":
+                _, x1, y1, x2, y2, dash = e
+                da = ' stroke-dasharray="5 3"' if dash else ""
+                out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
+                           f'stroke="#bbb" stroke-width="0.5"{da}/>')
+            elif e[0] == "bub":
+                _, bx, byy, r, lbl = e
+                out.append(f'<circle cx="{bx:.1f}" cy="{byy:.1f}" r="{r}" fill="#fff" stroke="#111" '
+                           f'stroke-width="0.6"/><text x="{bx:.1f}" y="{byy+2.5:.1f}" '
+                           f'text-anchor="middle" font-family="sans-serif" font-size="7" '
+                           f'font-weight="700">{lbl}</text>')
+            elif e[0] == "dim":
+                _, x1, y1, x2, y2, txt = e
+                if abs(y1 - y2) < 0.5:  # horizontal
+                    out.append(_dim_h(x1, x2, y1, txt))
+                else:
+                    out.append(_dim_v(x1, y1, y2, txt))
     # title block (bottom strip)
     m = layout["margin"]
     by = ph - m - layout["tb_h"] + 10
@@ -469,6 +516,31 @@ def render_sheet_pdf(layout: dict, meta: dict) -> bytes:
             for pt in poly[1:]:
                 p.lineTo(pt[0], fy(pt[1]))
             c.drawPath(p)
+        # grid / dimension annotations
+        for e in v.get("extras", []):
+            if e[0] == "line":
+                _, x1, y1, x2, y2, dash = e
+                c.saveState(); c.setStrokeGray(0.73); c.setLineWidth(0.5)
+                if dash:
+                    c.setDash(5, 3)
+                c.line(x1, fy(y1), x2, fy(y2)); c.restoreState()
+            elif e[0] == "bub":
+                _, bx, byy, r, lbl = e
+                c.saveState(); c.setFillGray(1); c.setStrokeGray(0); c.setLineWidth(0.6)
+                c.circle(bx, fy(byy), r, stroke=1, fill=1)
+                c.setFillGray(0); c.setFont("Helvetica-Bold", 6)
+                c.drawCentredString(bx, fy(byy) - 2, str(lbl)); c.restoreState()
+            elif e[0] == "dim":
+                _, x1, y1, x2, y2, txt = e
+                c.saveState(); c.setStrokeColorRGB(0, 0.6, 0.4); c.setFillColorRGB(0, 0.6, 0.4)
+                c.setLineWidth(0.6); c.setFont("Helvetica", 6)
+                c.line(x1, fy(y1), x2, fy(y2))
+                if abs(y1 - y2) < 0.5:
+                    c.drawCentredString((x1 + x2) / 2, fy(y1) + 2, str(txt))
+                else:
+                    c.saveState(); c.translate(x1 - 3, fy((y1 + y2) / 2)); c.rotate(90)
+                    c.drawCentredString(0, 0, str(txt)); c.restoreState()
+                c.restoreState()
     m = layout["margin"]; by = ph - m - layout["tb_h"] + 10
     c.setLineWidth(1.5); c.line(m, fy(by), pw - m, fy(by))
     c.setFont("Helvetica-Bold", 22); c.drawString(m + 8, fy(by + 34), meta.get("project", "PROJECT"))

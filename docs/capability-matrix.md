@@ -59,7 +59,9 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
   grid-spacing dimensions (mm). `GET /drawings/plan.svg`.
 - ~~Elevations~~ ✅ done — orthographic outline views (N/S/E/W) via per-element convex-hull
   silhouettes + storey level lines. `GET /drawings/elevation.svg?direction=`.
-- **Annotations on sheets**: room tags, leaders on the composed views; grid on sheet cells.
+- ~~Grid on sheet cells~~ ✅ done — composed sheet plan cells now carry grid bubbles, grid
+  lines, and overall dimensions (per-cell transform via drawing primitives, SVG + PDF).
+- **Room tags / leaders**: text annotations bound to elements on the views.
 - **Hidden-line removal**: elevations are outline silhouettes (no depth sorting yet).
 - **Federation UI**: a discipline picker to load several `.frag` and toggle by model.
 - **Authoring in-browser**: stays a Bonsai-bridge concern by design (GPL boundary).
