@@ -17,7 +17,7 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
 | Sheet sets & title blocks | Partial | Yes | No | ⏳ planned |
 | **COORDINATION & REVIEW** | | | | |
 | Model federation (combine models) | Partial | Partial | Native | **Built** — multi `.frag` load, per-model layers |
-| **Clash detection** | Yes | Partial | Native | **Built** — AABB broad-phase, → BCF clash topics |
+| **Clash detection** | Yes | Partial | Native | **Built** — AABB broad + **mesh narrow phase** (exact penetration volume), → BCF clash topics |
 | Markup / redline / viewpoints | Partial | Partial | Yes | **Built** — BCF pins/viewpoints, restore |
 | Real-time nav of huge models | Yes | Partial | Yes | **Built** — Fragments streaming + culling |
 | **4D / 5D** | | | | |
@@ -48,8 +48,8 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
   "Highlight 299 failures" → failing slabs highlighted green in 3D.
 
 ## Honest gaps (next, all open-source)
-- **Clash narrow phase**: AABB → mesh-triangle intersection for true hard clash (per-element
-  vertices are already computed; add a collision pass).
+- ~~Clash narrow phase~~ ✅ done — trimesh + manifold3d boolean intersection gives exact
+  penetration volume per pair; the API/UI now report `method: "mesh"`.
 - **2D documentation**: plan/section sheet generation (That Open Views + a sheet composer).
 - **Federation UI**: a discipline picker to load several `.frag` and toggle by model.
 - **Authoring in-browser**: stays a Bonsai-bridge concern by design (GPL boundary).

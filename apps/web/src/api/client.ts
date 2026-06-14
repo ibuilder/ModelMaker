@@ -110,7 +110,7 @@ export interface ClashResult {
   count: number;
   created_topics: number;
   truncated: boolean;
-  clashes: { a_guid: string; a_class: string; b_guid: string; b_class: string; overlap_volume: number; point: Vec3 }[];
+  clashes: { a_guid: string; a_class: string; b_guid: string; b_class: string; volume: number; method: "mesh" | "aabb"; point: Vec3 }[];
 }
 
 export interface ValidationResult {

@@ -39,25 +39,29 @@ def run_clash(
     a: str | None = None,
     b: str | None = None,
     min_volume: float = 1e-3,
-    tolerance: float = 0.02,
+    tolerance: float = 0.0,
+    narrow: bool = True,
+    max_narrow: int = 1500,
     create_topics: bool = False,
     limit: int = 200,
     db: Session = Depends(get_db),
     actor: str = Depends(require_writer),
 ):
-    """Detect AABB clashes between two IFC-class groups (comma-separated in `a` / `b`).
+    """Detect clashes between two IFC-class groups (comma-separated in `a` / `b`).
+    narrow=true runs the mesh boolean-intersection narrow phase (exact penetration volume).
     With create_topics=true, the top clashes become BCF `clash` topics (pins/issues)."""
     from aec_data import clash  # type: ignore
 
     ifc = _source_ifc(db, pid)
-    results = clash.detect_file(ifc, _classes(a), _classes(b), min_volume, tolerance)
+    results = clash.detect_file(ifc, _classes(a), _classes(b), min_volume, tolerance,
+                               narrow=narrow, max_narrow=max_narrow)
 
     created = 0
     if create_topics:
         for c in results[:limit]:
             t = Topic(
                 project_id=pid, type="clash", status="open",
-                title=f"Clash: {c['a_class']} × {c['b_class']} (vol {c['overlap_volume']})",
+                title=f"Clash: {c['a_class']} × {c['b_class']} ({c['method']} vol {c['volume']})",
                 anchor=c["point"], element_guids=[c["a_guid"], c["b_guid"]],
             )
             db.add(t)
