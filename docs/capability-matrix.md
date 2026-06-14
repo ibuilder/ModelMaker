@@ -14,7 +14,7 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
 | **DOCUMENTATION** | | | | |
 | Construction drawings (plans/sections) | Partial | Native | No | **Built** — IFC section-cut → SVG plans (per storey) + sections |
 | Schedules / takeoff tied to model | Yes | Yes | Yes | **Built** — QTO + generic schedule export |
-| Sheet sets & title blocks | Partial | Yes | No | ⏳ planned |
+| Sheet sets & title blocks | Partial | Yes | No | **Built** — sheet composer (multi-view + title block) → SVG + PDF |
 | **COORDINATION & REVIEW** | | | | |
 | Model federation (combine models) | Partial | Partial | Native | **Built** — multi `.frag` load, per-model layers |
 | **Clash detection** | Yes | Partial | Native | **Built** — AABB broad + **mesh narrow phase** (exact penetration volume), → BCF clash topics |
@@ -52,7 +52,9 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
   penetration volume per pair; the API/UI now report `method: "mesh"`.
 - ~~2D plans/sections~~ ✅ done — `drawings.py` cuts geometry with a plane → SVG (plan per
   storey at a 1.2 m cut height; X/Y sections), served at `/projects/{id}/drawings/*`.
-- **Sheet composer**: multiple views + dimensions + annotations on a titled sheet (PDF).
+- ~~Sheet composer~~ ✅ done — `compose()` lays out multiple views in a grid with a title
+  block; renders to SVG and PDF (reportlab). `GET /drawings/sheet.{svg,pdf}`.
 - **Elevations & dimension lines**: orthographic outlines + automatic dimensioning.
+- **Annotations on sheets**: tags, leaders, room labels on the composed views.
 - **Federation UI**: a discipline picker to load several `.frag` and toggle by model.
 - **Authoring in-browser**: stays a Bonsai-bridge concern by design (GPL boundary).

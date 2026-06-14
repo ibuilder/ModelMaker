@@ -361,6 +361,11 @@ async function buildDrawings(host: HTMLElement) {
     }
     drawingBtn("⌗ Section A-A (X=27)",
       `/projects/${projectId}/drawings/section.svg?axis=x&offset=27&title=SECTION%20A-A`);
+    const sep = document.createElement("div"); sep.className = "section-title";
+    sep.style.marginTop = "8px"; sep.textContent = "Sheet (all plans + section)";
+    host.appendChild(sep);
+    drawingBtn("⊞ Compose sheet (PDF)", `/projects/${projectId}/drawings/sheet.pdf?sheet=S-101`);
+    drawingBtn("⊞ Compose sheet (SVG)", `/projects/${projectId}/drawings/sheet.svg?sheet=S-101`);
   } catch {
     host.textContent = "drawings unavailable (no source IFC)";
   }
