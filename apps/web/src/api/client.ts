@@ -95,4 +95,27 @@ export class ApiClient {
       method: "POST", body: JSON.stringify(body),
     });
   }
+
+  // analysis & QA (clash + IDS validation)
+  runClash(pid: string, opts: { a?: string; b?: string; min_volume?: number; create_topics?: boolean } = {}) {
+    const q = new URLSearchParams({ create_topics: "true", ...(opts as Record<string, string>) }).toString();
+    return this.json<ClashResult>(`/projects/${pid}/clash?${q}`, { method: "POST" });
+  }
+  validate(pid: string) {
+    return fetch(this.url(`/projects/${pid}/validate`), { method: "POST" }).then((r) => r.json() as Promise<ValidationResult>);
+  }
+}
+
+export interface ClashResult {
+  count: number;
+  created_topics: number;
+  truncated: boolean;
+  clashes: { a_guid: string; a_class: string; b_guid: string; b_class: string; overlap_volume: number; point: Vec3 }[];
+}
+
+export interface ValidationResult {
+  title: string;
+  status: "pass" | "fail";
+  summary: { specifications: number; passed: number; failed: number };
+  specifications: { name: string; status: "pass" | "fail"; applicable: number; passed: number; failed: number; failed_guids: string[] }[];
 }

@@ -291,6 +291,45 @@ function buildToolsPanel() {
     }
   }
   panel.appendChild(ex);
+
+  // --- Coordination & QA (clash + IDS validation) ---
+  const qa = document.createElement("div");
+  qa.innerHTML = `<div class="section-title" style="margin-top:14px">Coordination & QA</div>`;
+  const qaOut = document.createElement("div"); qaOut.className = "meta"; qaOut.id = "qa-out";
+  if (!projectId) {
+    qaOut.textContent = "connect a project to run analysis";
+    qa.appendChild(qaOut);
+  } else {
+    const clashBtn = document.createElement("button");
+    clashBtn.className = "tool-btn"; clashBtn.textContent = "⚡ Run clash (struct)";
+    clashBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
+    clashBtn.onclick = async () => {
+      qaOut.textContent = "running clash…";
+      const r = await api.runClash(projectId!, { a: "IfcBeam,IfcSlab", b: "IfcColumn", min_volume: 0.05 });
+      qaOut.textContent = `${r.count} clashes — ${r.created_topics} topics created (see Issues)`;
+      await refreshIssues();
+      await pins.load(projectId!);
+    };
+    const idsBtn = document.createElement("button");
+    idsBtn.className = "tool-btn"; idsBtn.textContent = "✓ Validate (IDS)";
+    idsBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
+    idsBtn.onclick = async () => {
+      qaOut.textContent = "validating…";
+      const r = await api.validate(projectId!);
+      const failing = r.specifications.flatMap((s) => s.failed_guids);
+      qaOut.innerHTML = `<b>IDS: ${r.status.toUpperCase()}</b> — ${r.summary.passed} pass / ${r.summary.failed} fail<br>` +
+        r.specifications.map((s) => `${s.status === "pass" ? "✓" : "✗"} ${s.name} (${s.passed}/${s.applicable})`).join("<br>");
+      if (failing.length) {
+        const hl = document.createElement("button");
+        hl.className = "tool-btn"; hl.textContent = `Highlight ${failing.length} failures`; hl.style.marginTop = "6px";
+        hl.onclick = async () => { const m = await sets.fromGuids(failing); await selectMap(m, { fit: true }); };
+        qaOut.appendChild(document.createElement("br"));
+        qaOut.appendChild(hl);
+      }
+    };
+    qa.append(clashBtn, idsBtn, qaOut);
+  }
+  panel.appendChild(qa);
 }
 
 function colorFor(s: string): string {
