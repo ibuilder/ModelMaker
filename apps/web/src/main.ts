@@ -330,6 +330,40 @@ function buildToolsPanel() {
     qa.append(clashBtn, idsBtn, qaOut);
   }
   panel.appendChild(qa);
+
+  // --- 2D documentation (plans / sections) ---
+  const dr = document.createElement("div");
+  dr.innerHTML = `<div class="section-title" style="margin-top:14px">Drawings (2D)</div>`;
+  const drBody = document.createElement("div"); drBody.className = "meta";
+  dr.appendChild(drBody);
+  panel.appendChild(dr);
+  if (projectId) void buildDrawings(drBody);
+  else drBody.textContent = "connect a project for plans/sections";
+}
+
+async function buildDrawings(host: HTMLElement) {
+  if (!projectId) return;
+  host.textContent = "";
+  const open = (path: string) => window.open(api.url(path), "_blank");
+  const drawingBtn = (label: string, path: string) => {
+    const b = document.createElement("button");
+    b.className = "tool-btn"; b.textContent = label;
+    b.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
+    b.onclick = () => open(path);
+    host.appendChild(b);
+  };
+  try {
+    const storeys = await api.drawingStoreys(projectId);
+    for (const s of storeys) {
+      const t = encodeURIComponent(`PLAN - ${s.name}`);
+      drawingBtn(`▦ Plan: ${s.name}`,
+        `/projects/${projectId}/drawings/plan.svg?elevation=${s.elevation}&cut_height=1.2&title=${t}`);
+    }
+    drawingBtn("⌗ Section A-A (X=27)",
+      `/projects/${projectId}/drawings/section.svg?axis=x&offset=27&title=SECTION%20A-A`);
+  } catch {
+    host.textContent = "drawings unavailable (no source IFC)";
+  }
 }
 
 function colorFor(s: string): string {

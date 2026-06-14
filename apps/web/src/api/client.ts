@@ -104,6 +104,11 @@ export class ApiClient {
   validate(pid: string) {
     return fetch(this.url(`/projects/${pid}/validate`), { method: "POST" }).then((r) => r.json() as Promise<ValidationResult>);
   }
+
+  // 2D documentation
+  drawingStoreys(pid: string) {
+    return this.json<{ name: string; elevation: number }[]>(`/projects/${pid}/drawings/storeys`);
+  }
 }
 
 export interface ClashResult {

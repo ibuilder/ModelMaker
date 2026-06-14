@@ -12,7 +12,7 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
 | Parametric families / components | Partial | Native | No | **Bridge** + `families/` IFC type libraries + `recipes.py` |
 | Parametric stairs/roofs/complex | Yes | Yes | No | **Bridge** |
 | **DOCUMENTATION** | | | | |
-| Construction drawings (plans/sections) | Partial | Native | No | ⏳ planned (That Open Views/TechnicalDrawing) |
+| Construction drawings (plans/sections) | Partial | Native | No | **Built** — IFC section-cut → SVG plans (per storey) + sections |
 | Schedules / takeoff tied to model | Yes | Yes | Yes | **Built** — QTO + generic schedule export |
 | Sheet sets & title blocks | Partial | Yes | No | ⏳ planned |
 | **COORDINATION & REVIEW** | | | | |
@@ -50,6 +50,9 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
 ## Honest gaps (next, all open-source)
 - ~~Clash narrow phase~~ ✅ done — trimesh + manifold3d boolean intersection gives exact
   penetration volume per pair; the API/UI now report `method: "mesh"`.
-- **2D documentation**: plan/section sheet generation (That Open Views + a sheet composer).
+- ~~2D plans/sections~~ ✅ done — `drawings.py` cuts geometry with a plane → SVG (plan per
+  storey at a 1.2 m cut height; X/Y sections), served at `/projects/{id}/drawings/*`.
+- **Sheet composer**: multiple views + dimensions + annotations on a titled sheet (PDF).
+- **Elevations & dimension lines**: orthographic outlines + automatic dimensioning.
 - **Federation UI**: a discipline picker to load several `.frag` and toggle by model.
 - **Authoring in-browser**: stays a Bonsai-bridge concern by design (GPL boundary).
