@@ -31,9 +31,10 @@ export class LayerManager {
     this.colorize = new ColorizeTool(components);
   }
 
-  /** Create an IFC-class layer (e.g. all walls). */
+  /** Create an IFC-class layer (e.g. all walls). Case-insensitive: API reports "IfcColumn"
+   *  but Fragments stores categories uppercase ("IFCCOLUMN"). */
   async addClassLayer(name: string, ifcClass: string): Promise<Layer> {
-    const items = await this.sets.fromCategories([new RegExp(ifcClass)]);
+    const items = await this.sets.fromCategories([new RegExp(`^${ifcClass}$`, "i")]);
     return this._add(name, items);
   }
 

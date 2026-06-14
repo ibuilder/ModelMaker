@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
-from .routers import bim, properties
+from .routers import bim, exports, properties
 
 
 @asynccontextmanager
@@ -23,10 +23,12 @@ app.add_middleware(
     allow_origins=["http://localhost:5173"],  # web viewer dev origin
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(bim.router, tags=["bim"])
 app.include_router(properties.router, tags=["properties"])
+app.include_router(exports.router, tags=["exports"])
 
 
 @app.get("/health")

@@ -12,6 +12,13 @@ TopicType = Literal["rfi", "punch", "clash", "info"]
 class ProjectIn(BaseModel):
     name: str
     origin: dict[str, Any] | None = None
+    source_ifc: str | None = None
+
+
+class ProjectPatch(BaseModel):
+    name: str | None = None
+    origin: dict[str, Any] | None = None
+    source_ifc: str | None = None
 
 
 class ProjectOut(ProjectIn):

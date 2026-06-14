@@ -44,6 +44,12 @@ storage/
 test_storage/
 samples/out/
 
+# generated offline assets (recreated by copy-wasm on predev/prebuild)
+apps/web/public/wasm/*.wasm
+
+# local editor/agent settings
+.claude/settings.local.json
+
 # editor / os
 .vscode/
 .idea/

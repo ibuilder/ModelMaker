@@ -48,6 +48,11 @@ export class ApiClient {
     return res.json() as Promise<T>;
   }
 
+  /** Absolute URL for a GET endpoint, e.g. an export download. */
+  url(path: string): string {
+    return this.baseUrl + path;
+  }
+
   async health(): Promise<boolean> {
     try {
       const res = await fetch(this.baseUrl + "/health");

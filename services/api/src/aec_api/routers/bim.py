@@ -10,7 +10,7 @@ from ..auth import require_writer
 from ..db import get_db
 from ..models import Attachment, Comment, Project, Topic, Viewpoint
 from ..schemas import (
-    AttachmentOut, CommentIn, CommentOut, ProjectIn, ProjectOut,
+    AttachmentOut, CommentIn, CommentOut, ProjectIn, ProjectOut, ProjectPatch,
     TopicIn, TopicOut, TopicPatch, ViewpointIn, ViewpointOut,
 )
 
@@ -21,7 +21,7 @@ router = APIRouter()
 @router.post("/projects", response_model=ProjectOut, status_code=201)
 def create_project(body: ProjectIn, db: Session = Depends(get_db),
                    actor: str = Depends(require_writer)):
-    p = Project(name=body.name, origin=body.origin)
+    p = Project(name=body.name, origin=body.origin, source_ifc=body.source_ifc)
     db.add(p)
     audit.record(db, action="project.create", actor=actor, method="POST",
                  path="/projects", detail={"name": body.name})
@@ -37,6 +37,19 @@ def list_projects(db: Session = Depends(get_db)):
 @router.get("/projects/{pid}", response_model=ProjectOut)
 def get_project(pid: str, db: Session = Depends(get_db)):
     return _project(db, pid)
+
+
+@router.patch("/projects/{pid}", response_model=ProjectOut)
+def patch_project(pid: str, body: ProjectPatch, db: Session = Depends(get_db),
+                  actor: str = Depends(require_writer)):
+    p = _project(db, pid)
+    changes = body.model_dump(exclude_unset=True)
+    for k, v in changes.items():
+        setattr(p, k, v)
+    audit.record(db, action="project.update", actor=actor, method="PATCH",
+                 path=f"/projects/{pid}", detail=changes)
+    db.commit()
+    return p
 
 
 # --- topics ------------------------------------------------------------------

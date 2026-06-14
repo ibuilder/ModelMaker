@@ -32,6 +32,17 @@ sample model (`samples/school_str.ifc`, the That Open structural school, 8.6 MB,
 - Blender + Bonsai + Bonsai-MCP run for M5 (recipes are written and compile).
 - Boot the full docker-compose stack against Postgres + MinIO.
 
+## Integrated application (verified live in browser)
+The viewer is wired to the running API end-to-end (web :5173 ↔ api :8000), verified against
+the seeded "School" project:
+- **Tree** panel — 5 storeys → IFC class → element, click selects in 3D (green highlight).
+- **Layers** panel — 9 IFC classes with visibility toggle, color swatch, isolate.
+- **Issues** panel — RFI list; click restores the viewpoint (camera) + selects the element +
+  shows API properties; "+ RFI from selection" creates a topic + viewpoint + pin.
+- **Properties** — rendered from the Phase 1 index via the API (Psets formatted).
+- **Pin overlay** — markers from `/pins`, click restores viewpoint.
+- Known cosmetic nit: camera re-fit after isolate/show-all can over-zoom (functionality fine).
+
 ## Per-phase code map
 | Phase | Location |
 |---|---|
