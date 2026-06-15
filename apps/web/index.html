@@ -10,8 +10,11 @@
       <header id="toolbar">
         <button id="sidebar-toggle" title="Toggle panel (\\)" aria-label="Toggle panel">☰</button>
         <strong>AEC BIM Viewer</strong>
-        <label class="file-btn">Open IFC<input id="ifc-input" type="file" accept=".ifc" hidden /></label>
-        <label class="file-btn">Open .frag<input id="frag-input" type="file" accept=".frag" hidden /></label>
+        <div id="open-menu" class="menu"></div>
+        <div id="save-menu" class="menu"></div>
+        <input id="ifc-input" type="file" accept=".ifc" hidden />
+        <input id="frag-input" type="file" accept=".frag" hidden />
+        <input id="convert-input" type="file" accept=".rvt,.dwg,.nwc" hidden />
         <label id="persona-wrap" title="Show tools for your role">
           <select id="persona">
             <option value="all">All roles</option>

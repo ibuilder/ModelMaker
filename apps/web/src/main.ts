@@ -128,6 +128,7 @@ container.addEventListener("dblclick", () => { if (section.enabled) section.crea
 // ---- file loading -----------------------------------------------------------
 $("ifc-input").addEventListener("change", (e) => loadFile(e.target as HTMLInputElement, (b, id) => loader.loadIfc(b, id), "converting"));
 $("frag-input").addEventListener("change", (e) => loadFile(e.target as HTMLInputElement, (b, id) => loader.loadFragments(b, id), "loading"));
+$("convert-input").addEventListener("change", (e) => convertAndLoad(e.target as HTMLInputElement));
 async function loadFile(input: HTMLInputElement, load: (b: Uint8Array, id: string) => Promise<unknown>, verb: string) {
   const file = input.files?.[0];
   if (!file) return;
@@ -138,6 +139,89 @@ async function loadFile(input: HTMLInputElement, load: (b: Uint8Array, id: strin
   });
   input.value = "";
 }
+
+// load a sample model frag served from public/
+async function loadSample(file: string, label: string) {
+  await withLoading(container, `loading ${label}`, async () => {
+    const res = await fetch(file);
+    if (!res.ok) throw new Error(`${label} not found`);
+    await loader.loadFragments(await res.arrayBuffer(), nextId());
+    await fitToModels();
+    notify(`loaded ${label}`, "success");
+  });
+}
+
+// Autodesk import (RVT/DWG/NWC): convert to .frag server-side (paid APS bridge) + cache
+async function convertAndLoad(input: HTMLInputElement) {
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  await withLoading(container, `converting ${file.name} (Autodesk bridge)`, async () => {
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(api.url("/convert"), { method: "POST", body: fd });
+    if (!res.ok) {
+      const msg = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(msg.detail || "conversion unavailable");
+    }
+    await loader.loadFragments(await res.arrayBuffer(), nextId());
+    await fitToModels();
+    notify(`converted + loaded ${file.name}`, "success");
+  });
+}
+
+// export helpers
+function download(blob: Blob, name: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+async function exportFrag() {
+  const id = [...loader.fragments.list.keys()][0];
+  if (!id) { notify("no model loaded", "error"); return; }
+  const buf = await loader.fragments.list.get(id)!.getBuffer(false);
+  download(new Blob([buf]), `${id}.frag`);
+  notify(`exported ${id}.frag`, "success");
+}
+function exportIfc() {
+  if (!projectId) { notify("connect a project to export its IFC", "error"); return; }
+  window.open(api.url(`/projects/${projectId}/source.ifc`), "_blank");
+}
+
+// ---- Open / Save dropdown menus --------------------------------------------
+interface MenuItem { label: string; sep?: boolean; onClick?: () => void; }
+function buildMenu(mountId: string, label: string, items: MenuItem[]) {
+  const mount = $(mountId);
+  const btn = document.createElement("button");
+  btn.className = "file-btn menu-btn"; btn.textContent = label;
+  const panel = document.createElement("div"); panel.className = "menu-panel"; panel.hidden = true;
+  for (const it of items) {
+    if (it.sep) { const s = document.createElement("div"); s.className = "menu-sep"; s.textContent = it.label; panel.appendChild(s); continue; }
+    const mi = document.createElement("button"); mi.className = "menu-item"; mi.textContent = it.label;
+    mi.onclick = () => { panel.hidden = true; it.onClick?.(); };
+    panel.appendChild(mi);
+  }
+  // position: fixed so the panel escapes the toolbar's overflow clip at any breakpoint
+  const place = () => { const r = btn.getBoundingClientRect(); panel.style.left = `${r.left}px`; panel.style.top = `${r.bottom + 4}px`; };
+  btn.onclick = (e) => { e.stopPropagation(); document.querySelectorAll(".menu-panel").forEach((p) => { if (p !== panel) (p as HTMLElement).hidden = true; }); const open = panel.hidden; if (open) place(); panel.hidden = !open; };
+  document.addEventListener("click", () => (panel.hidden = true));
+  mount.append(btn, panel);
+}
+buildMenu("open-menu", "Open ▾", [
+  { label: "Open IFC…", onClick: () => $("ifc-input").click() },
+  { label: "Open Fragments (.frag)…", onClick: () => $("frag-input").click() },
+  { label: "Sample models", sep: true },
+  { label: "School — Structural", onClick: () => loadSample("/school_str.frag", "School (Structural)") },
+  { label: "School — Architectural", onClick: () => loadSample("/school_arq.frag", "School (Architectural)") },
+  { label: "BasicHouse", onClick: () => loadSample("/basichouse.frag", "BasicHouse") },
+  { label: "Import (Autodesk — paid bridge)", sep: true },
+  { label: "Revit (.rvt)…", onClick: () => $("convert-input").click() },
+  { label: "AutoCAD (.dwg)…", onClick: () => $("convert-input").click() },
+  { label: "Navisworks (.nwc)…", onClick: () => $("convert-input").click() },
+]);
+buildMenu("save-menu", "Save ▾", [
+  { label: "Export Fragments (.frag)", onClick: () => void exportFrag() },
+  { label: "Export source IFC (.ifc)", onClick: exportIfc },
+]);
 
 // ---- toolbar ----------------------------------------------------------------
 const viewerTools = $("viewer-tools");

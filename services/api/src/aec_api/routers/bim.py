@@ -212,6 +212,20 @@ def model_frag(pid: str, request: Request):
                           filename="model.frag")
 
 
+@router.get("/projects/{pid}/source.ifc")
+def source_ifc_download(pid: str, db: Session = Depends(get_db)):
+    """Download the project's source IFC (Save → Export IFC)."""
+    from pathlib import Path
+
+    from fastapi.responses import FileResponse
+
+    p = _project(db, pid)
+    if not p.source_ifc or not Path(p.source_ifc).exists():
+        raise HTTPException(409, "project has no accessible source IFC")
+    return FileResponse(p.source_ifc, filename=Path(p.source_ifc).name,
+                        media_type="application/octet-stream")
+
+
 # --- BCF interoperability ----------------------------------------------------
 @router.get("/projects/{pid}/bcf/export")
 def bcf_export(pid: str, db: Session = Depends(get_db)):

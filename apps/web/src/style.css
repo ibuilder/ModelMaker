@@ -118,8 +118,26 @@ html, body, #app {
 .panel.active { display: block; }
 
 /* buttons */
-.file-btn { cursor: pointer; padding: 5px 12px; background: var(--accent); border-radius: 4px; font-size: 13px; }
+.file-btn { cursor: pointer; padding: 5px 12px; background: var(--accent); border-radius: 4px; font-size: 13px; color: #fff; border: none; }
 .file-btn:hover { filter: brightness(1.1); }
+
+/* Open / Save dropdown menus */
+.menu { position: relative; display: inline-block; }
+.menu-panel {
+  position: fixed; z-index: 100; min-width: 220px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  box-shadow: 0 6px 20px #0008; padding: 4px; display: flex; flex-direction: column;
+}
+.menu-item {
+  text-align: left; background: transparent; border: none; color: var(--text);
+  padding: 7px 10px; border-radius: 4px; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.menu-item:hover { background: var(--accent); }
+.menu-sep {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+  padding: 6px 10px 3px; border-top: 1px solid var(--line); margin-top: 3px;
+}
+.menu-sep:first-child { border-top: none; margin-top: 0; }
 .tool-btn {
   cursor: pointer; padding: 4px 9px; background: #3a3d44; color: var(--text);
   border: 1px solid var(--line); border-radius: 4px; font-size: 12px;

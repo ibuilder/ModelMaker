@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
-from .routers import (analysis, authoring, bim, cost, dashboard, drawings, exports,
+from .routers import (analysis, authoring, bim, convert, cost, dashboard, drawings, exports,
                       modules, proforma, properties, schedule)
 
 
@@ -38,6 +38,7 @@ app.include_router(cost.router, tags=["cost"])
 app.include_router(schedule.router, tags=["schedule"])
 app.include_router(dashboard.router, tags=["dashboard"])
 app.include_router(proforma.router, tags=["proforma"])
+app.include_router(convert.router, tags=["convert"])
 
 
 @app.get("/health")
