@@ -70,8 +70,10 @@ real structural + architectural discipline frags loaded together. `POST /project
   lines, and overall dimensions (per-cell transform via drawing primitives, SVG + PDF).
 - ~~Hidden-line removal~~ ✅ done — elevations use a depth-sorted painter's algorithm
   (opaque silhouettes; nearer occludes farther) + grid bubbles + level datums.
-- **Room tags / leaders**: needs `IfcSpace` (architectural model; only its `.frag` is published
-  for this sample, not the IFC) — wire once an arch IFC is available.
+- ~~Room tags~~ ✅ done — `space_tags()` labels each `IfcSpace` with name + net floor area at
+  its centroid on plans (`rooms=True`). Verified on an authored 2-room model (Office 20 m²,
+  Meeting 12 m²); applies to any model carrying `IfcSpace`.
+- **Leaders/callouts**: extend room tags with leader lines + element callouts.
 - ~~Grid on section/elevation sheet cells~~ ✅ done — composed-sheet cells are all annotated:
   plans (grid + dims), sections (grid + level datums), elevations (grid + levels + HLR).
 - **Federation UI**: a discipline picker to load several `.frag` and toggle by model.

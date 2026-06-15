@@ -34,9 +34,9 @@ and verified** in this repo unless noted:
 
 Generated directly from the IFC by the data service:
 
-| Dimensioned grid plan | Composed sheet (A3) | North elevation |
-|---|---|---|
-| ![plan](docs/img/plan_grid.png) | ![sheet](docs/img/sheet.png) | ![elevation](docs/img/elevation_north.png) |
+| Dimensioned grid plan | Composed sheet (A3) | North elevation (HLR) | Room tags |
+|---|---|---|---|
+| ![plan](docs/img/plan_grid.png) | ![sheet](docs/img/sheet.png) | ![elevation](docs/img/elevation_north.png) | ![rooms](docs/img/room_tags.png) |
 
 The dimensioned plan derives the structural grid from column positions (no `IfcGrid` needed),
 adds numbered/lettered bubbles and grid-spacing dimensions; the sheet composes per-storey

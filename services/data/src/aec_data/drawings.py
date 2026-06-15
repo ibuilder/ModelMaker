@@ -158,7 +158,8 @@ def grid_from_meshes(meshes, tol: float = 0.4) -> dict[str, list[tuple[float, st
 
 
 def plan_drawing_svg(meshes, elevation: float, cut_height: float, title: str,
-                     grid: dict | None = None, dims: bool = True, width: int = 1200) -> str:
+                     grid: dict | None = None, dims: bool = True, width: int = 1200,
+                     tags: list[dict] | None = None) -> str:
     polys = cut_baked(meshes, "plan", elevation + cut_height)
     grid = grid or {"x": [], "y": []}
     if not polys and not (grid["x"] or grid["y"]):
@@ -210,6 +211,17 @@ def plan_drawing_svg(meshes, elevation: float, cut_height: float, title: str,
         pp = " ".join(f"{T(p[0], p[1])[0]:.1f},{T(p[0], p[1])[1]:.1f}" for p in poly)
         out.append(f'<polyline points="{pp}" fill="none" stroke="#111" stroke-width="0.8"/>')
 
+    # room tags (IfcSpace): name + net floor area at the space centroid
+    for tag in (tags or []):
+        if not (mn[0] <= tag["x"] <= mx[0] and mn[1] <= tag["y"] <= mx[1]):
+            continue
+        tx, tyy = T(tag["x"], tag["y"])
+        out.append(f'<text x="{tx:.1f}" y="{tyy:.1f}" text-anchor="middle" font-family="sans-serif" '
+                   f'font-size="12" font-weight="700" fill="#333">{tag["name"]}</text>')
+        if tag.get("area"):
+            out.append(f'<text x="{tx:.1f}" y="{tyy+13:.1f}" text-anchor="middle" '
+                       f'font-family="sans-serif" font-size="10" fill="#777">{tag["area"]:.1f} m²</text>')
+
     # dimension strings between consecutive grid lines (mm)
     if dims:
         dy = oy + draw_h + 26
@@ -249,11 +261,38 @@ def _dim_v(x, y0, y1, mm):
             f'font-size="10" fill="#0a6" transform="rotate(-90 {x-6:.1f} {(y0+y1)/2:.1f})">{mm}</text>')
 
 
+def space_tags(model: ifcopenshell.file) -> list[dict]:
+    """Room tags from IfcSpace: name + net floor area + plan centroid (for plan annotation)."""
+    import ifcopenshell.geom as _geom
+    import ifcopenshell.util.element as _ue
+
+    settings = _geom.settings()
+    tags = []
+    for sp in model.by_type("IfcSpace"):
+        name = getattr(sp, "LongName", None) or getattr(sp, "Name", None) or "Room"
+        area = None
+        for qset in _ue.get_psets(sp, qtos_only=True).values():
+            area = area or qset.get("NetFloorArea") or qset.get("GrossFloorArea")
+        try:
+            shape = _geom.create_shape(settings, sp)
+            v = np.asarray(shape.geometry.verts, dtype=float).reshape(-1, 3)
+            cx, cy = float(v[:, 0].mean()), float(v[:, 1].mean())
+            if area is None:  # footprint area fallback (convex hull of plan projection)
+                from shapely.geometry import MultiPoint
+                area = MultiPoint(v[:, :2]).convex_hull.area
+        except Exception:
+            continue
+        tags.append({"name": name, "area": float(area) if area else None, "x": cx, "y": cy})
+    return tags
+
+
 def plan_svg(model: ifcopenshell.file, elevation: float, cut_height: float = 1.2,
-             title: str = "PLAN", grid: bool = True, dims: bool = True) -> str:
+             title: str = "PLAN", grid: bool = True, dims: bool = True,
+             rooms: bool = True) -> str:
     meshes = bake(model)
     g = grid_from_meshes(meshes) if grid else {"x": [], "y": []}
-    return plan_drawing_svg(meshes, elevation, cut_height, title, g, dims)
+    tags = space_tags(model) if rooms else []
+    return plan_drawing_svg(meshes, elevation, cut_height, title, g, dims, tags=tags)
 
 
 # --- elevations (orthographic outline projections) --------------------------
