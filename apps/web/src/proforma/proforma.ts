@@ -84,6 +84,8 @@ export class ProformaUI {
     this.root.appendChild(form);
     const out = document.createElement("div"); out.id = "pf-out";
     this.root.appendChild(out);
+    const sens = document.createElement("div"); sens.id = "pf-sens";
+    this.root.appendChild(sens);
   }
 
   private async solve() {
@@ -93,6 +95,41 @@ export class ProformaUI {
     catch (e) { this.setStatus(`proforma error: ${(e as Error).message}`); return; }
     this.renderResult(r);
     this.setStatus(`equity IRR ${pct(r.returns.equity_irr)} · EM ${r.returns.equity_multiple}`);
+    void this.renderSensitivity();
+  }
+
+  /** Two-variable data table: Equity IRR vs exit cap × hard cost (around the base case). */
+  private async renderSensitivity() {
+    const host = document.getElementById("pf-sens");
+    if (!host) return;
+    const baseCap = get(this.a, "exit.exit_cap") as number;
+    const baseHard = get(this.a, "cost_lines.1.amount") as number;
+    const xs = [-0.01, -0.005, 0, 0.005, 0.01].map((d) => +(baseCap + d).toFixed(4));
+    const ys = [-0.1, -0.05, 0, 0.05, 0.1].map((d) => Math.round(baseHard * (1 + d)));
+    let s;
+    try {
+      s = await this.api.sensitivity({
+        assumptions: this.a,
+        x: { path: "exit.exit_cap", values: xs },
+        y: { path: "cost_lines.1.amount", values: ys },
+        metric: "returns.equity_irr",
+      });
+    } catch { return; }
+    const flat = s.matrix.flat().filter((v): v is number => v != null);
+    const lo = Math.min(...flat), hi = Math.max(...flat);
+    const color = (v: number | null) => {
+      if (v == null) return "#333";
+      const t = hi > lo ? (v - lo) / (hi - lo) : 0.5;          // red→green
+      return `hsl(${Math.round(t * 120)} 55% 32%)`;
+    };
+    const head = `<tr><th>IRR</th>${s.x_values.map((x) => `<th>${(x * 100).toFixed(1)}%</th>`).join("")}</tr>`;
+    const rows = s.matrix.map((row, j) =>
+      `<tr><th>$${(s.y_values[j] / 1e6).toFixed(1)}M</th>` +
+      row.map((v) => `<td style="background:${color(v)}">${v == null ? "—" : (v * 100).toFixed(1)}</td>`).join("") +
+      `</tr>`).join("");
+    host.innerHTML =
+      `<div class="section-title">Sensitivity — Equity IRR (exit cap × hard cost)</div>` +
+      `<table class="sens-table">${head}${rows}</table>`;
   }
 
   private renderResult(r: ProformaResult) {

@@ -184,3 +184,6 @@ kbd {
   margin-top: 2px; padding: 4px; background: #1e1f22; color: var(--text);
   border: 1px solid var(--line); border-radius: 4px; font-size: 12px;
 }
+.sens-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
+.sens-table th { color: var(--muted); font-weight: 600; padding: 3px; }
+.sens-table td { text-align: center; padding: 4px 2px; color: #fff; font-variant-numeric: tabular-nums; }

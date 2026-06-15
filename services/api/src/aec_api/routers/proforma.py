@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Scenario
+from ..proforma.sensitivity import sensitivity
 from ..proforma.solve import solve
 
 router = APIRouter()
@@ -87,6 +88,25 @@ class Assumptions(BaseModel):
 def solve_stateless(a: Assumptions):
     """Solve a deal without persisting — full S&U, cash flows, returns, waterfall."""
     return solve(a.model_dump())
+
+
+class Axis(BaseModel):
+    path: str                       # e.g. "exit.exit_cap" or "cost_lines.1.amount"
+    values: list[float]
+
+
+class SensitivityIn(BaseModel):
+    assumptions: Assumptions
+    x: Axis
+    y: Axis
+    metric: str = "returns.equity_irr"
+
+
+@router.post("/proforma/sensitivity")
+def run_sensitivity(body: SensitivityIn):
+    """Two-variable data table: the metric solved across the x×y grid of two drivers."""
+    return sensitivity(body.assumptions.model_dump(), body.x.path, body.x.values,
+                       body.y.path, body.y.values, body.metric)
 
 
 # --- scenarios (persisted, versioned) ---------------------------------------

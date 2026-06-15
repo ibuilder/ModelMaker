@@ -176,6 +176,10 @@ export class ApiClient {
   solveProforma(assumptions: unknown) {
     return this.json<ProformaResult>(`/proforma/solve`, { method: "POST", body: JSON.stringify(assumptions) });
   }
+  sensitivity(body: unknown) {
+    return this.json<{ metric: string; x_values: number[]; y_values: number[]; matrix: (number | null)[][] }>(
+      `/proforma/sensitivity`, { method: "POST", body: JSON.stringify(body) });
+  }
 
   // GC portal modules + model pins
   modules() {

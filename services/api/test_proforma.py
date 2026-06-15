@@ -72,6 +72,16 @@ wfr = res["waterfall"]
 assert abs((wfr["lp_distributions"] + wfr["gp_distributions"])
            - sum(max(p["distributable"], 0) for p in wfr["periods"])) < 5.0
 
+# --- sensitivity: monotonic two-variable table ------------------------------
+from aec_api.proforma.sensitivity import sensitivity  # noqa: E402
+
+sens = sensitivity(deal, "exit.exit_cap", [0.05, 0.055, 0.06],
+                   "cost_lines.1.amount", [18_000_000, 20_000_000, 22_000_000],
+                   "returns.equity_irr")
+m = sens["matrix"]
+assert m[0][0] > m[0][-1]    # lower exit cap → higher IRR
+assert m[0][0] > m[-1][0]    # cheaper hard cost → higher IRR
+
 print("PROFORMA OK")
 print(f"  S&U: uses ${su_r['total_uses']:,.0f} = loan ${su_r['loan_amount']:,.0f} + equity ${su_r['equity']:,.0f}"
       f" (int reserve ${su_r['interest_reserve']:,.0f})")
