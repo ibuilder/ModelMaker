@@ -9,6 +9,10 @@
 }
 
 * { box-sizing: border-box; }
+/* the [hidden] attribute must always win over component display rules
+   (e.g. .menu-panel/.rail-btn set display:flex, which would otherwise
+   override the UA [hidden]{display:none} and leave them visible) */
+[hidden] { display: none !important; }
 
 html, body, #app {
   margin: 0;
