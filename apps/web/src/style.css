@@ -143,3 +143,36 @@ html, body, #app {
 .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 6px; text-align: center; }
 .kpi-v { font-size: 20px; font-weight: 800; color: var(--accent); }
 .kpi-l { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* toasts */
+.toast-host { position: fixed; top: 56px; right: 16px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast {
+  pointer-events: auto; cursor: pointer; min-width: 200px; max-width: 360px;
+  padding: 10px 14px; border-radius: 6px; font-size: 13px; color: #fff;
+  background: #34373d; border-left: 4px solid var(--accent); box-shadow: 0 4px 16px #0007;
+  opacity: 0; transform: translateX(20px); transition: opacity .25s, transform .25s;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast-success { border-left-color: #2ecc71; }
+.toast-error { border-left-color: #e74c3c; }
+.toast-info { border-left-color: var(--accent); }
+
+/* loading overlay (inside #container) */
+.loading-overlay {
+  position: absolute; inset: 0; z-index: 50; display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+  background: rgba(20, 21, 24, 0.55); backdrop-filter: blur(1px);
+}
+.loading-overlay.show { display: flex; }
+.loading-label { font-size: 13px; color: var(--text); }
+.spinner {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 4px solid #ffffff22; border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+kbd {
+  background: #3a3d44; border: 1px solid var(--line); border-radius: 3px;
+  padding: 1px 5px; font-size: 11px; font-family: ui-monospace, monospace;
+}

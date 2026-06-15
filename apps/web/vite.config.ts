@@ -14,4 +14,16 @@ export default defineConfig({
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
   },
+  build: {
+    chunkSizeWarningLimit: 4000,
+    rollupOptions: {
+      output: {
+        // split heavy vendor libs into cacheable chunks (they change far less than app code)
+        manualChunks: {
+          three: ["three"],
+          thatopen: ["@thatopen/components", "@thatopen/components-front", "@thatopen/fragments"],
+        },
+      },
+    },
+  },
 });

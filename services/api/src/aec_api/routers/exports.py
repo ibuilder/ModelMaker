@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Project
+from ..deps import source_ifc_path as _source_ifc
 
 # make the monorepo data package importable in dev (services/data/src)
 _DATA_SRC = Path(__file__).resolve().parents[4] / "data" / "src"
@@ -18,15 +18,6 @@ if str(_DATA_SRC) not in sys.path:
     sys.path.insert(0, str(_DATA_SRC))
 
 router = APIRouter()
-
-
-def _source_ifc(db: Session, pid: str) -> str:
-    p = db.get(Project, pid)
-    if not p:
-        raise HTTPException(404, "project not found")
-    if not p.source_ifc or not Path(p.source_ifc).exists():
-        raise HTTPException(409, "project has no accessible source IFC (set project.source_ifc)")
-    return p.source_ifc
 
 
 def _xlsx_response(sheets: dict, filename: str) -> Response:

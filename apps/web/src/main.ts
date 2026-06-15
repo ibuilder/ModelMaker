@@ -14,6 +14,7 @@ import { buildTree } from "./tree/tree";
 import { PinOverlay, restoreCamera } from "./pins/pins";
 import { PortalUI } from "./portal/portal";
 import { ApiClient, type ElementProps, type Topic } from "./api/client";
+import { toast, withLoading } from "./ui/feedback";
 
 // ---- DOM refs ---------------------------------------------------------------
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -23,6 +24,8 @@ const propsPanel = $("props");
 const propsBody = $("props-body");
 const toolbar = $("toolbar");
 const setStatus = (m: string) => (statusEl.textContent = m);
+/** status bar + a transient toast for notable events */
+const notify = (m: string, kind: "info" | "success" | "error" = "info") => { setStatus(m); toast(m, kind); };
 
 // ---- viewer + tools ---------------------------------------------------------
 const viewer = createViewer(container);
@@ -127,13 +130,12 @@ $("frag-input").addEventListener("change", (e) => loadFile(e.target as HTMLInput
 async function loadFile(input: HTMLInputElement, load: (b: Uint8Array, id: string) => Promise<unknown>, verb: string) {
   const file = input.files?.[0];
   if (!file) return;
-  try {
-    setStatus(`${verb} ${file.name}…`);
+  await withLoading(container, `${verb} ${file.name}`, async () => {
     await load(new Uint8Array(await file.arrayBuffer()), nextId());
     await fitToModels();
-    setStatus(`loaded ${file.name}`);
-  } catch (err) { setStatus(`error: ${(err as Error).message}`); console.error(err); }
-  finally { input.value = ""; }
+    notify(`loaded ${file.name}`, "success");
+  });
+  input.value = "";
 }
 
 // ---- toolbar ----------------------------------------------------------------
@@ -361,19 +363,20 @@ function buildToolsPanel() {
     const clashBtn = document.createElement("button");
     clashBtn.className = "tool-btn"; clashBtn.textContent = "⚡ Run clash (struct)";
     clashBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
-    clashBtn.onclick = async () => {
-      qaOut.textContent = "running clash…";
+    clashBtn.onclick = () => withLoading(container, "Running clash detection", async () => {
       const r = await api.runClash(projectId!, { a: "IfcBeam,IfcSlab", b: "IfcColumn", min_volume: 0.05 });
       qaOut.textContent = `${r.count} clashes — ${r.created_topics} topics created (see Issues)`;
+      toast(`Clash: ${r.count} found, ${r.created_topics} topics created`, r.count ? "info" : "success");
       await refreshIssues();
-      await pins.load(projectId!);
-    };
+      await reloadModelPins();
+    });
     const idsBtn = document.createElement("button");
     idsBtn.className = "tool-btn"; idsBtn.textContent = "✓ Validate (IDS)";
     idsBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
-    idsBtn.onclick = async () => {
-      qaOut.textContent = "validating…";
+    idsBtn.onclick = () => withLoading(container, "Validating (IDS)", async () => {
       const r = await api.validate(projectId!);
+      toast(`IDS ${r.status.toUpperCase()} — ${r.summary.passed} pass / ${r.summary.failed} fail`,
+            r.status === "pass" ? "success" : "error");
       const failing = r.specifications.flatMap((s) => s.failed_guids);
       qaOut.innerHTML = `<b>IDS: ${r.status.toUpperCase()}</b> — ${r.summary.passed} pass / ${r.summary.failed} fail<br>` +
         r.specifications.map((s) => `${s.status === "pass" ? "✓" : "✗"} ${s.name} (${s.passed}/${s.applicable})`).join("<br>");
@@ -384,7 +387,7 @@ function buildToolsPanel() {
         qaOut.appendChild(document.createElement("br"));
         qaOut.appendChild(hl);
       }
-    };
+    });
     qa.append(clashBtn, idsBtn, qaOut);
   }
   panel.appendChild(qa);
@@ -400,14 +403,14 @@ function buildToolsPanel() {
     const eBtn = document.createElement("button");
     eBtn.className = "tool-btn"; eBtn.textContent = "⚡ Energy analysis";
     eBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
-    eBtn.onclick = async () => {
-      anOut.textContent = "analyzing envelope…";
+    eBtn.onclick = () => withLoading(container, "Analyzing building envelope", async () => {
       const e = await api.energy(projectId!);
       anOut.innerHTML = `<b>EUI ${e.eui_kwh_m2_yr} kWh/m²·yr</b><br>` +
         `Heating ${e.loads.design_heating_kw} kW · Cooling ${e.loads.design_cooling_kw} kW<br>` +
         `UA ${e.ua_w_per_k.total} W/K · annual ${e.annual_kwh.total.toLocaleString()} kWh<br>` +
         `floor ${e.areas_m2.conditioned_floor_area} m² · WWR ${e.areas_m2.window_wall_ratio}`;
-    };
+      toast(`Energy: EUI ${e.eui_kwh_m2_yr} kWh/m²·yr`, "success");
+    });
     const mBtn = document.createElement("button");
     mBtn.className = "tool-btn"; mBtn.textContent = "⚙ MEP inventory";
     mBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
@@ -615,19 +618,36 @@ async function startup() {
   }
   // load the chosen project's model frag(s) from public/
   const frags = projectName ? fragsForProject(projectName) : [["/school_str.frag", "school-STR"], ["/school_arq.frag", "school-ARQ"]];
-  for (const [file, id] of frags) {
-    try {
+  await withLoading(container, `Loading ${projectName || "model"}`, async () => {
+    for (const [file, id] of frags) {
       const res = await fetch(file);
       if (res.ok) await loader.loadFragments(await res.arrayBuffer(), id);
-    } catch { /* discipline frag not present */ }
-  }
-  await fitToModels();
+    }
+    await fitToModels();
+  });
   if (projectId) {
     try { await buildPanels(); }
     catch (e) { console.warn("panels:", e); setStatus("connected (no properties index for this project)"); }
   }
   buildToolsPanel();  // always render Tools, even if the data panels fail
 }
+
+// ---- keyboard shortcuts -----------------------------------------------------
+const SHORTCUTS = "F fit · Esc clear · M dist · A area · S section · H show all · ? help";
+window.addEventListener("keydown", (e) => {
+  const t = e.target as HTMLElement;
+  if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;  // don't hijack typing
+  switch (e.key.toLowerCase()) {
+    case "f": fitToModels(); break;
+    case "escape": selectMap(null); break;
+    case "m": measure.setMode(measure.mode === "length" ? "off" : "length"); setStatus(`measure: ${measure.mode}`); break;
+    case "a": measure.setMode(measure.mode === "area" ? "off" : "area"); setStatus(`measure: ${measure.mode}`); break;
+    case "s": section.enabled = !section.enabled; setStatus(`section ${section.enabled ? "on (dbl-click face)" : "off"}`); break;
+    case "h": visibility.showAll(); colorize.reset(); break;
+    case "?": toast(SHORTCUTS, "info", 6000); break;
+    default: return;
+  }
+});
 
 // debug hook for automated/preview testing
 (window as unknown as Record<string, unknown>).__viewer = { viewer, loader, fitToModels, selectByGuid, THREE };
