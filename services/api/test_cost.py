@@ -67,8 +67,21 @@ with TestClient(app) as c:
     pdf = c.get(f"/projects/{pid}/cost/g702.pdf", params={"app_no": 2}).content
     assert pdf[:5] == b"%PDF-" and len(pdf) > 1500, len(pdf)
 
+    # ---- eTicket T&M builder (priced from rate tables) ----------------------
+    c.post(f"/projects/{pid}/modules/labor_rate", json={"data": {"trade": "Carpenter", "rate": 62.5}})
+    c.post(f"/projects/{pid}/modules/equipment_rate", json={"data": {"equipment": "Lift", "rate": 30}})
+    et = c.post(f"/projects/{pid}/modules/eticket", json={"data": {"subject": "Extra work", "work_date": "2026-07-10"}}).json()
+    tm = c.post(f"/projects/{pid}/cost/tm", json={"eticket_id": et["id"], "lines": [
+        {"type": "labor", "name": "Carpenter", "qty": 16},
+        {"type": "equipment", "name": "Lift", "qty": 8},
+        {"type": "material", "name": "Lumber", "rate": 1200, "qty": 1}]}).json()
+    assert tm["labor_total"] == 1000.0 and tm["equipment_total"] == 240.0 and tm["grand_total"] == 2440.0, tm
+    et2 = c.get(f"/projects/{pid}/modules/eticket/{et['id']}").json()
+    assert et2["data"]["labor_total"] == 1000.0 and len(et2["data"]["tm_lines"]) == 3
+
     print("COST OK")
     print(f"  G703 totals: scheduled={t['scheduled']:,} completed={t['completed']:,} retainage={t['retainage']:,}")
     print(f"  G702 current payment due: ${g7['line8_current_payment_due']:,.2f}  contract-to-date ${g7['line3_contract_sum_to_date']:,.2f}")
     print(f"  Summary: budget ${s['budget']:,} committed ${s['committed']:,} actual ${s['actual']:,} over/under ${s['projected_over_under']:,}")
     print(f"  G702 PDF: {len(pdf)} bytes")
+    print(f"  eTicket T&M: labor ${tm['labor_total']:,} + equip ${tm['equipment_total']:,} + material -> grand ${tm['grand_total']:,}")

@@ -93,6 +93,43 @@ def g702(db: Session, pid: str, app_no: int = 1, period: str | None = None) -> d
     }
 
 
+_RATE_LOOKUP = {  # tm line type -> (rate module, name field)
+    "labor": ("labor_rate", "trade"),
+    "material": ("material_rate", "material"),
+    "equipment": ("equipment_rate", "equipment"),
+}
+
+
+def _rate_for(db: Session, pid: str, line_type: str, name: str) -> float:
+    mod, name_field = _RATE_LOOKUP.get(line_type, (None, None))
+    if not mod or mod not in me.TABLES:
+        return 0.0
+    for r in _records(db, mod, pid):
+        if str(r["data"].get(name_field, "")).lower() == str(name).lower():
+            return _n(r["data"].get("rate"))
+    return 0.0
+
+
+def price_tm(db: Session, pid: str, lines: list[dict]) -> dict[str, Any]:
+    """eTicket T&M builder: price each line from the project rate tables (or an explicit
+    rate), compute per-type subtotals and a grand total."""
+    priced = []
+    subtotals = {"labor": 0.0, "material": 0.0, "equipment": 0.0}
+    for ln in lines:
+        lt = (ln.get("type") or "labor").lower()
+        qty = _n(ln.get("qty"))
+        rate = _n(ln.get("rate")) or _rate_for(db, pid, lt, ln.get("name", ""))
+        amount = round(rate * qty, 2)
+        subtotals[lt] = subtotals.get(lt, 0.0) + amount
+        priced.append({"type": lt, "name": ln.get("name"), "qty": qty,
+                       "rate": rate, "amount": amount})
+    subtotals = {k: round(v, 2) for k, v in subtotals.items()}
+    grand = round(sum(subtotals.values()), 2)
+    return {"lines": priced, "labor_total": subtotals.get("labor", 0.0),
+            "material_total": subtotals.get("material", 0.0),
+            "equipment_total": subtotals.get("equipment", 0.0), "grand_total": grand}
+
+
 def summary(db: Session, pid: str) -> dict[str, Any]:
     """Cost Summary roll-up: budget vs committed vs actual vs forecast, with over/under."""
     sov = g703(db, pid)["totals"]

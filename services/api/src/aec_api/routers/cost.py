@@ -7,7 +7,10 @@ import io
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
+from fastapi import Body
+
 from .. import cost
+from .. import modules as me
 from ..db import get_db
 from ..models import Project
 from ..rbac import require_role
@@ -29,6 +32,20 @@ def g702(pid: str, app_no: int = 1, period: str | None = None,
 @router.get("/projects/{pid}/cost/summary")
 def summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     return cost.summary(db, pid)
+
+
+@router.post("/projects/{pid}/cost/tm")
+def price_tm(pid: str, eticket_id: str = Body(...), lines: list[dict] = Body(...),
+             db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
+    """Price T&M line items from the rate tables and write the totals back onto the eTicket."""
+    result = cost.price_tm(db, pid, lines)
+    me.update_record(db, "eticket", pid, eticket_id, {
+        "tm_lines": result["lines"],
+        "labor_total": result["labor_total"],
+        "material_total": result["material_total"],
+        "equipment_total": result["equipment_total"],
+    }, user, None)
+    return result
 
 
 @router.get("/projects/{pid}/cost/g702.pdf")

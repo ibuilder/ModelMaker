@@ -89,9 +89,15 @@ export class PortalUI {
     this.root.innerHTML = "";
     this.root.appendChild(this.bar(`New ${m.name}`, () => this.openModule(m)));
     const inputs: Record<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> = {};
+    const sigs: Record<string, () => string> = {};   // signature field getters (data-URI)
     for (const f of m.fields) {
       const wrap = document.createElement("label"); wrap.className = "portal-field";
       wrap.textContent = f.label + (f.required ? " *" : "");
+      if (f.type === "signature") {
+        sigs[f.name] = this.signaturePad(wrap);
+        this.root.appendChild(wrap);
+        continue;
+      }
       let el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
       if (f.type === "textarea") el = document.createElement("textarea");
       else if (f.type === "select") {
@@ -110,7 +116,10 @@ export class PortalUI {
     save.className = "file-btn"; save.textContent = "Create"; save.style.marginTop = "8px";
     save.onclick = async () => {
       const data: Record<string, unknown> = {};
-      for (const f of m.fields) { const v = inputs[f.name].value; if (v) data[f.name] = f.type === "number" ? Number(v) : v; }
+      for (const f of m.fields) {
+        if (f.type === "signature") { const s = sigs[f.name]?.(); if (s) data[f.name] = s; continue; }
+        const v = inputs[f.name].value; if (v) data[f.name] = f.type === "number" ? Number(v) : v;
+      }
       const body: Record<string, unknown> = { data };
       if (m.pinnable && pinCb.checked) {
         body.anchor = this.host.anchorPoint();
@@ -148,7 +157,12 @@ export class PortalUI {
     for (const f of m.fields) {
       const v = r.data[f.name];
       if (v === undefined || v === "") continue;
-      fields.insertAdjacentHTML("beforeend", `<div class="k">${f.label}</div><div class="v">${v}</div>`);
+      if (f.type === "signature") {
+        fields.insertAdjacentHTML("beforeend",
+          `<div class="k">${f.label}</div><div class="v"><img src="${v}" style="max-width:200px;border:1px solid var(--line);background:#fff"/></div>`);
+      } else {
+        fields.insertAdjacentHTML("beforeend", `<div class="k">${f.label}</div><div class="v">${v}</div>`);
+      }
     }
     this.root.appendChild(fields);
 
@@ -212,6 +226,25 @@ export class PortalUI {
       e.textContent = `${(a.ts || "").slice(0, 16).replace("T", " ")} · ${a.actor ?? ""} · ${a.action}`;
       this.root.appendChild(e);
     }
+  }
+
+  /** Draw-to-sign canvas pad; returns a getter for the signature data-URI ("" if blank). */
+  private signaturePad(wrap: HTMLElement): () => string {
+    const cv = document.createElement("canvas");
+    cv.width = 240; cv.height = 90;
+    cv.style.cssText = "display:block;margin-top:4px;border:1px solid var(--line);background:#fff;border-radius:4px;touch-action:none";
+    const ctx = cv.getContext("2d")!;
+    ctx.strokeStyle = "#111"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    let drawing = false, dirty = false;
+    cv.onpointerdown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
+    cv.onpointermove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); dirty = true; } };
+    cv.onpointerup = () => (drawing = false);
+    cv.onpointerleave = () => (drawing = false);
+    const clear = document.createElement("button");
+    clear.type = "button"; clear.className = "tool-btn"; clear.textContent = "Clear"; clear.style.marginTop = "4px";
+    clear.onclick = () => { ctx.clearRect(0, 0, cv.width, cv.height); dirty = false; };
+    wrap.append(cv, clear);
+    return () => (dirty ? cv.toDataURL("image/png") : "");
   }
 
   private bar(title: string, back: () => void): HTMLElement {
