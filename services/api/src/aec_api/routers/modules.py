@@ -28,9 +28,16 @@ def list_modules():
     return [
         {"key": m["key"], "name": m["name"], "section": m.get("section"),
          "icon": m.get("icon"), "pinnable": m.get("pinnable", False),
-         "fields": m.get("fields", []), "workflow": m.get("workflow", {})}
+         "fields": m.get("fields", []), "workflow": m.get("workflow", {}),
+         "relations": m.get("relations", [])}
         for m in mod_engine.REGISTRY.values()
     ]
+
+
+@router.get("/projects/{pid}/my-work")
+def my_work(pid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
+    """Cross-module work queue for the current user (assigned + ball-in-court)."""
+    return mod_engine.my_work(db, pid, user, _party(pid, db, user))
 
 
 @router.get("/projects/{pid}/modules/{key}")
@@ -54,6 +61,14 @@ def export_csv(pid: str, key: str, db: Session = Depends(get_db),
                     headers={"Content-Disposition": f'attachment; filename="{key}.csv"'})
 
 
+# NOTE: must precede the /{rid} route so "board" isn't captured as a record id.
+@router.get("/projects/{pid}/modules/{key}/board")
+def module_board(pid: str, key: str, db: Session = Depends(get_db),
+                 _: str = Depends(require_role("viewer"))):
+    """Records grouped by workflow state — kanban board."""
+    return mod_engine.board(db, key, pid)
+
+
 @router.get("/projects/{pid}/modules/{key}/{rid}")
 def get_record(pid: str, key: str, rid: str, db: Session = Depends(get_db),
                _: str = Depends(require_role("viewer"))):
@@ -68,6 +83,20 @@ def get_record(pid: str, key: str, rid: str, db: Session = Depends(get_db),
 def update_record(pid: str, key: str, rid: str, data: dict = Body(...),
                   db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
     return mod_engine.update_record(db, key, pid, rid, data, user, _party(pid, db, user))
+
+
+@router.delete("/projects/{pid}/modules/{key}/{rid}")
+def delete_record(pid: str, key: str, rid: str, db: Session = Depends(get_db),
+                  user: str = Depends(require_role("editor"))):
+    """Delete a record (editor+). Removes its activity/comments too."""
+    return mod_engine.delete_record(db, key, pid, rid, user, _party(pid, db, user))
+
+
+@router.get("/projects/{pid}/modules/{key}/{rid}/related")
+def related_records(pid: str, key: str, rid: str, db: Session = Depends(get_db),
+                    _: str = Depends(require_role("viewer"))):
+    """Outgoing references + incoming records that point at this one."""
+    return mod_engine.related_records(db, key, pid, rid)
 
 
 @router.post("/projects/{pid}/modules/{key}/{rid}/transition")

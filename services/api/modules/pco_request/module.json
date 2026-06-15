@@ -2,22 +2,77 @@
   "key": "pco_request",
   "name": "PCO Requests",
   "section": "Change Management",
-  "icon": "⚑",
+  "icon": "\u2691",
   "ref_prefix": "PCO",
   "title_field": "subject",
   "pinnable": true,
   "fields": [
-    {"name": "subject", "label": "Subject", "type": "text", "required": true},
-    {"name": "description", "label": "Description of Change", "type": "textarea", "required": true},
-    {"name": "origin", "label": "Origin", "type": "select", "options": ["Field Condition", "RFI", "Design Change", "Owner Request"]},
-    {"name": "rough_cost", "label": "Rough Order Cost", "type": "number"}
+    {
+      "name": "subject",
+      "label": "Subject",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "description",
+      "label": "Description of Change",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "origin",
+      "label": "Origin",
+      "type": "select",
+      "options": [
+        "Field Condition",
+        "RFI",
+        "Design Change",
+        "Owner Request"
+      ]
+    },
+    {
+      "name": "rough_cost",
+      "label": "Rough Order Cost",
+      "type": "number"
+    },
+    {
+      "name": "source_rfi",
+      "label": "Source RFI",
+      "type": "reference",
+      "module": "rfi"
+    },
+    {
+      "name": "change_event",
+      "label": "Change Event",
+      "type": "reference",
+      "module": "change_event"
+    }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "submitted", "closed"],
+    "states": [
+      "draft",
+      "submitted",
+      "closed"
+    ],
     "transitions": [
-      {"from": "draft", "to": "submitted", "action": "submit", "party": ["GC", "Subcontractor"]},
-      {"from": "submitted", "to": "closed", "action": "close", "party": ["GC"]}
+      {
+        "from": "draft",
+        "to": "submitted",
+        "action": "submit",
+        "party": [
+          "GC",
+          "Subcontractor"
+        ]
+      },
+      {
+        "from": "submitted",
+        "to": "closed",
+        "action": "close",
+        "party": [
+          "GC"
+        ]
+      }
     ]
   }
 }

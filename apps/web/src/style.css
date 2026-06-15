@@ -238,6 +238,21 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 .portal-kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 8px 0; font-size: 12px; }
 .portal-kv .k { color: var(--muted); }
 .portal-act { font-size: 11px; color: var(--muted); padding: 2px 0; border-bottom: 1px solid #2b2d31; }
+.ref-link { color: var(--accent); cursor: pointer; text-decoration: none; }
+.ref-link:hover { text-decoration: underline; }
+
+/* kanban / scrum board */
+.kanban { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0; align-items: flex-start; }
+.kan-col { flex: 0 0 200px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px; min-height: 80px; }
+.kan-col.over { border-color: var(--accent); background: #2f343d; }
+.kan-head { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 2px 4px 6px; display: flex; justify-content: space-between; }
+.kan-head .count { background: var(--panel); border-radius: 8px; padding: 0 6px; color: var(--text); }
+.kan-card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; margin-bottom: 6px; cursor: grab; }
+.kan-card:hover { border-color: var(--accent); }
+.kan-card:active { cursor: grabbing; }
+.kc-ref { font-size: 11px; color: var(--accent); font-weight: 600; }
+.kc-title { font-size: 12px; }
+.kc-asg { font-size: 10px; color: var(--muted); margin-top: 2px; }
 .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
 .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 6px; text-align: center; }
 .kpi-v { font-size: 20px; font-weight: 800; color: var(--accent); }

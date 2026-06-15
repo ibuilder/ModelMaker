@@ -7,18 +7,71 @@
   "title_field": "subject",
   "pinnable": false,
   "fields": [
-    {"name": "subject", "label": "Subject", "type": "text", "required": true},
-    {"name": "amount", "label": "Proposed Amount", "type": "number", "required": true},
-    {"name": "breakdown", "label": "Cost Breakdown", "type": "textarea"}
+    {
+      "name": "subject",
+      "label": "Subject",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "amount",
+      "label": "Proposed Amount",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "breakdown",
+      "label": "Cost Breakdown",
+      "type": "textarea"
+    },
+    {
+      "name": "pco",
+      "label": "Source PCO",
+      "type": "reference",
+      "module": "pco_request"
+    }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "submitted", "reconciled", "closed"],
+    "states": [
+      "draft",
+      "submitted",
+      "reconciled",
+      "closed"
+    ],
     "transitions": [
-      {"from": "draft", "to": "submitted", "action": "submit", "party": ["Subcontractor"]},
-      {"from": "submitted", "to": "reconciled", "action": "reconcile", "party": ["GC"]},
-      {"from": "submitted", "to": "draft", "action": "return", "party": ["GC"]},
-      {"from": "reconciled", "to": "closed", "action": "close", "party": ["GC"]}
+      {
+        "from": "draft",
+        "to": "submitted",
+        "action": "submit",
+        "party": [
+          "Subcontractor"
+        ]
+      },
+      {
+        "from": "submitted",
+        "to": "reconciled",
+        "action": "reconcile",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "submitted",
+        "to": "draft",
+        "action": "return",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "reconciled",
+        "to": "closed",
+        "action": "close",
+        "party": [
+          "GC"
+        ]
+      }
     ]
   }
 }

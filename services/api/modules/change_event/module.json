@@ -17,6 +17,12 @@
       "name": "rom",
       "label": "ROM Cost",
       "type": "number"
+    },
+    {
+      "name": "source_rfi",
+      "label": "Source RFI",
+      "type": "reference",
+      "module": "rfi"
     }
   ],
   "workflow": {

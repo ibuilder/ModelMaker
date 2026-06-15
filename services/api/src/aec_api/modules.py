@@ -28,6 +28,14 @@ MODULES_DIR = Path(__file__).resolve().parents[2] / "modules"
 
 REGISTRY: dict[str, dict] = {}
 TABLES: dict[str, Table] = {}
+# reverse index of reference fields: target_module -> [(source_module, field_name, label)]
+# lets a record show "what points at me" without scanning every module.
+REVERSE_REFS: dict[str, list[tuple[str, str, str]]] = {}
+
+
+def reference_fields(mod: dict) -> list[dict]:
+    """Fields that point at another module's record (type == 'reference')."""
+    return [f for f in mod.get("fields", []) if f.get("type") == "reference" and f.get("module")]
 
 
 def _now() -> datetime:
@@ -65,6 +73,12 @@ def load_registry() -> None:
         REGISTRY[key] = mod
         if key not in TABLES:
             TABLES[key] = _table(key)
+    # build the reverse-reference index once everything is registered
+    REVERSE_REFS.clear()
+    for key, mod in REGISTRY.items():
+        for f in reference_fields(mod):
+            REVERSE_REFS.setdefault(f["module"], []).append(
+                (key, f["name"], mod.get("name", key)))
 
 
 def get_module(key: str) -> dict:
@@ -169,7 +183,101 @@ def get_record(db: Session, key: str, project_id: str, rid: str) -> dict:
             RecordComment.module == key, RecordComment.record_id == rid)
         .order_by(RecordComment.created_at).all()
     ]
+    # resolve reference fields to a clickable brief {module, id, ref, title}
+    mod = get_module(key)
+    data = rec.get("data") or {}
+    refs: dict[str, dict] = {}
+    for f in reference_fields(mod):
+        tid = data.get(f["name"])
+        if tid:
+            b = _brief(db, f["module"], project_id, tid)
+            if b:
+                refs[f["name"]] = b
+    rec["data_refs"] = refs
     return rec
+
+
+def _brief(db: Session, key: str, project_id: str, rid: str) -> dict | None:
+    """Lightweight record summary for relation links (no activity/comments)."""
+    t = TABLES.get(key)
+    if t is None:
+        return None
+    r = db.execute(select(t.c.id, t.c.ref, t.c.title, t.c.workflow_state)
+                   .where(t.c.id == rid, t.c.project_id == project_id)).first()
+    if not r:
+        return None
+    m = r._mapping
+    return {"module": key, "module_name": REGISTRY.get(key, {}).get("name", key),
+            "id": m["id"], "ref": m["ref"], "title": m["title"], "state": m["workflow_state"]}
+
+
+def related_records(db: Session, key: str, project_id: str, rid: str) -> dict:
+    """Outgoing (this record's reference fields) + incoming (records pointing here)."""
+    mod = get_module(key)
+    rec = get_record(db, key, project_id, rid)
+    data = rec.get("data") or {}
+    outgoing = []
+    for f in reference_fields(mod):
+        tid = data.get(f["name"])
+        b = _brief(db, f["module"], project_id, tid) if tid else None
+        if b:
+            outgoing.append({"label": f["label"], **b})
+    incoming = []
+    for src_key, field, src_name in REVERSE_REFS.get(key, []):
+        t = TABLES[src_key]
+        for r in db.execute(select(t.c.id, t.c.ref, t.c.title, t.c.workflow_state, t.c.data)
+                            .where(t.c.project_id == project_id)):
+            m = r._mapping
+            if (m["data"] or {}).get(field) == rid:
+                incoming.append({"module": src_key, "module_name": src_name, "id": m["id"],
+                                 "ref": m["ref"], "title": m["title"], "state": m["workflow_state"]})
+    return {"outgoing": outgoing, "incoming": incoming}
+
+
+def delete_record(db: Session, key: str, project_id: str, rid: str, actor: str,
+                  party: str | None) -> dict:
+    """Delete a record (and its activity/comments). Returns {deleted, ref}."""
+    t = TABLES[key]
+    rec = get_record(db, key, project_id, rid)  # 404 if missing
+    db.execute(t.delete().where(t.c.id == rid, t.c.project_id == project_id))
+    db.query(RecordActivity).filter(RecordActivity.module == key,
+                                    RecordActivity.record_id == rid).delete()
+    db.query(RecordComment).filter(RecordComment.module == key,
+                                   RecordComment.record_id == rid).delete()
+    db.commit()
+    return {"deleted": True, "ref": rec["ref"]}
+
+
+def board(db: Session, key: str, project_id: str) -> dict:
+    """Records grouped by workflow state — drives the kanban board."""
+    mod = get_module(key)
+    states = mod.get("workflow", {}).get("states", [])
+    rows = list_records(db, key, project_id, limit=100000)
+    columns = {s: [] for s in states}
+    for r in rows:
+        columns.setdefault(r["workflow_state"], []).append(
+            {"id": r["id"], "ref": r["ref"], "title": r["title"],
+             "assignee": r.get("assignee"), "party_owner": r.get("party_owner")})
+    return {"states": states or list(columns.keys()),
+            "columns": columns,
+            "transitions": mod.get("workflow", {}).get("transitions", [])}
+
+
+def my_work(db: Session, project_id: str, user: str, party: str | None) -> list[dict]:
+    """Cross-module: records assigned to me, plus those where my party can act now."""
+    out = []
+    for key, mod in REGISTRY.items():
+        t = TABLES[key]
+        for r in db.execute(select(t).where(t.c.project_id == project_id)):
+            m = r._mapping
+            mine = m["assignee"] == user
+            actionable = bool(available_actions(mod, m["workflow_state"], party))
+            if mine or actionable:
+                out.append({"module": key, "module_name": mod.get("name", key),
+                            "icon": mod.get("icon", "•"), "id": m["id"], "ref": m["ref"],
+                            "title": m["title"], "state": m["workflow_state"],
+                            "assignee": m["assignee"], "reason": "assigned" if mine else "ball-in-court"})
+    return out
 
 
 def add_comment(db: Session, key: str, project_id: str, rid: str, text: str,

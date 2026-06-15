@@ -38,21 +38,41 @@ export interface Vec3 { x: number; y: number; z: number; }
 
 export interface ModuleField {
   name: string; label: string; type: string; required?: boolean; options?: string[];
+  module?: string;   // for type:"reference" — the target module key
 }
 export interface ModuleDef {
   key: string; name: string; section: string; icon: string; pinnable: boolean;
   fields: ModuleField[];
-  workflow: { initial: string; states: string[]; transitions: { from: string; to: string; action: string; party: string[] }[] };
+  workflow: { initial: string; states: string[]; transitions: WorkflowTransition[] };
+  relations?: { label: string; module: string }[];
+}
+export interface WorkflowTransition { from: string; to: string; action: string; party: string[] }
+export interface RecordBrief {
+  module: string; module_name: string; id: string; ref: string; title: string | null; state: string;
 }
 export interface ModuleRecord {
   id: string; ref: string; title: string | null; workflow_state: string;
-  party_owner: string | null; created_by: string | null; created_at: string;
+  party_owner: string | null; assignee?: string | null; created_by: string | null; created_at: string;
   anchor: Vec3 | null; element_guids: string[] | null;
   links: { module: string; id: string; ref: string }[];
   data: Record<string, unknown>;
+  data_refs?: Record<string, RecordBrief>;   // resolved reference fields
   activity?: { ts: string; actor: string; party: string; action: string; detail: unknown }[];
   comments?: { author: string | null; text: string; created_at: string }[];
   available_actions?: { action: string; to: string; party: string[] }[];
+}
+export interface RelatedRecords {
+  outgoing: (RecordBrief & { label: string })[];
+  incoming: RecordBrief[];
+}
+export interface ModuleBoard {
+  states: string[];
+  columns: Record<string, { id: string; ref: string; title: string | null; assignee: string | null; party_owner: string | null }[]>;
+  transitions: WorkflowTransition[];
+}
+export interface WorkItem {
+  module: string; module_name: string; icon: string; id: string; ref: string;
+  title: string | null; state: string; assignee: string | null; reason: string;
 }
 
 export interface ProformaResult {
@@ -238,6 +258,23 @@ export class ApiClient {
   addComment(pid: string, key: string, rid: string, text: string) {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/comments`, {
       method: "POST", body: JSON.stringify({ text }) });
+  }
+  updateModuleRecord(pid: string, key: string, rid: string, data: Record<string, unknown>) {
+    return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}`, {
+      method: "PATCH", body: JSON.stringify(data) });
+  }
+  deleteModuleRecord(pid: string, key: string, rid: string) {
+    return this.json<{ deleted: boolean; ref: string }>(`/projects/${pid}/modules/${key}/${rid}`, {
+      method: "DELETE" });
+  }
+  relatedRecords(pid: string, key: string, rid: string) {
+    return this.json<RelatedRecords>(`/projects/${pid}/modules/${key}/${rid}/related`);
+  }
+  moduleBoard(pid: string, key: string) {
+    return this.json<ModuleBoard>(`/projects/${pid}/modules/${key}/board`);
+  }
+  myWork(pid: string) {
+    return this.json<WorkItem[]>(`/projects/${pid}/my-work`);
   }
 
   // cost / financials (GC portal)

@@ -2,24 +2,84 @@
   "key": "cor",
   "name": "Change Order Requests",
   "section": "Change Management",
-  "icon": "✚",
+  "icon": "\u271a",
   "ref_prefix": "COR",
   "title_field": "subject",
   "pinnable": true,
   "fields": [
-    {"name": "subject", "label": "Subject", "type": "text", "required": true},
-    {"name": "amount", "label": "Amount", "type": "number", "required": true},
-    {"name": "schedule_days", "label": "Schedule Days", "type": "number"},
-    {"name": "justification", "label": "Justification", "type": "textarea"}
+    {
+      "name": "subject",
+      "label": "Subject",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "amount",
+      "label": "Amount",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "schedule_days",
+      "label": "Schedule Days",
+      "type": "number"
+    },
+    {
+      "name": "justification",
+      "label": "Justification",
+      "type": "textarea"
+    },
+    {
+      "name": "pco",
+      "label": "Source PCO",
+      "type": "reference",
+      "module": "pco_request"
+    }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "submitted", "approved", "rejected", "executed"],
+    "states": [
+      "draft",
+      "submitted",
+      "approved",
+      "rejected",
+      "executed"
+    ],
     "transitions": [
-      {"from": "draft", "to": "submitted", "action": "submit", "party": ["GC"]},
-      {"from": "submitted", "to": "approved", "action": "approve", "party": ["Owner", "OwnersRep"]},
-      {"from": "submitted", "to": "rejected", "action": "reject", "party": ["Owner", "OwnersRep"]},
-      {"from": "approved", "to": "executed", "action": "execute", "party": ["GC"]}
+      {
+        "from": "draft",
+        "to": "submitted",
+        "action": "submit",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "submitted",
+        "to": "approved",
+        "action": "approve",
+        "party": [
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "submitted",
+        "to": "rejected",
+        "action": "reject",
+        "party": [
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "approved",
+        "to": "executed",
+        "action": "execute",
+        "party": [
+          "GC"
+        ]
+      }
     ]
   }
 }

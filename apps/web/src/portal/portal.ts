@@ -1,4 +1,4 @@
-import type { ApiClient, ModuleDef } from "../api/client";
+import type { ApiClient, ModuleDef, ModuleRecord } from "../api/client";
 
 /**
  * GC portal UI — one config-driven engine renders every module's list / form / record pages
@@ -103,10 +103,13 @@ export class PortalUI {
     const newBtn = document.createElement("button");
     newBtn.className = "tool-btn"; newBtn.textContent = "+ New";
     newBtn.onclick = () => this.renderForm(m);
+    const boardBtn = document.createElement("button");
+    boardBtn.className = "tool-btn"; boardBtn.textContent = "▦ Board";
+    boardBtn.onclick = () => this.renderBoard(m);
     const csvBtn = document.createElement("button");
     csvBtn.className = "tool-btn"; csvBtn.textContent = "↓ CSV";
     csvBtn.onclick = () => window.open(this.host.api.url(`/projects/${pid}/modules/${m.key}/export.csv`), "_blank");
-    actions.append(newBtn, csvBtn);
+    actions.append(newBtn, boardBtn, csvBtn);
     this.root.appendChild(actions);
 
     if (!records.length) {
@@ -128,12 +131,23 @@ export class PortalUI {
     this.root.appendChild(table);
   }
 
-  // --- create form (fields from module.json) ---------------------------------
-  private renderForm(m: ModuleDef) {
+  // --- create / edit form (fields from module.json) --------------------------
+  private async renderForm(m: ModuleDef, existing?: ModuleRecord) {
+    const pid = this.host.projectId()!;
+    const editing = !!existing;
+    // reference fields need their target module's records as options — fetch up front
+    const refOpts = new Map<string, { id: string; label: string }[]>();
+    await Promise.all(m.fields.filter((f) => f.type === "reference" && f.module).map(async (f) => {
+      const recs = await this.host.api.moduleRecords(pid, f.module!);
+      refOpts.set(f.name, recs.map((r) => ({ id: r.id, label: `${r.ref} — ${r.title ?? ""}` })));
+    }));
+
     this.root.innerHTML = "";
-    this.root.appendChild(this.bar(`New ${m.name}`, () => this.openModule(m)));
+    this.root.appendChild(this.bar(`${editing ? "Edit" : "New"} ${m.name}`,
+      () => (editing ? this.openRecord(m, existing!.id) : this.openModule(m))));
     const inputs: Record<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> = {};
     const sigs: Record<string, () => string> = {};   // signature field getters (data-URI)
+    const cur = (n: string) => (existing?.data?.[n] as string | number | undefined);
     for (const f of m.fields) {
       const wrap = document.createElement("label"); wrap.className = "portal-field";
       wrap.textContent = f.label + (f.required ? " *" : "");
@@ -143,37 +157,60 @@ export class PortalUI {
         continue;
       }
       let el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-      if (f.type === "textarea") el = document.createElement("textarea");
+      if (f.type === "textarea") { el = document.createElement("textarea"); el.value = String(cur(f.name) ?? ""); }
       else if (f.type === "select") {
         el = document.createElement("select");
         for (const o of f.options ?? []) { const opt = document.createElement("option"); opt.value = opt.textContent = o; el.appendChild(opt); }
-      } else { el = document.createElement("input"); (el as HTMLInputElement).type = f.type === "number" ? "number" : f.type === "date" ? "date" : "text"; }
+        if (cur(f.name) != null) el.value = String(cur(f.name));
+      } else if (f.type === "reference") {
+        el = document.createElement("select");
+        const none = document.createElement("option"); none.value = ""; none.textContent = `— none —`; el.appendChild(none);
+        for (const o of refOpts.get(f.name) ?? []) { const opt = document.createElement("option"); opt.value = o.id; opt.textContent = o.label; el.appendChild(opt); }
+        if (cur(f.name) != null) el.value = String(cur(f.name));
+      } else { el = document.createElement("input"); (el as HTMLInputElement).type = f.type === "number" ? "number" : f.type === "date" ? "date" : "text"; (el as HTMLInputElement).value = String(cur(f.name) ?? ""); }
       inputs[f.name] = el; wrap.appendChild(el); this.root.appendChild(wrap);
     }
-    // pin-to-model option
-    const pinLabel = document.createElement("label"); pinLabel.className = "portal-field";
+    // assignee (drives the cross-module "My work" queue) — set at creation
+    const asg = document.createElement("input"); asg.type = "text"; asg.placeholder = "user id";
+    if (!editing) {
+      const asgWrap = document.createElement("label"); asgWrap.className = "portal-field";
+      asgWrap.textContent = "Assignee";
+      asgWrap.appendChild(asg); this.root.appendChild(asgWrap);
+    }
+
+    // pin-to-model option (create only)
     const pinCb = document.createElement("input"); pinCb.type = "checkbox"; pinCb.checked = m.pinnable;
-    pinLabel.append(pinCb, document.createTextNode(" Pin to last-clicked model point"));
-    if (m.pinnable) this.root.appendChild(pinLabel);
+    if (m.pinnable && !editing) {
+      const pinLabel = document.createElement("label"); pinLabel.className = "portal-field";
+      pinLabel.append(pinCb, document.createTextNode(" Pin to last-clicked model point"));
+      this.root.appendChild(pinLabel);
+    }
 
     const save = document.createElement("button");
-    save.className = "file-btn"; save.textContent = "Create"; save.style.marginTop = "8px";
+    save.className = "file-btn"; save.textContent = editing ? "Save" : "Create"; save.style.marginTop = "8px";
     save.onclick = async () => {
       const data: Record<string, unknown> = {};
       for (const f of m.fields) {
         if (f.type === "signature") { const s = sigs[f.name]?.(); if (s) data[f.name] = s; continue; }
         const v = inputs[f.name].value; if (v) data[f.name] = f.type === "number" ? Number(v) : v;
       }
-      const body: Record<string, unknown> = { data };
-      if (m.pinnable && pinCb.checked) {
-        body.anchor = this.host.anchorPoint();
-        const g = this.host.selectedGuid(); if (g) body.element_guids = [g];
-      }
       try {
-        const rec = await this.host.api.createModuleRecord(this.host.projectId()!, m.key, body);
-        this.host.setStatus(`created ${rec.ref}`);
-        if (body.anchor) this.host.onPinsChanged();
-        this.openRecord(m, rec.id);
+        if (editing) {
+          await this.host.api.updateModuleRecord(pid, m.key, existing!.id, data);
+          this.host.setStatus(`saved ${existing!.ref}`);
+          this.openRecord(m, existing!.id);
+        } else {
+          const body: Record<string, unknown> = { data };
+          if (asg.value.trim()) body.assignee = asg.value.trim();
+          if (m.pinnable && pinCb.checked) {
+            body.anchor = this.host.anchorPoint();
+            const g = this.host.selectedGuid(); if (g) body.element_guids = [g];
+          }
+          const rec = await this.host.api.createModuleRecord(pid, m.key, body);
+          this.host.setStatus(`created ${rec.ref}`);
+          if (body.anchor) this.host.onPinsChanged();
+          this.openRecord(m, rec.id);
+        }
       } catch (e) { this.host.setStatus(`error: ${(e as Error).message}`); }
     };
     this.root.appendChild(save);
@@ -191,17 +228,40 @@ export class PortalUI {
       `<div class="meta">status <span class="badge">${r.workflow_state}</span> · ${r.party_owner ?? ""}</div>`;
     this.root.appendChild(head);
 
+    const tools = document.createElement("div"); tools.style.cssText = "display:flex;gap:6px;margin:4px 0;flex-wrap:wrap";
+    const editBtn = document.createElement("button");
+    editBtn.className = "tool-btn"; editBtn.textContent = "✎ Edit";
+    editBtn.onclick = () => this.renderForm(m, r);
+    const delBtn = document.createElement("button");
+    delBtn.className = "tool-btn"; delBtn.textContent = "🗑 Delete";
+    delBtn.onclick = async () => {
+      if (!confirm(`Delete ${r.ref}? This cannot be undone.`)) return;
+      try { await this.host.api.deleteModuleRecord(pid, m.key, rid); this.host.setStatus(`deleted ${r.ref}`); this.host.onPinsChanged(); this.openModule(m); }
+      catch (e) { this.host.setStatus(`error: ${(e as Error).message}`); }
+    };
     const pdfBtn = document.createElement("button");
-    pdfBtn.className = "tool-btn"; pdfBtn.textContent = "↓ PDF"; pdfBtn.style.margin = "4px 0";
+    pdfBtn.className = "tool-btn"; pdfBtn.textContent = "↓ PDF";
     pdfBtn.onclick = () => window.open(this.host.api.url(`/projects/${pid}/modules/${m.key}/${rid}/pdf`), "_blank");
-    this.root.appendChild(pdfBtn);
+    tools.append(editBtn, delBtn, pdfBtn);
+    this.root.appendChild(tools);
 
-    // fields
+    // fields (reference fields render as clickable links to the target record)
     const fields = document.createElement("div"); fields.className = "portal-kv";
     for (const f of m.fields) {
       const v = r.data[f.name];
       if (v === undefined || v === "") continue;
-      if (f.type === "signature") {
+      if (f.type === "reference") {
+        const ref = r.data_refs?.[f.name];
+        const k = document.createElement("div"); k.className = "k"; k.textContent = f.label;
+        const vd = document.createElement("div"); vd.className = "v";
+        if (ref) {
+          const a = document.createElement("a"); a.href = "#"; a.className = "ref-link";
+          a.textContent = `${ref.ref} — ${ref.title ?? ""}`;
+          a.onclick = (e) => { e.preventDefault(); this.openByBrief(ref.module, ref.id); };
+          vd.appendChild(a);
+        } else vd.textContent = String(v);
+        fields.append(k, vd);
+      } else if (f.type === "signature") {
         fields.insertAdjacentHTML("beforeend",
           `<div class="k">${f.label}</div><div class="v"><img src="${v}" style="max-width:200px;border:1px solid var(--line);background:#fff"/></div>`);
       } else {
@@ -209,6 +269,11 @@ export class PortalUI {
       }
     }
     this.root.appendChild(fields);
+
+    // related records (outgoing references + incoming records that point here)
+    const relatedBox = document.createElement("div");
+    this.root.appendChild(relatedBox);
+    void this.renderRelated(relatedBox, m.key, rid);
 
     // anchor / linked elements
     if (r.element_guids?.length) {
@@ -270,6 +335,65 @@ export class PortalUI {
       e.textContent = `${(a.ts || "").slice(0, 16).replace("T", " ")} · ${a.actor ?? ""} · ${a.action}`;
       this.root.appendChild(e);
     }
+  }
+
+  /** Open a record given a module key + id (used by reference + related links). */
+  private openByBrief(moduleKey: string, id: string) {
+    const m = this.mods.find((x) => x.key === moduleKey);
+    if (m) this.openRecord(m, id);
+  }
+
+  /** Render the outgoing/incoming relation graph for a record into `box`. */
+  private async renderRelated(box: HTMLElement, key: string, rid: string) {
+    const pid = this.host.projectId()!;
+    let rel;
+    try { rel = await this.host.api.relatedRecords(pid, key, rid); }
+    catch { return; }
+    if (!rel.outgoing.length && !rel.incoming.length) return;
+    box.innerHTML = `<div class="section-title">Related</div>`;
+    const link = (label: string, b: { module: string; module_name: string; id: string; ref: string; title: string | null; state: string }) => {
+      const row = document.createElement("button"); row.className = "portal-mod";
+      row.innerHTML = `<span class="ic">↳</span> <b>${label}</b> ${b.ref} ${b.title ?? ""} <span class="badge">${b.state}</span>`;
+      row.onclick = () => this.openByBrief(b.module, b.id);
+      box.appendChild(row);
+    };
+    for (const o of rel.outgoing) link(o.label, o);
+    for (const i of rel.incoming) link(i.module_name, i);
+  }
+
+  // --- kanban / "scrum" board: columns by workflow state, drag to transition --
+  private async renderBoard(m: ModuleDef) {
+    const pid = this.host.projectId()!;
+    const data = await this.host.api.moduleBoard(pid, m.key);
+    this.root.innerHTML = "";
+    this.root.appendChild(this.bar(`${m.name} — board`, () => this.openModule(m)));
+    const board = document.createElement("div"); board.className = "kanban";
+    for (const state of data.states) {
+      const col = document.createElement("div"); col.className = "kan-col"; col.dataset.state = state;
+      col.innerHTML = `<div class="kan-head">${state} <span class="count">${(data.columns[state] ?? []).length}</span></div>`;
+      // drop target: on drop, find a transition from the card's state -> this column's state
+      col.ondragover = (e) => { e.preventDefault(); col.classList.add("over"); };
+      col.ondragleave = () => col.classList.remove("over");
+      col.ondrop = async (e) => {
+        e.preventDefault(); col.classList.remove("over");
+        const rid = e.dataTransfer?.getData("rid"); const from = e.dataTransfer?.getData("from");
+        if (!rid || from === state) return;
+        const tr = data.transitions.find((t) => t.from === from && t.to === state);
+        if (!tr) { this.host.setStatus(`no direct transition ${from} → ${state}`); return; }
+        try { await this.host.api.transitionRecord(pid, m.key, rid, tr.action); this.renderBoard(m); }
+        catch (err) { this.host.setStatus(`blocked: ${(err as Error).message}`); }
+      };
+      for (const c of data.columns[state] ?? []) {
+        const card = document.createElement("div"); card.className = "kan-card"; card.draggable = true;
+        card.innerHTML = `<div class="kc-ref">${c.ref}</div><div class="kc-title">${c.title ?? ""}</div>` +
+          (c.assignee ? `<div class="kc-asg">@${c.assignee}</div>` : "");
+        card.ondragstart = (e) => { e.dataTransfer?.setData("rid", c.id); e.dataTransfer?.setData("from", state); };
+        card.onclick = () => this.openRecord(m, c.id);
+        col.appendChild(card);
+      }
+      board.appendChild(col);
+    }
+    this.root.appendChild(board);
   }
 
   /** Draw-to-sign canvas pad; returns a getter for the signature data-URI ("" if blank). */
