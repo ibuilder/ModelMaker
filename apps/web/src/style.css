@@ -114,3 +114,4 @@ html, body, #app {
 .pin-punch { background: #ff8c00; }
 .pin-clash { background: #e0457b; }
 .pin-info { background: #6aa84f; }
+.pin-gc { background: #8e44ad; }   /* GC portal module records (RFI/PCO/COR…) */

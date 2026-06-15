@@ -36,6 +36,18 @@ export interface Viewpoint {
 
 export interface Vec3 { x: number; y: number; z: number; }
 
+export interface ModulePin {
+  module: string;
+  module_name: string;
+  icon: string;
+  id: string;
+  ref: string;
+  title: string | null;
+  status: string;
+  anchor: Vec3;
+  element_guids: string[] | null;
+}
+
 export class ApiClient {
   constructor(private baseUrl = "http://localhost:8000") {}
 
@@ -108,6 +120,17 @@ export class ApiClient {
   // 2D documentation
   drawingStoreys(pid: string) {
     return this.json<{ name: string; elevation: number }[]>(`/projects/${pid}/drawings/storeys`);
+  }
+
+  // GC portal modules + model pins
+  modules() {
+    return this.json<{ key: string; name: string; section: string; icon: string; pinnable: boolean }[]>(`/modules`);
+  }
+  modulePins(pid: string) {
+    return this.json<ModulePin[]>(`/projects/${pid}/module-pins`);
+  }
+  moduleRecords(pid: string, key: string) {
+    return this.json<Record<string, unknown>[]>(`/projects/${pid}/modules/${key}`);
   }
 
   // authoring round-trip (Phase 6)

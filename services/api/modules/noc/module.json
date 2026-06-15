@@ -1,0 +1,22 @@
+{
+  "key": "noc",
+  "name": "Notifications of Change",
+  "section": "Change Management",
+  "icon": "⚐",
+  "ref_prefix": "NOC",
+  "title_field": "subject",
+  "pinnable": true,
+  "fields": [
+    {"name": "subject", "label": "Subject", "type": "text", "required": true},
+    {"name": "description", "label": "Description", "type": "textarea"},
+    {"name": "direction", "label": "Owner Direction", "type": "select", "options": ["Proceed & Pricing", "Pricing Only", "Do Not Proceed"]}
+  ],
+  "workflow": {
+    "initial": "issued",
+    "states": ["issued", "returned", "closed"],
+    "transitions": [
+      {"from": "issued", "to": "returned", "action": "return_direction", "party": ["Owner", "OwnersRep"]},
+      {"from": "returned", "to": "closed", "action": "close", "party": ["GC"]}
+    ]
+  }
+}

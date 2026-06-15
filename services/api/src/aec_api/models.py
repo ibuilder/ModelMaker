@@ -33,13 +33,31 @@ class Project(Base):
 
 
 class ProjectMember(Base):
-    """Project-scoped role (guide §7/§10): viewer < reviewer < editor < admin."""
+    """Project-scoped roles. Two dimensions (GC portal):
+      - CRUD capability role: viewer < reviewer < editor < admin
+      - party role (workflow gate): GC | Owner | OwnersRep | Consultant | Subcontractor"""
     __tablename__ = "project_members"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     user: Mapped[str] = mapped_column(String, index=True)
     role: Mapped[str] = mapped_column(String, default="viewer")
+    party_role: Mapped[str | None] = mapped_column(String, nullable=True)
+    company: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class RecordActivity(Base):
+    """Per-record activity timeline shared by all GC modules (create/update/transition/link)."""
+    __tablename__ = "record_activity"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    module: Mapped[str] = mapped_column(String, index=True)
+    record_id: Mapped[str] = mapped_column(String, index=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    actor: Mapped[str | None] = mapped_column(String, nullable=True)
+    party: Mapped[str | None] = mapped_column(String, nullable=True)
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class Topic(Base):

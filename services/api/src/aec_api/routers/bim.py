@@ -27,7 +27,7 @@ def create_project(body: ProjectIn, db: Session = Depends(get_db),
     p = Project(name=body.name, origin=body.origin, source_ifc=body.source_ifc)
     db.add(p)
     db.flush()
-    rbac.grant(db, p.id, actor, "admin")  # creator becomes project admin
+    rbac.grant(db, p.id, actor, "admin", party_role="GC")  # creator: admin + GC party
     audit.record(db, action="project.create", actor=actor, method="POST",
                  path="/projects", detail={"name": body.name})
     db.commit()
@@ -38,23 +38,28 @@ def create_project(body: ProjectIn, db: Session = Depends(get_db),
 class MemberIn(BaseModel):
     user: str
     role: str
+    party_role: str | None = None
+    company: str | None = None
 
 
 @router.get("/projects/{pid}/members")
 def list_members(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     rows = db.query(ProjectMember).filter(ProjectMember.project_id == pid).all()
-    return [{"user": m.user, "role": m.role} for m in rows]
+    return [{"user": m.user, "role": m.role, "party_role": m.party_role, "company": m.company}
+            for m in rows]
 
 
 @router.post("/projects/{pid}/members", status_code=201)
 def add_member(pid: str, body: MemberIn, db: Session = Depends(get_db),
                actor: str = Depends(require_role("admin"))):
     _project(db, pid)
-    m = rbac.grant(db, pid, body.user, body.role)
-    audit.record(db, action="member.grant", actor=actor, method="POST",
-                 path=f"/projects/{pid}/members", detail={"user": body.user, "role": body.role})
+    m = rbac.grant(db, pid, body.user, body.role, party_role=body.party_role)
+    if body.company is not None:
+        m.company = body.company
+    audit.record(db, action="member.grant", actor=actor, method="POST", path=f"/projects/{pid}/members",
+                 detail={"user": body.user, "role": body.role, "party_role": body.party_role})
     db.commit()
-    return {"user": m.user, "role": m.role}
+    return {"user": m.user, "role": m.role, "party_role": m.party_role}
 
 
 @router.get("/projects", response_model=list[ProjectOut])

@@ -1,0 +1,29 @@
+{
+  "key": "submittal",
+  "name": "Submittals",
+  "section": "Engineering",
+  "icon": "▤",
+  "ref_prefix": "SUB",
+  "title_field": "title",
+  "pinnable": true,
+  "fields": [
+    {"name": "title", "label": "Title", "type": "text", "required": true},
+    {"name": "spec_section", "label": "Spec Section", "type": "text", "required": true},
+    {"name": "type", "label": "Type", "type": "select", "options": ["Product Data", "Shop Drawing", "Sample", "Mock-up"]},
+    {"name": "disposition", "label": "Disposition", "type": "select", "options": ["Approved", "Approved as Noted", "Revise & Resubmit", "Rejected"]},
+    {"name": "lead_time_days", "label": "Lead Time (days)", "type": "number"}
+  ],
+  "workflow": {
+    "initial": "draft",
+    "states": ["draft", "submitted", "gc_review", "ae_review", "returned", "closed"],
+    "transitions": [
+      {"from": "draft", "to": "submitted", "action": "submit", "party": ["Subcontractor"]},
+      {"from": "submitted", "to": "gc_review", "action": "begin_review", "party": ["GC"]},
+      {"from": "gc_review", "to": "ae_review", "action": "forward", "party": ["GC"]},
+      {"from": "gc_review", "to": "draft", "action": "return_to_sub", "party": ["GC"]},
+      {"from": "ae_review", "to": "returned", "action": "disposition", "party": ["Consultant"]},
+      {"from": "returned", "to": "closed", "action": "close", "party": ["GC"]},
+      {"from": "returned", "to": "draft", "action": "revise_resubmit", "party": ["GC"]}
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "key": "daily_report",
+  "name": "Daily Reports",
+  "section": "Field",
+  "icon": "☼",
+  "ref_prefix": "DR",
+  "title_field": "report_date",
+  "pinnable": false,
+  "fields": [
+    {"name": "report_date", "label": "Date", "type": "date", "required": true},
+    {"name": "weather", "label": "Weather", "type": "text"},
+    {"name": "manpower", "label": "Manpower Count", "type": "number"},
+    {"name": "work_performed", "label": "Work Performed", "type": "textarea"},
+    {"name": "deliveries", "label": "Deliveries", "type": "textarea"}
+  ],
+  "workflow": {
+    "initial": "draft",
+    "states": ["draft", "submitted"],
+    "transitions": [
+      {"from": "draft", "to": "submitted", "action": "submit", "party": ["GC", "Subcontractor"]}
+    ]
+  }
+}

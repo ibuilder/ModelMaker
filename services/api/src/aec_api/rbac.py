@@ -56,14 +56,34 @@ def require_role(min_role: str):
     return dep
 
 
-def grant(db: Session, project_id: str, user: str, role: str) -> ProjectMember:
+def party_role_for(db: Session, project_id: str, user: str) -> str | None:
+    if user == "api-key":
+        return "GC"
+    m = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id, ProjectMember.user == user).first()
+    return m.party_role if m else None
+
+
+def party_allowed(party: str | None, allowed: list[str]) -> bool:
+    """GC and the api-key/admin always pass so the workflow never stalls (per spec)."""
+    if not RBAC_ON:
+        return True
+    if party in ("GC", "GeneralContractor"):
+        return True
+    return party in (allowed or [])
+
+
+def grant(db: Session, project_id: str, user: str, role: str,
+          party_role: str | None = None) -> ProjectMember:
     if role not in ROLE_ORDER:
         raise HTTPException(400, f"invalid role {role!r}")
     existing = db.query(ProjectMember).filter(
         ProjectMember.project_id == project_id, ProjectMember.user == user).first()
     if existing:
         existing.role = role
+        if party_role is not None:
+            existing.party_role = party_role
         return existing
-    m = ProjectMember(project_id=project_id, user=user, role=role)
+    m = ProjectMember(project_id=project_id, user=user, role=role, party_role=party_role)
     db.add(m)
     return m

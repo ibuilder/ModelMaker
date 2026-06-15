@@ -1,0 +1,23 @@
+{
+  "key": "directive",
+  "name": "Scope / PCO Directives",
+  "section": "Change Management",
+  "icon": "➜",
+  "ref_prefix": "DIR",
+  "title_field": "subject",
+  "pinnable": true,
+  "fields": [
+    {"name": "subject", "label": "Subject", "type": "text", "required": true},
+    {"name": "scope", "label": "Directed Scope", "type": "textarea", "required": true},
+    {"name": "mode", "label": "Mode", "type": "select", "options": ["Pricing Only", "Proceed & Pricing"]},
+    {"name": "to_company", "label": "Directed To", "type": "text"}
+  ],
+  "workflow": {
+    "initial": "issued",
+    "states": ["issued", "acknowledged", "closed"],
+    "transitions": [
+      {"from": "issued", "to": "acknowledged", "action": "acknowledge", "party": ["Subcontractor"]},
+      {"from": "acknowledged", "to": "closed", "action": "close", "party": ["GC"]}
+    ]
+  }
+}

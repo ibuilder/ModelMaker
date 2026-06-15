@@ -1,56 +1,96 @@
 import * as THREE from "three";
 import * as OBC from "@thatopen/components";
-import * as OBCF from "@thatopen/components-front";
 import type { World } from "../viewer/world";
-import type { ApiClient, Topic, Viewpoint } from "../api/client";
+import type { ApiClient, ModulePin, Topic, Viewpoint } from "../api/client";
 
 /**
- * Pin / markup overlay (guide §7). A pin is a Topic with a 3D anchor + element GUID(s).
- * Renders one marker per topic; clicking a pin restores its viewpoint (camera + components
- * + visibility) via the provided callback. Pins reference GUIDs, so they survive model
- * updates.
+ * Pin / markup overlay (guide §7 + GC portal). Renders a screen-projected HTML marker for
+ * every anchored record — BCF topics (RFIs/punch/clash) and GC module records (PCO/COR/…).
+ * A pin is any record with a 3D anchor + element GUID(s); clicking it restores context.
+ * Implemented as a projected DOM overlay (robust across engine versions).
  */
+interface PinMarker { el: HTMLElement; point: THREE.Vector3; }
+
 export class PinOverlay {
-  private markers: OBCF.Marker;
-  private ids: string[] = [];
+  private overlay: HTMLElement;
+  private markers: PinMarker[] = [];
 
   constructor(
-    components: OBC.Components,
+    _components: OBC.Components,
     private world: World,
     private api: ApiClient,
     private onRestore: (topic: Topic, viewpoint: Viewpoint | null) => void,
   ) {
-    this.markers = components.get(OBCF.Marker);
+    const container = this.world.renderer!.three.domElement.parentElement!;
+    this.overlay = document.createElement("div");
+    this.overlay.className = "pin-overlay";
+    this.overlay.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5";
+    container.appendChild(this.overlay);
+    const tick = () => { this.update(); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
   }
 
-  /** Load pins for a project and drop a marker for each. */
+  private addMarker(el: HTMLElement, point: THREE.Vector3) {
+    el.style.position = "absolute";
+    el.style.pointerEvents = "auto";
+    el.style.transform = "translate(-50%, -100%)";
+    this.overlay.appendChild(el);
+    this.markers.push({ el, point });
+  }
+
+  /** Project each anchor to screen space and place its marker (called every frame). */
+  private update() {
+    if (!this.markers.length) return;
+    const cam = this.world.camera.three;
+    const dom = this.world.renderer!.three.domElement;
+    const w = dom.clientWidth, h = dom.clientHeight;
+    const v = new THREE.Vector3();
+    for (const m of this.markers) {
+      v.copy(m.point).project(cam);
+      const behind = v.z > 1;
+      m.el.style.display = behind ? "none" : "block";
+      if (behind) continue;
+      m.el.style.left = `${(v.x * 0.5 + 0.5) * w}px`;
+      m.el.style.top = `${(-v.y * 0.5 + 0.5) * h}px`;
+    }
+  }
+
+  /** BCF topic pins. */
   async load(projectId: string) {
     this.clear();
     const pins = await this.api.pins(projectId);
     for (const topic of pins) {
       if (!topic.anchor) continue;
-      const el = this.markerElement(topic);
-      const point = new THREE.Vector3(topic.anchor.x, topic.anchor.y, topic.anchor.z);
-      const id = this.markers.create(this.world, el, point);
-      if (id) this.ids.push(id);
+      const el = document.createElement("div");
+      el.className = `pin pin-${topic.type}`;
+      el.title = topic.title;
+      el.textContent = { rfi: "?", punch: "!", clash: "✶", info: "i" }[topic.type] ?? "•";
       el.onclick = async () => {
         const vps = await this.api.viewpoints(projectId, topic.id);
         this.onRestore(topic, vps[0] ?? null);
       };
+      this.addMarker(el, new THREE.Vector3(topic.anchor.x, topic.anchor.y, topic.anchor.z));
     }
+    return pins.length;
   }
 
-  private markerElement(topic: Topic): HTMLElement {
-    const el = document.createElement("div");
-    el.className = `pin pin-${topic.type}`;
-    el.title = topic.title;
-    el.textContent = { rfi: "?", punch: "!", clash: "✶", info: "i" }[topic.type] ?? "•";
-    return el;
+  /** GC module record pins (RFIs, PCOs, CORs, …). */
+  async loadModulePins(projectId: string, onClick: (pin: ModulePin) => void) {
+    const pins = await this.api.modulePins(projectId);
+    for (const pin of pins) {
+      const el = document.createElement("div");
+      el.className = "pin pin-gc";
+      el.title = `${pin.ref} · ${pin.module_name} · ${pin.status}`;
+      el.textContent = pin.icon || "•";
+      el.onclick = () => onClick(pin);
+      this.addMarker(el, new THREE.Vector3(pin.anchor.x, pin.anchor.y, pin.anchor.z));
+    }
+    return pins.length;
   }
 
   clear() {
-    for (const id of this.ids) this.markers.delete(id);
-    this.ids = [];
+    for (const m of this.markers) m.el.remove();
+    this.markers = [];
   }
 }
 

@@ -1,0 +1,30 @@
+{
+  "key": "rfi",
+  "name": "RFIs",
+  "section": "Engineering",
+  "icon": "?",
+  "ref_prefix": "RFI",
+  "title_field": "subject",
+  "pinnable": true,
+  "fields": [
+    {"name": "subject", "label": "Subject", "type": "text", "required": true},
+    {"name": "question", "label": "Question", "type": "textarea", "required": true},
+    {"name": "discipline", "label": "Discipline", "type": "select", "options": ["Architectural", "Structural", "MEP", "Civil"]},
+    {"name": "spec_section", "label": "Spec Section", "type": "text"},
+    {"name": "due_date", "label": "Date Required", "type": "date"},
+    {"name": "answer", "label": "Response", "type": "textarea"},
+    {"name": "cost_impact", "label": "Cost Impact", "type": "select", "options": ["None", "Possible", "Yes"]},
+    {"name": "schedule_impact", "label": "Schedule Impact", "type": "select", "options": ["None", "Possible", "Yes"]}
+  ],
+  "workflow": {
+    "initial": "draft",
+    "states": ["draft", "open", "answered", "closed", "void"],
+    "transitions": [
+      {"from": "draft", "to": "open", "action": "submit", "party": ["GC"]},
+      {"from": "open", "to": "answered", "action": "respond", "party": ["Consultant", "OwnersRep"]},
+      {"from": "open", "to": "void", "action": "void", "party": ["GC"]},
+      {"from": "answered", "to": "closed", "action": "accept", "party": ["GC"]},
+      {"from": "answered", "to": "open", "action": "reopen", "party": ["GC"]}
+    ]
+  }
+}

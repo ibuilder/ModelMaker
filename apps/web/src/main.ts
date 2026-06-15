@@ -215,9 +215,13 @@ async function buildPanels() {
     layersPanel.appendChild(row);
   }
 
-  // Issues / pins
+  // Issues / pins (BCF topics) + GC module record pins
   await refreshIssues();
   await pins.load(projectId);
+  await pins.loadModulePins(projectId, async (pin) => {
+    if (pin.element_guids?.[0]) await selectByGuid(pin.element_guids[0], true);
+    setStatus(`${pin.ref} · ${pin.module_name} · ${pin.status}`);
+  });
 }
 
 function buildToolsPanel() {
