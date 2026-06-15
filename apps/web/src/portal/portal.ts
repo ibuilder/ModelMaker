@@ -55,10 +55,15 @@ export class PortalUI {
     this.root.innerHTML = "";
     this.root.appendChild(this.bar(m.name, () => this.renderHome()));
 
+    const actions = document.createElement("div"); actions.style.cssText = "display:flex;gap:6px;margin:6px 0";
     const newBtn = document.createElement("button");
-    newBtn.className = "tool-btn"; newBtn.textContent = "+ New"; newBtn.style.margin = "6px 0";
+    newBtn.className = "tool-btn"; newBtn.textContent = "+ New";
     newBtn.onclick = () => this.renderForm(m);
-    this.root.appendChild(newBtn);
+    const csvBtn = document.createElement("button");
+    csvBtn.className = "tool-btn"; csvBtn.textContent = "↓ CSV";
+    csvBtn.onclick = () => window.open(this.host.api.url(`/projects/${pid}/modules/${m.key}/export.csv`), "_blank");
+    actions.append(newBtn, csvBtn);
+    this.root.appendChild(actions);
 
     if (!records.length) {
       const e = document.createElement("div"); e.className = "meta"; e.textContent = "no records yet";
@@ -133,6 +138,11 @@ export class PortalUI {
       `<div class="meta">status <span class="badge">${r.workflow_state}</span> · ${r.party_owner ?? ""}</div>`;
     this.root.appendChild(head);
 
+    const pdfBtn = document.createElement("button");
+    pdfBtn.className = "tool-btn"; pdfBtn.textContent = "↓ PDF"; pdfBtn.style.margin = "4px 0";
+    pdfBtn.onclick = () => window.open(this.host.api.url(`/projects/${pid}/modules/${m.key}/${rid}/pdf`), "_blank");
+    this.root.appendChild(pdfBtn);
+
     // fields
     const fields = document.createElement("div"); fields.className = "portal-kv";
     for (const f of m.fields) {
@@ -174,6 +184,25 @@ export class PortalUI {
         this.root.appendChild(e);
       }
     }
+
+    // comments
+    const cd = document.createElement("div"); cd.className = "section-title"; cd.textContent = "Comments";
+    this.root.appendChild(cd);
+    for (const cm of r.comments ?? []) {
+      const e = document.createElement("div"); e.className = "portal-act";
+      e.textContent = `${cm.author ?? ""}: ${cm.text}`;
+      this.root.appendChild(e);
+    }
+    const ta = document.createElement("textarea");
+    ta.className = "portal-field"; ta.placeholder = "Add a comment…"; ta.style.width = "100%";
+    const addBtn = document.createElement("button");
+    addBtn.className = "tool-btn"; addBtn.textContent = "Comment"; addBtn.style.margin = "4px 0";
+    addBtn.onclick = async () => {
+      if (!ta.value.trim()) return;
+      await this.host.api.addComment(pid, m.key, rid, ta.value.trim());
+      this.openRecord(m, rid);
+    };
+    this.root.append(ta, addBtn);
 
     // activity timeline
     const td = document.createElement("div"); td.className = "section-title"; td.textContent = "Activity";

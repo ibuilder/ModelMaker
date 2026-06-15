@@ -97,6 +97,16 @@ with TestClient(app) as c:
     acts = [a["action"] for a in linked["activity"]]
     assert "create" in acts and any(a.startswith("transition:") for a in acts) and "link" in acts
 
+    # ---- comments + CSV + PDF export (cross-cutting) -------------------------
+    c.post(f"/projects/{pid}/modules/rfi/{rid}/comments", headers=H("consultant"),
+           json={"text": "Coordinate with structural before coring."})
+    rec = c.get(f"/projects/{pid}/modules/rfi/{rid}", headers=H("gc")).json()
+    assert rec["comments"] and rec["comments"][0]["text"].startswith("Coordinate"), rec.get("comments")
+    csv_text = c.get(f"/projects/{pid}/modules/cor/export.csv", headers=H("gc")).text
+    assert "ref" in csv_text.splitlines()[0] and "COR-001" in csv_text, csv_text[:200]
+    pdf = c.get(f"/projects/{pid}/modules/cor/{cor['id']}/pdf", headers=H("gc")).content
+    assert pdf[:5] == b"%PDF-" and len(pdf) > 1000, len(pdf)
+
     print("GC MODULES OK")
     print(f"  modules loaded: {len(mods)}  |  project={pid}")
     print(f"  RFI lifecycle gated (sub blocked from answering: 403)")

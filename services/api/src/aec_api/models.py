@@ -46,6 +46,18 @@ class ProjectMember(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class RecordComment(Base):
+    """Comments on any GC module record (shared table, keyed by module + record_id)."""
+    __tablename__ = "record_comments"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    module: Mapped[str] = mapped_column(String, index=True)
+    record_id: Mapped[str] = mapped_column(String, index=True)
+    author: Mapped[str | None] = mapped_column(String, nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class RecordActivity(Base):
     """Per-record activity timeline shared by all GC modules (create/update/transition/link)."""
     __tablename__ = "record_activity"

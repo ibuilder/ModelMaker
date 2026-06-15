@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from . import rbac
 from .db import Base
-from .models import RecordActivity
+from .models import RecordActivity, RecordComment
 
 MODULES_DIR = Path(__file__).resolve().parents[2] / "modules"
 
@@ -162,7 +162,42 @@ def get_record(db: Session, key: str, project_id: str, rid: str) -> dict:
             RecordActivity.module == key, RecordActivity.record_id == rid)
         .order_by(RecordActivity.ts).all()
     ]
+    rec["comments"] = [
+        {"author": cm.author, "text": cm.text,
+         "created_at": cm.created_at.isoformat() if cm.created_at else None}
+        for cm in db.query(RecordComment).filter(
+            RecordComment.module == key, RecordComment.record_id == rid)
+        .order_by(RecordComment.created_at).all()
+    ]
     return rec
+
+
+def add_comment(db: Session, key: str, project_id: str, rid: str, text: str,
+                author: str) -> dict:
+    get_record(db, key, project_id, rid)  # 404 if missing
+    db.add(RecordComment(project_id=project_id, module=key, record_id=rid,
+                         author=author, text=text))
+    _log(db, project_id, key, rid, author, None, "comment", {"text": text[:80]})
+    db.commit()
+    return get_record(db, key, project_id, rid)
+
+
+def to_csv(db: Session, key: str, project_id: str) -> str:
+    """Module record list → CSV (ref/title/status + module fields)."""
+    import csv
+    import io
+
+    mod = get_module(key)
+    field_names = [f["name"] for f in mod.get("fields", [])]
+    headers = ["ref", "title", "workflow_state", "party_owner", "created_by"] + field_names
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(headers)
+    for r in list_records(db, key, project_id, limit=100000):
+        d = r.get("data") or {}
+        w.writerow([r["ref"], r["title"], r["workflow_state"], r["party_owner"], r["created_by"]]
+                   + [d.get(fn, "") for fn in field_names])
+    return buf.getvalue()
 
 
 def update_record(db: Session, key: str, project_id: str, rid: str, data: dict,

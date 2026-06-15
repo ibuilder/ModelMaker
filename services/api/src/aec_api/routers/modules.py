@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Response
 from sqlalchemy.orm import Session
 
 from .. import modules as mod_engine
@@ -46,6 +46,14 @@ def create_record(pid: str, key: str, body: dict = Body(...), db: Session = Depe
     return mod_engine.create_record(db, key, pid, body, user, _party(pid, db, user))
 
 
+@router.get("/projects/{pid}/modules/{key}/export.csv")
+def export_csv(pid: str, key: str, db: Session = Depends(get_db),
+               _: str = Depends(require_role("viewer"))):
+    csv_text = mod_engine.to_csv(db, key, pid)
+    return Response(csv_text, media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{key}.csv"'})
+
+
 @router.get("/projects/{pid}/modules/{key}/{rid}")
 def get_record(pid: str, key: str, rid: str, db: Session = Depends(get_db),
                _: str = Depends(require_role("viewer"))):
@@ -73,6 +81,55 @@ def transition(pid: str, key: str, rid: str, action: str = Body(..., embed=True)
 def link_record(pid: str, key: str, rid: str, target: dict = Body(...),
                 db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
     return mod_engine.link_record(db, key, pid, rid, target, user, _party(pid, db, user))
+
+
+@router.post("/projects/{pid}/modules/{key}/{rid}/comments", status_code=201)
+def add_comment(pid: str, key: str, rid: str, text: str = Body(..., embed=True),
+                db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
+    return mod_engine.add_comment(db, key, pid, rid, text, user)
+
+
+@router.get("/projects/{pid}/modules/{key}/{rid}/pdf")
+def record_pdf(pid: str, key: str, rid: str, db: Session = Depends(get_db),
+               _: str = Depends(require_role("viewer"))):
+    import io
+
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    mod = mod_engine.get_module(key)
+    r = mod_engine.get_record(db, key, pid, rid)
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=letter)
+    w, h = letter
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(40, h - 50, f"{mod['name']} — {r['ref']}")
+    c.setFont("Helvetica", 10)
+    c.drawString(40, h - 68, f"Status: {r['workflow_state']}    Party: {r['party_owner'] or '-'}    By: {r['created_by'] or '-'}")
+    y = h - 100
+    for f in mod.get("fields", []):
+        v = r["data"].get(f["name"])
+        if v in (None, ""):
+            continue
+        c.setFont("Helvetica-Bold", 10); c.drawString(40, y, f"{f['label']}:")
+        c.setFont("Helvetica", 10)
+        for i, line in enumerate(str(v)[:600].split("\n")):
+            c.drawString(170, y - i * 13, line[:70])
+            y -= 13 if i else 0
+        y -= 16
+        if y < 80:
+            c.showPage(); y = h - 60
+    if r.get("activity"):
+        c.setFont("Helvetica-Bold", 11); c.drawString(40, y - 6, "Activity"); y -= 22
+        c.setFont("Helvetica", 9)
+        for a in r["activity"]:
+            c.drawString(50, y, f"{(a['ts'] or '')[:16]}  {a['actor'] or ''}  {a['action']}")
+            y -= 12
+            if y < 60:
+                c.showPage(); y = h - 60
+    c.showPage(); c.save()
+    return Response(buf.getvalue(), media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{r["ref"]}.pdf"'})
 
 
 @router.get("/projects/{pid}/module-pins")

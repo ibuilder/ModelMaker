@@ -51,6 +51,7 @@ export interface ModuleRecord {
   links: { module: string; id: string; ref: string }[];
   data: Record<string, unknown>;
   activity?: { ts: string; actor: string; party: string; action: string; detail: unknown }[];
+  comments?: { author: string | null; text: string; created_at: string }[];
   available_actions?: { action: string; to: string; party: string[] }[];
 }
 
@@ -160,6 +161,10 @@ export class ApiClient {
   transitionRecord(pid: string, key: string, rid: string, action: string, note?: string) {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/transition`, {
       method: "POST", body: JSON.stringify({ action, note }) });
+  }
+  addComment(pid: string, key: string, rid: string, text: string) {
+    return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/comments`, {
+      method: "POST", body: JSON.stringify({ text }) });
   }
 
   // cost / financials (GC portal)
