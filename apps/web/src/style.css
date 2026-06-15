@@ -62,13 +62,29 @@ html, body, #app {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
-  flex-wrap: wrap;
+  white-space: nowrap;
+  min-height: 44px;
+}
+#toolbar > strong { font-size: 14px; }
+#toolbar #status {
+  font-size: 12px; opacity: 0.7; max-width: 280px; overflow: hidden;
+  text-overflow: ellipsis; margin-left: 0;
 }
 
-#container { grid-area: container; position: relative; min-width: 0; }
+#container { grid-area: container; position: relative; min-width: 0; overflow: hidden; }
+
+/* floating viewer toolbar over the 3D viewport (not the top bar) */
+#viewer-tools {
+  position: absolute; top: 10px; left: 10px; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: 4px; max-width: calc(100% - 20px);
+  padding: 5px; border-radius: 8px;
+  background: rgba(43, 45, 49, 0.82); backdrop-filter: blur(4px);
+  border: 1px solid var(--line); box-shadow: 0 2px 10px #0006;
+}
+#viewer-tools:empty { display: none; }
 
 /* sidebar */
 #sidebar {

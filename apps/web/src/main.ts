@@ -140,10 +140,11 @@ async function loadFile(input: HTMLInputElement, load: (b: Uint8Array, id: strin
 }
 
 // ---- toolbar ----------------------------------------------------------------
+const viewerTools = $("viewer-tools");
 function toolBtn(label: string, onClick: (b: HTMLButtonElement) => void) {
   const b = document.createElement("button");
   b.textContent = label; b.className = "tool-btn"; b.onclick = () => onClick(b);
-  toolbar.appendChild(b);
+  viewerTools.appendChild(b);   // floating toolbar over the 3D viewport, not the top bar
   return b;
 }
 const setMeasure = (m: MeasureMode) => {
