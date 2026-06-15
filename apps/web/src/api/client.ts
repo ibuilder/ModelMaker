@@ -101,8 +101,13 @@ export interface ModulePin {
   element_guids: string[] | null;
 }
 
+// dev (Vite @ :5173): hit the API directly (CORS allows :5173).
+// prod build: relative "/api" so nginx reverse-proxies same-origin (no CORS needed).
+// VITE_API_URL overrides either, baked at build time.
+const DEFAULT_API = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:8000" : "/api");
+
 export class ApiClient {
-  constructor(private baseUrl = "http://localhost:8000") {}
+  constructor(private baseUrl = DEFAULT_API) {}
 
   private async json<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(this.baseUrl + path, {

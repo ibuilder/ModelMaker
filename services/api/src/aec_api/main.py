@@ -1,6 +1,7 @@
 """FastAPI app entry (guide §7). Run: uvicorn aec_api.main:app --reload"""
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -19,9 +20,13 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="AEC BIM Platform API", version="0.1.0", lifespan=lifespan)
 
+# In production the web app calls the API same-origin via nginx's /api proxy, so CORS
+# is moot. CORS only matters for the dev server (:5173) or direct cross-origin access;
+# AEC_CORS_ORIGINS (comma-separated) overrides the dev default.
+_cors = os.environ.get("AEC_CORS_ORIGINS", "http://localhost:5173")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # web viewer dev origin
+    allow_origins=[o.strip() for o in _cors.split(",") if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
