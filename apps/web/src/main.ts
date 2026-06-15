@@ -528,7 +528,7 @@ function openPortalTab() {
 }
 
 // Proforma — real-estate development underwriting (independent of the BIM model)
-const proforma = new ProformaUI($("panel-proforma"), api, setStatus);
+const proforma = new ProformaUI($("panel-proforma"), api, setStatus, () => projectId);
 let proformaReady = false;
 function openProformaTab() {
   if (proformaReady) return;

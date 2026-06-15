@@ -9,6 +9,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from sqlalchemy import delete
+
+from .. import cost as cost_engine
+from .. import modules as me
 from ..db import get_db
 from ..models import Scenario
 from ..proforma.draws import reforecast
@@ -193,6 +197,46 @@ def forecast_scenario(sid: str, body: ForecastIn, db: Session = Depends(get_db))
 def forecast_stateless(assumptions: Assumptions, actuals: list[Actual] = Body(...),
                        as_of_month: int = Body(0)):
     return reforecast(assumptions.model_dump(), [a.model_dump() for a in actuals], as_of_month)
+
+
+class DrawPackageIn(BaseModel):
+    project_id: str                 # the GC portal project to receive the SOV
+    actuals: list[Actual]
+    as_of_month: int = 0
+    retainage_pct: float = 5.0
+    app_no: int = 1
+
+
+@router.post("/proforma/scenarios/{sid}/draw-package")
+def draw_package(sid: str, body: DrawPackageIn, db: Session = Depends(get_db)):
+    """Bridge underwriting → construction draws: turn the scenario's cost tree + actuals into
+    Schedule-of-Values records on a GC project, then produce the AIA G702/G703 pay app —
+    so the IRR you underwrote and the lender draw run off the SAME cost tree."""
+    s = db.get(Scenario, sid)
+    if not s:
+        raise HTTPException(404, "scenario not found")
+    if "sov" not in me.TABLES:
+        raise HTTPException(409, "SOV module not loaded")
+    fc = reforecast(s.assumptions, [a.model_dump() for a in body.actuals], body.as_of_month)
+    pid = body.project_id
+    # replace any prior SOV for this project so re-running is idempotent
+    db.execute(delete(me.TABLES["sov"]).where(me.TABLES["sov"].c.project_id == pid))
+    db.commit()
+    for i, L in enumerate(fc["lines"]):
+        me.create_record(db, "sov", pid, {"data": {
+            "item_no": f"{i + 1:02d}", "description": L["name"], "cost_code": L["category"],
+            "scheduled_value": L["forecast_at_completion"],   # revised contract value
+            "completed_this": L["actual_to_date"],
+            "retainage_pct": body.retainage_pct,
+        }}, "proforma-bridge", "GC")
+    g703 = cost_engine.g703(db, pid)
+    g702 = cost_engine.g702(db, pid, app_no=body.app_no)
+    return {
+        "sov_lines_created": len(fc["lines"]),
+        "g702": g702, "g703_totals": g703["totals"],
+        "g702_pdf": f"/projects/{pid}/cost/g702.pdf?app_no={body.app_no}",
+        "forecast_returns": fc["forecast_returns"],
+    }
 
 
 @router.post("/proforma/compare")

@@ -193,6 +193,14 @@ export class ApiClient {
     return this.json<ProformaForecast>(`/proforma/forecast`, {
       method: "POST", body: JSON.stringify({ assumptions, actuals, as_of_month }) });
   }
+  createScenario(name: string, project_id: string | null, assumptions: unknown) {
+    return this.json<{ id: string }>(`/proforma/scenarios`, {
+      method: "POST", body: JSON.stringify({ name, project_id, assumptions }) });
+  }
+  drawPackage(sid: string, body: unknown) {
+    return this.json<{ sov_lines_created: number; g702: Record<string, number>; g702_pdf: string }>(
+      `/proforma/scenarios/${sid}/draw-package`, { method: "POST", body: JSON.stringify(body) });
+  }
 
   // GC portal modules + model pins
   modules() {

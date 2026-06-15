@@ -56,7 +56,8 @@ export class ProformaUI {
   private timer = 0;
 
   constructor(private root: HTMLElement, private api: ApiClient,
-              private setStatus: (m: string) => void) {}
+              private setStatus: (m: string) => void,
+              private projectId: () => string | null = () => null) {}
 
   async init() {
     this.render();
@@ -132,6 +133,26 @@ export class ProformaUI {
       `<tr><th style="text-align:left">TOTAL</th><td>${money(f.totals.budget)}</td><td>${money(f.totals.actual_to_date)}</td>` +
       `<td>${money(f.totals.forecast_at_completion)}</td><td style="color:${f.totals.variance_to_budget > 0 ? "#e74c3c" : "#2ecc71"}">${money(f.totals.variance_to_budget)}</td></tr></table>`;
     this.setStatus(`re-forecast IRR ${pct(fc)} (was ${pct(uw)})`);
+
+    // bridge to the GC portal: turn this cost tree + draws into an AIA G702/G703 pay app
+    const pid = this.projectId();
+    if (pid) {
+      const btn = document.createElement("button");
+      btn.className = "file-btn"; btn.textContent = "↓ Generate G702 draw package"; btn.style.marginTop = "8px";
+      btn.onclick = async () => {
+        this.setStatus("generating lender draw package…");
+        try {
+          const actuals = [...document.querySelectorAll<HTMLInputElement>(".pf-actual")]
+            .sort((a, b) => +a.dataset.i! - +b.dataset.i!)
+            .map((x) => ({ actual_to_date: parseFloat(x.value) || 0 }));
+          const sc = await this.api.createScenario("Draw package", pid, this.a);
+          const dp = await this.api.drawPackage(sc.id, { project_id: pid, actuals, as_of_month: 9, app_no: 1 });
+          this.setStatus(`SOV (${dp.sov_lines_created} lines) → G702 due $${Math.round(dp.g702.line8_current_payment_due).toLocaleString()}`);
+          window.open(this.api.url(dp.g702_pdf), "_blank");
+        } catch (e) { this.setStatus(`draw package error: ${(e as Error).message}`); }
+      };
+      document.getElementById("pf-fc-out")!.appendChild(btn);
+    }
   }
 
   private async solve() {
