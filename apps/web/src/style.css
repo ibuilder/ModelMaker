@@ -139,3 +139,7 @@ html, body, #app {
 .portal-kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 8px 0; font-size: 12px; }
 .portal-kv .k { color: var(--muted); }
 .portal-act { font-size: 11px; color: var(--muted); padding: 2px 0; border-bottom: 1px solid #2b2d31; }
+.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 6px; text-align: center; }
+.kpi-v { font-size: 20px; font-weight: 800; color: var(--accent); }
+.kpi-l { font-size: 10px; color: var(--muted); margin-top: 2px; }

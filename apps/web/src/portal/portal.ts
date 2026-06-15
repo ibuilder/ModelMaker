@@ -23,12 +23,56 @@ export class PortalUI {
   async init() {
     if (!this.host.projectId()) { this.root.textContent = "connect a project to use the portal"; return; }
     this.mods = await this.host.api.modules();
-    this.renderHome();
+    await this.renderHome();
   }
 
-  // --- module catalog grouped by section -------------------------------------
-  private renderHome() {
+  // --- role-tailored dashboard + module catalog ------------------------------
+  private async renderHome() {
     this.root.innerHTML = "";
+    const pid = this.host.projectId()!;
+    try {
+      const d = await this.host.api.dashboard(pid);
+      const head = document.createElement("div");
+      head.className = "section-title"; head.textContent = `Dashboard — ${d.party}`;
+      this.root.appendChild(head);
+
+      // KPI cards
+      const kpis = document.createElement("div"); kpis.className = "kpi-grid";
+      const cards: [string, number][] = [
+        ["Ball in court", d.kpis.my_action_items ?? 0], ["Overdue", d.kpis.overdue ?? 0],
+        ["Open RFIs", d.kpis.open_rfis ?? 0], ["Pending COs", d.kpis.pending_change_orders ?? 0],
+        ["Quality", d.kpis.open_quality ?? 0], ["Safety", d.kpis.open_safety ?? 0],
+      ];
+      for (const [label, val] of cards) {
+        const c = document.createElement("div"); c.className = "kpi";
+        c.innerHTML = `<div class="kpi-v">${val}</div><div class="kpi-l">${label}</div>`;
+        kpis.appendChild(c);
+      }
+      this.root.appendChild(kpis);
+      if (d.cost) {
+        const cd = document.createElement("div"); cd.className = "meta";
+        cd.style.margin = "6px 0";
+        cd.textContent = `Budget $${d.cost.budget.toLocaleString()} · Over/Under $${d.cost.projected_over_under.toLocaleString()}`;
+        this.root.appendChild(cd);
+      }
+
+      // ball-in-your-court action items
+      if (d.action_items.length) {
+        const t = document.createElement("div"); t.className = "section-title"; t.textContent = "Ball in your court";
+        this.root.appendChild(t);
+        for (const a of d.action_items.slice(0, 20)) {
+          const row = document.createElement("button");
+          row.className = "portal-mod";
+          row.innerHTML = `<span class="ic">→</span> ${a.ref} ${a.title ?? ""} <span class="badge">${a.state}</span>`;
+          row.onclick = () => { const m = this.mods.find((x) => x.key === a.module); if (m) this.openRecord(m, a.id); };
+          this.root.appendChild(row);
+        }
+      }
+      const allTitle = document.createElement("div");
+      allTitle.className = "section-title"; allTitle.textContent = "All modules";
+      this.root.appendChild(allTitle);
+    } catch { /* dashboard optional */ }
+
     const sections = new Map<string, ModuleDef[]>();
     for (const m of this.mods) {
       const s = m.section || "Other";

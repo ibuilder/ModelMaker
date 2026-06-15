@@ -55,6 +55,14 @@ export interface ModuleRecord {
   available_actions?: { action: string; to: string; party: string[] }[];
 }
 
+export interface Dashboard {
+  party: string;
+  kpis: Record<string, number>;
+  cost: { budget: number; committed: number; actual: number; projected_over_under: number } | null;
+  action_items: { module: string; module_name: string; id: string; ref: string; title: string | null; state: string; actions: string[] }[];
+  by_module: { key: string; name: string; section: string; count: number; by_state: Record<string, number> }[];
+}
+
 export interface ModulePin {
   module: string;
   module_name: string;
@@ -147,6 +155,10 @@ export class ApiClient {
   }
   modulePins(pid: string) {
     return this.json<ModulePin[]>(`/projects/${pid}/module-pins`);
+  }
+  dashboard(pid: string, party?: string) {
+    const q = party ? `?party=${encodeURIComponent(party)}` : "";
+    return this.json<Dashboard>(`/projects/${pid}/dashboard${q}`);
   }
   moduleRecords(pid: string, key: string) {
     return this.json<ModuleRecord[]>(`/projects/${pid}/modules/${key}`);
