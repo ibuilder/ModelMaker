@@ -7,14 +7,16 @@
   </head>
   <body>
     <div id="app">
-      <header id="toolbar">
-        <button id="sidebar-toggle" title="Toggle panel (\\)" aria-label="Toggle panel">☰</button>
-        <strong>AEC BIM Viewer</strong>
+      <header id="topbar">
+        <button id="rail-toggle" title="Toggle panel (\\)" aria-label="Toggle panel">☰</button>
+        <strong>AEC viewer</strong>
         <div id="open-menu" class="menu"></div>
         <div id="save-menu" class="menu"></div>
         <input id="ifc-input" type="file" accept=".ifc" hidden />
         <input id="frag-input" type="file" accept=".frag" hidden />
         <input id="convert-input" type="file" accept=".rvt,.dwg,.nwc" hidden />
+        <div id="workspaces" role="tablist" aria-label="Workspace"></div>
+        <span class="grow"></span>
         <label id="persona-wrap" title="Show tools for your role">
           <select id="persona">
             <option value="all">All roles</option>
@@ -28,36 +30,45 @@
         <span id="status">ready</span>
       </header>
 
-      <nav id="sidebar">
-        <div id="tabs">
-          <button class="tab active" data-tab="tree">Tree</button>
-          <button class="tab" data-tab="layers">Layers</button>
-          <button class="tab" data-tab="issues">Issues</button>
-          <button class="tab" data-tab="tools">Tools</button>
-          <button class="tab" data-tab="portal">Portal</button>
-          <button class="tab" data-tab="proforma">Proforma</button>
-          <button class="tab" data-tab="portfolio">Portfolio</button>
-        </div>
-        <div id="panel-tree" class="panel active"></div>
-        <div id="panel-layers" class="panel"></div>
-        <div id="panel-issues" class="panel"></div>
-        <div id="panel-tools" class="panel"></div>
-        <div id="panel-portal" class="panel"></div>
-        <div id="panel-proforma" class="panel"></div>
-        <div id="panel-portfolio" class="panel"></div>
-      </nav>
+      <main id="stage">
+        <!-- MODEL workspace: icon rail + slide-out panel + viewport + contextual props -->
+        <section id="ws-model" class="workspace active">
+          <nav id="rail" aria-label="Model panels"></nav>
+          <aside id="rail-panel">
+            <div id="panel-tree" class="rpanel active"></div>
+            <div id="panel-layers" class="rpanel"></div>
+            <div id="panel-issues" class="rpanel"></div>
+            <div id="panel-tools" class="rpanel"></div>
+          </aside>
+          <div id="container">
+            <div id="viewer-tools"></div>
+          </div>
+          <aside id="props" hidden>
+            <div id="props-head">
+              <h3>Properties</h3>
+              <button id="props-close" title="Close (Esc)" aria-label="Close properties">✕</button>
+            </div>
+            <pre id="props-body"></pre>
+          </aside>
+        </section>
 
-      <div id="container">
-        <div id="viewer-tools"></div>
-      </div>
+        <!-- CONSTRUCTION workspace: full-width GC portal -->
+        <section id="ws-construction" class="workspace">
+          <div id="panel-portal" class="fullpanel"></div>
+        </section>
 
-      <aside id="props" hidden>
-        <div id="props-head">
-          <h3>Properties</h3>
-          <button id="props-close" title="Close (Esc)" aria-label="Close properties">✕</button>
-        </div>
-        <pre id="props-body"></pre>
-      </aside>
+        <!-- FINANCE workspace: full-width proforma + portfolio roll-up -->
+        <section id="ws-finance" class="workspace">
+          <div id="fin-tabs">
+            <button class="fintab active" data-fin="proforma">Proforma</button>
+            <button class="fintab" data-fin="portfolio">Portfolio</button>
+          </div>
+          <div id="panel-proforma" class="fullpanel active"></div>
+          <div id="panel-portfolio" class="fullpanel"></div>
+        </section>
+      </main>
+
+      <footer id="statusbar"></footer>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

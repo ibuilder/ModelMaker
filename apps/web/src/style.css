@@ -18,65 +18,71 @@ html, body, #app {
   background: var(--bg);
 }
 
-#app {
-  --sidebar-w: 300px;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  grid-template-columns: var(--sidebar-w) 1fr auto;
-  grid-template-areas:
-    "toolbar toolbar toolbar"
-    "sidebar container props";
-  height: 100vh;
-  transition: grid-template-columns .2s ease;
+/* light theme (toggled from the bottom settings bar) */
+:root[data-theme="light"] {
+  --bg: #f4f5f7; --panel: #ffffff; --panel2: #eceef1;
+  --text: #1d1f23; --muted: #5f6368; --accent: #2f6fed; --line: #d6d9de;
 }
-#app.sidebar-collapsed { --sidebar-w: 0px; }
-#app.sidebar-collapsed #sidebar { display: none; }
 
-#sidebar-toggle {
+/* ---- 4-zone shell: top chrome / stage / bottom settings bar ---- */
+#app {
+  --rail-w: 300px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "topbar" "stage" "statusbar";
+  height: 100vh;
+}
+
+#topbar {
+  grid-area: topbar; display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--line);
+  white-space: nowrap; min-height: 44px;
+}
+#topbar > strong { font-size: 14px; }
+.grow { flex: 1; }
+#rail-toggle {
   background: transparent; border: none; color: var(--text); cursor: pointer;
   font-size: 18px; padding: 2px 6px; border-radius: 4px;
 }
-#sidebar-toggle:hover { background: #ffffff14; }
-#persona-wrap { margin-left: auto; }
-#persona {
-  background: #3a3d44; color: var(--text); border: 1px solid var(--line);
-  border-radius: 4px; padding: 4px 8px; font-size: 12px;
-}
-.tab[hidden] { display: none; }
+#rail-toggle:hover { background: #ffffff14; }
+#persona { background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+#status { font-size: 12px; opacity: 0.7; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
-/* tablet/mobile: stack the panel above the viewer, hide the props rail (use it as overlay) */
-@media (max-width: 820px) {
-  #app {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas: "toolbar" "sidebar" "container";
-  }
-  #app:not(.sidebar-collapsed) #sidebar { max-height: 45vh; }
-  #app.sidebar-collapsed { grid-template-rows: auto 1fr; grid-template-areas: "toolbar" "container"; }
-  #props { position: fixed; right: 0; top: 0; bottom: 0; z-index: 30; box-shadow: -4px 0 20px #000a; }
-  #toolbar { overflow-x: auto; }
-}
+/* workspace switcher (segmented control) */
+#workspaces { display: inline-flex; gap: 2px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 2px; margin-left: 6px; }
+.ws-btn { background: transparent; border: none; color: var(--muted); font-size: 12px; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
+.ws-btn:hover { color: var(--text); }
+.ws-btn.active { background: var(--accent); color: #fff; }
 
-#toolbar {
-  grid-area: toolbar;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-  min-height: 44px;
-}
-#toolbar > strong { font-size: 14px; }
-#toolbar #status {
-  font-size: 12px; opacity: 0.7; max-width: 280px; overflow: hidden;
-  text-overflow: ellipsis; margin-left: 0;
-}
+/* stage holds the three workspaces; only the active one shows */
+#stage { grid-area: stage; position: relative; min-height: 0; }
+.workspace { display: none; height: 100%; }
+.workspace.active { display: grid; }
 
-#container { grid-area: container; position: relative; min-width: 0; overflow: hidden; }
+/* MODEL workspace: icon rail | slide-out panel | viewport | contextual props */
+#ws-model { grid-template-columns: 46px var(--rail-w) minmax(0, 1fr) auto; }
+#app.rail-collapsed #ws-model { grid-template-columns: 46px 0 minmax(0, 1fr) auto; }
+#app.rail-collapsed #rail-panel { display: none; }
 
-/* floating viewer toolbar over the 3D viewport (not the top bar) */
+#rail { background: var(--panel2); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; }
+.rail-btn {
+  width: 34px; height: 34px; border: none; background: transparent; color: var(--muted);
+  font-size: 17px; border-radius: 6px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; position: relative;
+}
+.rail-btn:hover { background: #ffffff14; color: var(--text); }
+.rail-btn.active { background: var(--accent); color: #fff; }
+.rail-badge { position: absolute; top: 0; right: 0; min-width: 14px; height: 14px; padding: 0 3px; font-size: 9px; line-height: 14px; border-radius: 7px; background: #e2554a; color: #fff; }
+
+#rail-panel { background: var(--panel2); border-right: 1px solid var(--line); overflow: auto; position: relative; }
+.rpanel { display: none; padding: 8px 10px; font-size: 12px; }
+.rpanel.active { display: block; }
+#rail-resize { position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 20; }
+#rail-resize:hover { background: var(--accent); opacity: 0.5; }
+
+#container { position: relative; min-width: 0; overflow: hidden; }
+
+/* floating viewer toolbar over the 3D viewport */
 #viewer-tools {
   position: absolute; top: 10px; left: 10px; z-index: 10;
   display: flex; flex-wrap: wrap; gap: 4px; max-width: calc(100% - 20px);
@@ -85,37 +91,45 @@ html, body, #app {
   border: 1px solid var(--line); box-shadow: 0 2px 10px #0006;
 }
 #viewer-tools:empty { display: none; }
+.icon-btn { width: 30px; height: 30px; padding: 0; font-size: 15px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 
-/* sidebar */
-#sidebar {
-  grid-area: sidebar;
-  background: var(--panel2);
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-#sidebar-resize {
-  position: absolute; top: 0; right: -3px; width: 6px; height: 100%;
-  cursor: col-resize; z-index: 20;
-}
-#sidebar-resize:hover { background: var(--accent); opacity: 0.5; }
-@media (max-width: 820px) { #sidebar-resize { display: none; } }   /* stacked layout */
+/* CONSTRUCTION / FINANCE: full-width workspaces */
+#ws-construction.active, #ws-finance.active { display: block; }
+#ws-construction { overflow: auto; }
+.fullpanel { display: none; height: 100%; overflow: auto; padding: 14px 18px; font-size: 13px; }
+.fullpanel.active { display: block; }
+#panel-portal.fullpanel { display: block; }
+#ws-finance.active { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+#fin-tabs { display: flex; gap: 4px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); background: var(--panel); }
+.fintab { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-size: 13px; padding: 6px 12px; cursor: pointer; }
+.fintab.active { color: var(--text); border-bottom-color: var(--accent); }
 
-/* icon buttons on the floating viewer toolbar */
-.icon-btn {
-  width: 30px; height: 30px; padding: 0; font-size: 15px; line-height: 1;
-  display: inline-flex; align-items: center; justify-content: center;
+/* bottom settings bar (persisted) */
+#statusbar {
+  grid-area: statusbar; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 4px 12px; background: var(--panel); border-top: 1px solid var(--line);
+  font-size: 12px; min-height: 32px;
 }
-#tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
-.tab {
-  flex: 1 0 auto; padding: 7px 9px; cursor: pointer; font-size: 12px; white-space: nowrap;
-  background: transparent; color: var(--muted); border: none; border-bottom: 2px solid transparent;
+.sb-group { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.sb-group > label { color: var(--muted); white-space: nowrap; }
+.sb-toggle { cursor: pointer; padding: 2px 9px; background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; }
+.sb-toggle.on { background: var(--accent); color: #fff; }
+.sb-sel { background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; padding: 2px 4px; }
+.sb-sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 0; }
+#sb-coords { font-family: ui-monospace, monospace; color: var(--muted); }
+#sb-saved { color: #8fd98f; margin-left: auto; opacity: 0; transition: opacity .2s; }
+#sb-saved.show { opacity: 1; }
+
+/* tablet/mobile: rail panel + props become overlays */
+@media (max-width: 820px) {
+  #ws-model { grid-template-columns: 46px minmax(0, 1fr); }
+  #app.rail-collapsed #ws-model { grid-template-columns: 46px minmax(0, 1fr); }
+  #rail-panel { position: absolute; left: 46px; top: 0; bottom: 0; width: 78vw; max-width: 320px; z-index: 25; box-shadow: 4px 0 20px #000a; }
+  #rail-resize { display: none; }
+  #props { position: absolute; right: 0; top: 0; bottom: 0; width: 82vw; max-width: 320px; z-index: 26; box-shadow: -4px 0 20px #000a; }
+  #statusbar { overflow-x: auto; flex-wrap: nowrap; }
+  #topbar { overflow-x: auto; }
 }
-.tab.active { color: var(--text); border-bottom-color: var(--accent); }
-.panel { display: none; overflow: auto; padding: 8px 10px; flex: 1; font-size: 12px; }
-.panel.active { display: block; }
 
 /* buttons */
 .file-btn { cursor: pointer; padding: 5px 12px; background: var(--accent); border-radius: 4px; font-size: 13px; color: #fff; border: none; }
@@ -145,8 +159,6 @@ html, body, #app {
 .tool-btn:hover { background: #45484f; }
 .tool-btn.on { background: var(--accent); }
 
-#status { font-size: 12px; opacity: 0.7; margin-left: auto; }
-
 /* tree */
 .tree, .tree ul { list-style: none; margin: 0; padding-left: 12px; }
 .tree { padding-left: 0; }
@@ -175,7 +187,7 @@ html, body, #app {
 .section-title { font-size: 11px; text-transform: uppercase; color: var(--muted); margin: 4px 0 8px; letter-spacing: .04em; }
 
 /* properties */
-#props { grid-area: props; width: 320px; overflow: auto; padding: 12px 14px; background: var(--panel); border-left: 1px solid var(--line); }
+#props { width: 320px; overflow: auto; padding: 12px 14px; background: var(--panel); border-left: 1px solid var(--line); }
 #props-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--panel); padding-bottom: 6px; }
 #props-head h3 { margin: 0; }
 #props-close {

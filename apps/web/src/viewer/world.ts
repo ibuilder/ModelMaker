@@ -1,11 +1,12 @@
 import * as OBC from "@thatopen/components";
 
-export type World = OBC.SimpleWorld<OBC.SimpleScene, OBC.SimpleCamera, OBC.SimpleRenderer>;
+export type World = OBC.SimpleWorld<OBC.SimpleScene, OBC.OrthoPerspectiveCamera, OBC.SimpleRenderer>;
 
 export interface Viewer {
   components: OBC.Components;
   world: World;
   container: HTMLElement;
+  grid: OBC.SimpleGrid;
 }
 
 /**
@@ -16,22 +17,22 @@ export function createViewer(container: HTMLElement): Viewer {
   const components = new OBC.Components();
 
   const worlds = components.get(OBC.Worlds);
-  const world = worlds.create<OBC.SimpleScene, OBC.SimpleCamera, OBC.SimpleRenderer>();
+  const world = worlds.create<OBC.SimpleScene, OBC.OrthoPerspectiveCamera, OBC.SimpleRenderer>();
 
   world.scene = new OBC.SimpleScene(components);
   world.scene.setup();
   world.scene.three.background = null;
 
   world.renderer = new OBC.SimpleRenderer(components, container);
-  world.camera = new OBC.SimpleCamera(components);
+  world.camera = new OBC.OrthoPerspectiveCamera(components);
 
   components.init();
 
   world.camera.controls.setLookAt(12, 8, 12, 0, 0, 0);
 
-  // light reference grid
+  // light reference grid (toggled from the bottom settings bar)
   const grids = components.get(OBC.Grids);
-  grids.create(world);
+  const grid = grids.create(world);
 
-  return { components, world, container };
+  return { components, world, container, grid };
 }

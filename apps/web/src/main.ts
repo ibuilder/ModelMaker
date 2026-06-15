@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import CameraControls from "camera-controls";
 import "./style.css";
 import { createViewer } from "./viewer/world";
 import { ModelLoader } from "./viewer/loader";
@@ -23,7 +24,7 @@ const container = $("container");
 const statusEl = $("status");
 const propsPanel = $("props");
 const propsBody = $("props-body");
-const toolbar = $("toolbar");
+const toolbar = $("topbar");
 $("props-close").addEventListener("click", () => void selectMap(null));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !propsPanel.hidden) void selectMap(null); });
 const setStatus = (m: string) => (statusEl.textContent = m);
@@ -120,6 +121,7 @@ container.addEventListener("click", async (e) => {
   });
   if (!hit) { await selectMap(null); return; }
   lastPoint = hit.point.clone();
+  showCoords(lastPoint);
   const [guid] = await hit.fragments.getGuidsByLocalIds([hit.localId]);
   selectedGuid = guid ?? null;
   await selectMap({ [hit.fragments.modelId]: new Set([hit.localId]) }, { guid: guid ?? undefined });
@@ -257,80 +259,212 @@ toolBtn("⊙", "Isolate selection", () => selection && visibility.isolate(select
 toolBtn("◐", "Color selection", () => selection && colorize.color(selection, "#ffb000"));
 toolBtn("⊞", "Show all (H)", async () => { await visibility.showAll(); await colorize.reset(); });
 
-// ---- tabs -------------------------------------------------------------------
-document.querySelectorAll<HTMLButtonElement>(".tab").forEach((tab) => {
-  tab.onclick = () => {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
-    tab.classList.add("active");
-    $(`panel-${tab.dataset.tab}`).classList.add("active");
-    if (tab.dataset.tab === "portal") openPortalTab();
-    if (tab.dataset.tab === "proforma") openProformaTab();
-    if (tab.dataset.tab === "portfolio") openPortfolioTab();
+// ---- workspaces + left icon rail (replaces the old tab strip) ---------------
+const appEl = document.getElementById("app")!;
+
+// Model-workspace rail: each icon toggles a slide-out panel
+const RAIL_ITEMS: { key: string; icon: string; title: string }[] = [
+  { key: "tree", icon: "⌗", title: "Model tree" },
+  { key: "layers", icon: "≣", title: "Layers" },
+  { key: "issues", icon: "⚑", title: "Issues / RFIs" },
+  { key: "tools", icon: "⚙", title: "Tools & analysis" },
+];
+const railEl = $("rail");
+function showRail(key: string) {
+  appEl.classList.remove("rail-collapsed");
+  document.querySelectorAll(".rail-btn").forEach((b) => b.classList.toggle("active", (b as HTMLElement).dataset.rail === key));
+  document.querySelectorAll(".rpanel").forEach((p) => p.classList.remove("active"));
+  $(`panel-${key}`).classList.add("active");
+}
+for (const it of RAIL_ITEMS) {
+  const b = document.createElement("button");
+  b.className = "rail-btn"; b.dataset.rail = it.key; b.textContent = it.icon;
+  b.title = it.title; b.setAttribute("aria-label", it.title);
+  b.onclick = () => {
+    const isActive = b.classList.contains("active") && !appEl.classList.contains("rail-collapsed");
+    if (isActive) appEl.classList.add("rail-collapsed");   // click the active icon to collapse
+    else showRail(it.key);
+  };
+  railEl.appendChild(b);
+}
+
+// Workspace switcher: Model (viewer) / Construction (GC portal) / Finance (proforma)
+const WORKSPACES: { key: string; label: string }[] = [
+  { key: "model", label: "Model" },
+  { key: "construction", label: "Construction" },
+  { key: "finance", label: "Finance" },
+];
+let currentWs = "model";
+function setWorkspace(key: string) {
+  currentWs = key;
+  document.querySelectorAll(".ws-btn").forEach((b) => b.classList.toggle("active", (b as HTMLElement).dataset.ws === key));
+  document.querySelectorAll(".workspace").forEach((w) => w.classList.toggle("active", w.id === `ws-${key}`));
+  if (key === "construction") openPortalTab();
+  if (key === "finance") openProformaTab();
+  // the viewer container resizes from 0 when Model comes back into view
+  if (key === "model") setTimeout(() => { viewer.world.renderer?.resize(); void loader.fragments.core.update(true); }, 0);
+  localStorage.setItem("workspace", key);
+}
+const wsEl = $("workspaces");
+for (const w of WORKSPACES) {
+  const b = document.createElement("button");
+  b.className = "ws-btn"; b.dataset.ws = w.key; b.textContent = w.label;
+  b.onclick = () => setWorkspace(w.key);
+  wsEl.appendChild(b);
+}
+
+// Finance sub-tabs (Proforma / Portfolio)
+document.querySelectorAll<HTMLButtonElement>(".fintab").forEach((t) => {
+  t.onclick = () => {
+    document.querySelectorAll(".fintab").forEach((x) => x.classList.remove("active"));
+    document.querySelectorAll("#ws-finance .fullpanel").forEach((p) => p.classList.remove("active"));
+    t.classList.add("active");
+    $(`panel-${t.dataset.fin}`).classList.add("active");
+    if (t.dataset.fin === "proforma") openProformaTab();
+    if (t.dataset.fin === "portfolio") openPortfolioTab();
   };
 });
 
-// ---- role-based navigation: show only the tabs relevant to a persona --------
-const PERSONA_TABS: Record<string, string[] | null> = {
-  all: null,
-  developer: ["proforma", "portfolio", "issues", "tools", "portal"],
-  gc: ["tree", "layers", "issues", "tools", "portal", "portfolio"],
-  architect: ["tree", "layers", "issues", "tools", "portal"],
-  engineer: ["tree", "layers", "tools", "issues"],
-  subcontractor: ["portal", "issues", "tools"],
-};
-// each persona lands on the tab most relevant to their lifecycle stage
-const PERSONA_HOME: Record<string, string> = {
-  developer: "portfolio", gc: "portal", architect: "tree",
-  engineer: "tools", subcontractor: "portal",
+// ---- role-based navigation: gate workspaces + rail panels per persona -------
+interface PersonaCfg { ws: string[] | null; rail: string[] | null; home: string; }
+const PERSONAS: Record<string, PersonaCfg> = {
+  all:           { ws: null, rail: null, home: "model" },
+  developer:     { ws: ["finance", "model", "construction"], rail: ["issues", "tools", "tree"], home: "finance" },
+  gc:            { ws: ["construction", "model", "finance"], rail: ["tree", "layers", "issues", "tools"], home: "construction" },
+  architect:     { ws: ["model", "construction"], rail: ["tree", "layers", "issues", "tools"], home: "model" },
+  engineer:      { ws: ["model"], rail: ["tree", "layers", "tools", "issues"], home: "model" },
+  subcontractor: { ws: ["construction", "model"], rail: ["issues", "tools"], home: "construction" },
 };
 const personaSel = document.getElementById("persona") as HTMLSelectElement;
 function applyPersona(p: string, goHome = false) {
-  const allow = PERSONA_TABS[p] ?? null;
-  let activeHidden = false;
-  document.querySelectorAll<HTMLButtonElement>(".tab").forEach((t) => {
-    const show = !allow || allow.includes(t.dataset.tab!);
-    t.hidden = !show;
-    if (!show && t.classList.contains("active")) activeHidden = true;
-  });
-  const home = goHome ? PERSONA_HOME[p] : null;
-  if (home) {
-    document.querySelector<HTMLButtonElement>(`.tab[data-tab="${home}"]`)?.click();
-  } else if (activeHidden) {
-    document.querySelector<HTMLButtonElement>(".tab:not([hidden])")?.click();
-  }
+  const cfg = PERSONAS[p] ?? PERSONAS.all;
+  document.querySelectorAll<HTMLButtonElement>(".ws-btn").forEach((b) => { b.hidden = !!cfg.ws && !cfg.ws.includes(b.dataset.ws!); });
+  document.querySelectorAll<HTMLButtonElement>(".rail-btn").forEach((b) => { b.hidden = !!cfg.rail && !cfg.rail.includes(b.dataset.rail!); });
+  const allowedRail = cfg.rail ?? RAIL_ITEMS.map((r) => r.key);
+  const activeRail = document.querySelector(".rail-btn.active") as HTMLElement | null;
+  if (!activeRail || !allowedRail.includes(activeRail.dataset.rail!)) showRail(allowedRail[0]);
+  if (goHome || (cfg.ws && !cfg.ws.includes(currentWs))) setWorkspace(cfg.home);
   localStorage.setItem("persona", p);
 }
 personaSel.value = localStorage.getItem("persona") || "all";
-personaSel.onchange = () => applyPersona(personaSel.value, true);  // jump to the role's home tab
-applyPersona(personaSel.value);
+personaSel.onchange = () => applyPersona(personaSel.value, true);  // jump to the role's home workspace
 
-// ---- collapsible / responsive sidebar ---------------------------------------
-const appEl = document.getElementById("app")!;
-function toggleSidebar() { appEl.classList.toggle("sidebar-collapsed"); }
-(document.getElementById("sidebar-toggle") as HTMLButtonElement).onclick = toggleSidebar;
-
-// drag-to-resize the side panel (persisted)
-const savedW = localStorage.getItem("sidebar-w");
-if (savedW) appEl.style.setProperty("--sidebar-w", savedW);
+// ---- rail collapse + drag-to-resize (persisted) -----------------------------
+function toggleRail() { appEl.classList.toggle("rail-collapsed"); }
+(document.getElementById("rail-toggle") as HTMLButtonElement).onclick = toggleRail;
+const savedW = localStorage.getItem("rail-w");
+if (savedW) appEl.style.setProperty("--rail-w", savedW);
 const resizer = document.createElement("div");
-resizer.id = "sidebar-resize"; resizer.title = "Drag to resize";
-$("sidebar").appendChild(resizer);
+resizer.id = "rail-resize"; resizer.title = "Drag to resize";
+$("rail-panel").appendChild(resizer);
 resizer.addEventListener("pointerdown", (e) => {
   e.preventDefault();
   resizer.setPointerCapture(e.pointerId);
   const move = (ev: PointerEvent) => {
-    const w = Math.min(Math.max(ev.clientX, 220), 560);  // clamp 220–560px
-    appEl.style.setProperty("--sidebar-w", `${w}px`);
+    const w = Math.min(Math.max(ev.clientX - 46, 200), 560);  // minus the 46px icon column
+    appEl.style.setProperty("--rail-w", `${w}px`);
   };
   const up = () => {
     resizer.removeEventListener("pointermove", move);
     resizer.removeEventListener("pointerup", up);
-    localStorage.setItem("sidebar-w", getComputedStyle(appEl).getPropertyValue("--sidebar-w").trim());
+    localStorage.setItem("rail-w", getComputedStyle(appEl).getPropertyValue("--rail-w").trim());
   };
   resizer.addEventListener("pointermove", move);
   resizer.addEventListener("pointerup", up);
 });
+
+// ---- bottom settings bar: view options persisted across sessions ------------
+type Settings = {
+  theme: "dark" | "light"; grid: boolean; projection: "Perspective" | "Orthographic";
+  background: "dark" | "light" | "none"; zoomCursor: boolean;
+  nav: "orbit" | "pan" | "cad"; units: "m" | "cm" | "mm" | "ft"; section: boolean;
+};
+const SETTINGS_DEFAULTS: Settings = {
+  theme: "dark", grid: true, projection: "Perspective", background: "dark",
+  zoomCursor: true, nav: "orbit", units: "m", section: false,
+};
+const settings: Settings = { ...SETTINGS_DEFAULTS, ...JSON.parse(localStorage.getItem("aec-settings") || "{}") };
+const UNIT_FACTOR: Record<string, number> = { m: 1, cm: 100, mm: 1000, ft: 3.28084 };
+const BG: Record<string, number | null> = { dark: 0x1e1f22, light: 0xf0f1f3, none: null };
+const ACT = CameraControls.ACTION;
+
+let savedTimer: number | undefined;
+function flashSaved() {
+  const el = document.getElementById("sb-saved"); if (!el) return;
+  el.classList.add("show"); clearTimeout(savedTimer);
+  savedTimer = window.setTimeout(() => el.classList.remove("show"), 1200);
+}
+function saveSettings() { localStorage.setItem("aec-settings", JSON.stringify(settings)); flashSaved(); }
+
+function applySettings() {
+  document.documentElement.dataset.theme = settings.theme === "light" ? "light" : "";
+  viewer.grid.visible = settings.grid;
+  void viewer.world.camera.projection.set(settings.projection);
+  const bg = BG[settings.background];
+  viewer.world.scene.three.background = bg === null ? null : new THREE.Color(bg);
+  const c = viewer.world.camera.controls;
+  c.dollyToCursor = settings.zoomCursor;
+  if (settings.nav === "orbit") { c.mouseButtons.left = ACT.ROTATE; c.mouseButtons.right = ACT.TRUCK; c.mouseButtons.wheel = ACT.DOLLY; }
+  else if (settings.nav === "pan") { c.mouseButtons.left = ACT.TRUCK; c.mouseButtons.right = ACT.ROTATE; c.mouseButtons.wheel = ACT.DOLLY; }
+  else { c.mouseButtons.left = ACT.ROTATE; c.mouseButtons.middle = ACT.TRUCK; c.mouseButtons.wheel = ACT.ZOOM; }
+  section.enabled = settings.section;
+  showCoords(lastPoint);
+  void loader.fragments.core.update(true);
+}
+
+function showCoords(p: THREE.Vector3 | null) {
+  const el = document.getElementById("sb-coords"); if (!el) return;
+  if (!p) { el.textContent = "—"; return; }
+  const f = UNIT_FACTOR[settings.units] ?? 1, u = settings.units, d = u === "mm" ? 0 : 2;
+  // model Y is up; report E=x, N=-z, Z=y to match the origin tool
+  el.textContent = `E ${(p.x * f).toFixed(d)} · N ${(-p.z * f).toFixed(d)} · Z ${(p.y * f).toFixed(d)} ${u}`;
+}
+
+function buildStatusBar() {
+  const bar = $("statusbar");
+  const sep = () => { const d = document.createElement("span"); d.className = "sb-sep"; return d; };
+  const toggle = (label: string, key: "grid" | "section" | "zoomCursor") => {
+    const b = document.createElement("button"); b.className = "sb-toggle"; b.textContent = label;
+    const sync = () => b.classList.toggle("on", !!settings[key]);
+    b.onclick = () => { settings[key] = !settings[key]; sync(); applySettings(); saveSettings(); };
+    sync(); return b;
+  };
+  const select = (label: string, key: "projection" | "theme" | "background" | "nav" | "units", opts: [string, string][]) => {
+    const wrap = document.createElement("span"); wrap.className = "sb-group";
+    const l = document.createElement("label"); l.textContent = label;
+    const s = document.createElement("select"); s.className = "sb-sel";
+    for (const [v, t] of opts) { const o = document.createElement("option"); o.value = v; o.textContent = t; s.appendChild(o); }
+    s.value = String(settings[key]);
+    s.onchange = () => { (settings[key] as string) = s.value; applySettings(); saveSettings(); };
+    wrap.append(l, s); return wrap;
+  };
+  const fit = document.createElement("button"); fit.className = "sb-toggle"; fit.textContent = "⤢ Fit";
+  fit.title = "Fit to view (F)"; fit.onclick = () => void fitToModels();
+  bar.append(
+    fit, sep(),
+    toggle("Grid", "grid"), toggle("Section", "section"),
+    select("View", "projection", [["Perspective", "Perspective"], ["Orthographic", "Ortho"]]), sep(),
+    select("Theme", "theme", [["dark", "Dark"], ["light", "Light"]]),
+    select("Background", "background", [["dark", "Dark"], ["light", "Light"], ["none", "None"]]), sep(),
+    select("Nav", "nav", [["orbit", "Orbit"], ["pan", "Pan (Revit)"], ["cad", "CAD (Navis)"]]),
+    toggle("Zoom to cursor", "zoomCursor"),
+    select("Units", "units", [["m", "m"], ["cm", "cm"], ["mm", "mm"], ["ft", "ft-in"]]), sep(),
+  );
+  const coords = document.createElement("span"); coords.id = "sb-coords"; coords.textContent = "—";
+  const saved = document.createElement("span"); saved.id = "sb-saved"; saved.textContent = "✓ saved";
+  bar.append(coords, saved);
+}
+
+// initialise navigation + settings
+showRail("tree");
+buildStatusBar();
+applySettings();
+applyPersona(personaSel.value);
+{
+  const savedWs = localStorage.getItem("workspace");
+  const allowWs = PERSONAS[personaSel.value]?.ws ?? null;
+  setWorkspace(savedWs && (!allowWs || allowWs.includes(savedWs)) ? savedWs : currentWs);
+}
 
 // ---- camera fit -------------------------------------------------------------
 async function fitToModels() {
@@ -843,7 +977,7 @@ window.addEventListener("keydown", (e) => {
     case "a": measure.setMode(measure.mode === "area" ? "off" : "area"); setStatus(`measure: ${measure.mode}`); break;
     case "s": section.enabled = !section.enabled; setStatus(`section ${section.enabled ? "on (dbl-click face)" : "off"}`); break;
     case "h": visibility.showAll(); colorize.reset(); break;
-    case "\\": toggleSidebar(); break;
+    case "\\": toggleRail(); break;
     case "?": toast(SHORTCUTS + " · \\ panel", "info", 6000); break;
     default: return;
   }
