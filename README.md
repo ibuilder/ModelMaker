@@ -1,13 +1,16 @@
-# AEC BIM Platform
+# AEC BIM Platform + GC Portal
 
 A standalone, open, web-based **BIM viewer + data + coordination platform** for AEC firms,
-built on the IfcOpenShell / That Open (Fragments) ecosystem. **IFC is the source of truth.**
-The browser viewer streams a fast tiled format; a Python service does extraction, QA, clash,
-and 2D documentation; a FastAPI backend handles BCF issues; and authoring runs on
-`ifcopenshell.api` (the engine Bonsai drives) — no proprietary format, no per-seat license.
+built on the IfcOpenShell / That Open (Fragments) ecosystem, **plus a general-contracting
+portal** (RFIs, change-order chain, pay apps, dashboards) whose records pin to the 3D model.
+**IFC is the source of truth.** The browser viewer streams a fast tiled format; a Python
+service does extraction, QA, clash, and 2D documentation; a FastAPI backend handles BCF
+issues, the GC-portal module engine, and authoring on `ifcopenshell.api` (the engine Bonsai
+drives) — no proprietary format, no per-seat license.
 
-> Status: a working end-to-end vertical slice, verified against a real structural model
-> (the buildingSMART/That Open "school" IFC, 8.6 MB, IFC4). See [docs/status.md](docs/status.md).
+> Status: a working end-to-end vertical slice, verified against real models (the That Open
+> "school" structural IFC + a 52 MB architectural Revit export). Two halves: the **BIM
+> platform** (below) and the **[General Contracting Portal](docs/gc-portal.md)**.
 
 ## What it does (vs. Bonsai / Revit / Navisworks)
 
@@ -30,9 +33,29 @@ and verified** in this repo unless noted:
   → republish (reconvert + reindex). GUID-stable, so pins/RFIs/clashes survive. Desktop
   GUI authoring is the Blender + Bonsai bridge (driven via Bonsai-MCP).
 
+## General Contracting Portal
+
+A construction-management portal on top of the viewer — full writeup in
+[docs/gc-portal.md](docs/gc-portal.md). Highlights:
+
+- **Module engine** — every process (RFIs, Submittals, PCO/Change-Order chain, Daily
+  Reports, …) is a `module.json` → its own auto-created table. **68 modules / 12 sections**,
+  no per-module code. Each gets CRUD, role-gated workflow, comments, CSV/PDF, pins, timeline.
+- **Two role dimensions** — capability roles (viewer→admin) + party roles
+  (GC/Owner/OwnersRep/Consultant/Subcontractor) that gate workflow transitions.
+- **Change-order chain** — PCO ▸ NOC ▸ Directive ▸ Proposal ▸ COR ▸ eTicket, linked and
+  audit-logged; approved CORs flow into the contract sum.
+- **Financials** — AIA **G702/G703** pay apps (+ PDF), **Cost Summary** roll-up, **eTicket
+  T&M builder** priced from rate tables.
+- **Schedule** — Gantt + Empire-State **Line-of-Balance** charts.
+- **Role-tailored dashboard** — per-party KPIs + "ball-in-your-court" action items.
+- **Model pins** — any anchored record (RFI/PCO/COR/punchlist/inspection/…) shows on the
+  3D model; clicking selects the element and opens the record. Same GUID keys geometry,
+  BCF, and GC records.
+
 ## Gallery
 
-Generated directly from the IFC by the data service:
+Generated directly from the IFC by the data service (BIM), plus GC schedule charts:
 
 | Dimensioned grid plan | Composed sheet (A3) | North elevation (HLR) | Room tags |
 |---|---|---|---|
@@ -41,6 +64,12 @@ Generated directly from the IFC by the data service:
 The dimensioned plan derives the structural grid from column positions (no `IfcGrid` needed),
 adds numbered/lettered bubbles and grid-spacing dimensions; the sheet composes per-storey
 plans + a section under a title block (also exported as PDF).
+
+GC portal schedule visuals (from the `schedule_activity` module):
+
+| Gantt | Line of Balance |
+|---|---|
+| ![gantt](docs/img/gantt.png) | ![lob](docs/img/lob.png) |
 
 > Live 3D-viewer UI captures (model + panels) can be added to `docs/img/` — the viewer is a
 > WebGL app, so these are best grabbed from the running app (`apps/web`).
@@ -67,11 +96,13 @@ plans + a section under a title block (also exported as PDF).
 apps/web/            Vite + TS viewer (Three.js + @thatopen/*), integrated app shell
 apps/editor-bridge/  Bonsai-MCP config + authoring recipes (desktop path)
 services/converter/  IFC→.frag (Node) + optional RVT→IFC via APS (paid, flagged)
-services/api/        FastAPI: BCF, properties, exports, clash/validate, drawings, edit/publish
+services/api/        FastAPI: BCF, properties, exports, clash/validate, drawings, edit/publish,
+                       GC portal (modules, cost, schedule, dashboard)
+services/api/modules/  68 module.json definitions (GC portal — one table each)
 services/data/       IfcOpenShell: index, QTO, COBie, spaces, schedule, clash, IDS, drawings, edit
 packages/            shared types
 families/            IFC type libraries (versioned)
-docs/                status, capability matrix, phase notes, deploy, images
+docs/                status, capability matrix, gc-portal, deploy, images
 ```
 
 ## Quick start (dev)
@@ -109,6 +140,14 @@ POST   /projects/{id}/validate                IDS validation
 GET    /projects/{id}/drawings/{plan,section,elevation}.svg
 GET    /projects/{id}/drawings/sheet.{svg,pdf}
 POST   /projects/{id}/edit | /publish         authoring round-trip
+
+# GC portal (full list in docs/gc-portal.md)
+GET    /modules                               module catalog
+GET/POST /projects/{id}/modules/{key}[/{rid}] config-driven CRUD (+ /transition /link /comments /pdf /export.csv)
+GET    /projects/{id}/module-pins             anchored records → viewer overlay
+GET    /projects/{id}/cost/{g703,g702,summary} financials (+ g702.pdf, POST /cost/tm)
+GET    /projects/{id}/schedule/{gantt,lob}.svg  Gantt + Line-of-Balance
+GET    /projects/{id}/dashboard               role-tailored dashboard
 ```
 
 ## Verification
