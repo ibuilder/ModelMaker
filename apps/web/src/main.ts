@@ -472,18 +472,44 @@ function cameraPos() {
   return { x: p.x, y: p.y, z: p.z };
 }
 
+// which demo frag(s) back each project (by name) — federation handled per project
+function fragsForProject(name: string): [string, string][] {
+  if (/basichouse/i.test(name)) return [["/basichouse.frag", "BasicHouse-ARCH"]];
+  if (/school/i.test(name)) return [["/school_str.frag", "school-STR"], ["/school_arq.frag", "school-ARQ"]];
+  return [];
+}
+
+function buildProjectPicker(projects: { id: string; name: string }[]) {
+  const sel = document.createElement("select");
+  sel.className = "tool-btn"; sel.title = "Project";
+  for (const p of projects) {
+    const o = document.createElement("option");
+    o.value = p.id; o.textContent = p.name; o.selected = p.id === projectId;
+    sel.appendChild(o);
+  }
+  sel.onchange = () => { window.location.search = `?project=${sel.value}`; };  // reload into project
+  toolbar.insertBefore(sel, statusEl);
+}
+
 // ---- startup ----------------------------------------------------------------
 async function startup() {
   connected = await api.health();
+  let projects: { id: string; name: string }[] = [];
+  let projectName = "";
   if (connected) {
-    const projects = await api.projects();
-    projectId = projects[0]?.id ?? null;
-    setStatus(connected && projectId ? `connected • project ${projects[0].name}` : "connected • no project");
+    projects = await api.projects();
+    const wanted = new URLSearchParams(location.search).get("project");
+    const chosen = projects.find((p) => p.id === wanted) ?? projects[0];
+    projectId = chosen?.id ?? null;
+    projectName = chosen?.name ?? "";
+    setStatus(projectId ? `connected • ${projectName}` : "connected • no project");
+    if (projects.length) buildProjectPicker(projects);
   } else {
     setStatus("offline — open a .frag to view (API not reachable)");
   }
-  // auto-load demo frags if present (federation: structural + architectural disciplines)
-  for (const [file, id] of [["/school_str.frag", "school-STR"], ["/school_arq.frag", "school-ARQ"]]) {
+  // load the chosen project's model frag(s) from public/
+  const frags = projectName ? fragsForProject(projectName) : [["/school_str.frag", "school-STR"], ["/school_arq.frag", "school-ARQ"]];
+  for (const [file, id] of frags) {
     try {
       const res = await fetch(file);
       if (res.ok) await loader.loadFragments(await res.arrayBuffer(), id);
