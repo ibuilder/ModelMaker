@@ -193,6 +193,9 @@ export class ApiClient {
     return this.json<ProformaForecast>(`/proforma/forecast`, {
       method: "POST", body: JSON.stringify({ assumptions, actuals, as_of_month }) });
   }
+  portfolio() {
+    return this.json<{ deal_count: number; totals: Record<string, number | null>; deals: { id: string; name: string; total_uses: number; equity: number; loan: number; equity_irr: number | null; equity_multiple: number | null }[] }>(`/proforma/portfolio`);
+  }
   createScenario(name: string, project_id: string | null, assumptions: unknown) {
     return this.json<{ id: string }>(`/proforma/scenarios`, {
       method: "POST", body: JSON.stringify({ name, project_id, assumptions }) });

@@ -168,8 +168,42 @@ document.querySelectorAll<HTMLButtonElement>(".tab").forEach((tab) => {
     $(`panel-${tab.dataset.tab}`).classList.add("active");
     if (tab.dataset.tab === "portal") openPortalTab();
     if (tab.dataset.tab === "proforma") openProformaTab();
+    if (tab.dataset.tab === "portfolio") openPortfolioTab();
   };
 });
+
+// ---- role-based navigation: show only the tabs relevant to a persona --------
+const PERSONA_TABS: Record<string, string[] | null> = {
+  all: null,
+  developer: ["proforma", "portfolio", "issues", "tools", "portal"],
+  gc: ["tree", "layers", "issues", "tools", "portal", "portfolio"],
+  architect: ["tree", "layers", "issues", "tools", "portal"],
+  engineer: ["tree", "layers", "tools", "issues"],
+  subcontractor: ["portal", "issues", "tools"],
+};
+const personaSel = document.getElementById("persona") as HTMLSelectElement;
+function applyPersona(p: string) {
+  const allow = PERSONA_TABS[p] ?? null;
+  let activeHidden = false;
+  document.querySelectorAll<HTMLButtonElement>(".tab").forEach((t) => {
+    const show = !allow || allow.includes(t.dataset.tab!);
+    t.hidden = !show;
+    if (!show && t.classList.contains("active")) activeHidden = true;
+  });
+  if (activeHidden) {
+    const first = document.querySelector<HTMLButtonElement>(".tab:not([hidden])");
+    first?.click();
+  }
+  localStorage.setItem("persona", p);
+}
+personaSel.value = localStorage.getItem("persona") || "all";
+personaSel.onchange = () => applyPersona(personaSel.value);
+applyPersona(personaSel.value);
+
+// ---- collapsible / responsive sidebar ---------------------------------------
+const appEl = document.getElementById("app")!;
+function toggleSidebar() { appEl.classList.toggle("sidebar-collapsed"); }
+(document.getElementById("sidebar-toggle") as HTMLButtonElement).onclick = toggleSidebar;
 
 // ---- camera fit -------------------------------------------------------------
 async function fitToModels() {
@@ -536,6 +570,33 @@ function openProformaTab() {
   void proforma.init();
 }
 
+// Portfolio — multi-deal roll-up across solved proforma scenarios
+async function openPortfolioTab() {
+  const panel = $("panel-portfolio");
+  panel.innerHTML = `<div class="section-title">Portfolio roll-up</div><div class="meta">loading…</div>`;
+  let p;
+  try { p = await api.portfolio(); }
+  catch { panel.innerHTML = `<div class="meta">portfolio unavailable (API offline)</div>`; return; }
+  const t = p.totals;
+  const m = (v: number | null) => (v == null ? "—" : "$" + Math.round(v).toLocaleString());
+  const pc = (v: number | null) => (v == null ? "—" : (v * 100).toFixed(1) + "%");
+  const kpis: [string, string][] = [
+    ["Deals", String(p.deal_count)], ["Total cap", m(t.total_capitalization)],
+    ["Total equity", m(t.total_equity)], ["Blended LTC", pc(t.blended_ltc)],
+    ["Blended equity IRR", pc(t.blended_equity_irr)], ["Portfolio EM", `${t.portfolio_equity_multiple ?? "—"}×`],
+  ];
+  const rows = p.deals.map((d) =>
+    `<tr><th style="text-align:left">${d.name}</th><td>${m(d.total_uses)}</td>` +
+    `<td>${m(d.equity)}</td><td>${pc(d.equity_irr)}</td><td>${d.equity_multiple ?? "—"}×</td></tr>`).join("");
+  panel.innerHTML =
+    `<div class="section-title">Portfolio roll-up — ${p.deal_count} deal(s)</div>` +
+    `<div class="kpi-grid">` +
+    kpis.map(([l, v]) => `<div class="kpi"><div class="kpi-v" style="font-size:15px">${v}</div><div class="kpi-l">${l}</div></div>`).join("") +
+    `</div>` +
+    (p.deal_count ? `<table class="sens-table"><tr><th>Deal</th><th>Cap</th><th>Equity</th><th>IRR</th><th>EM</th></tr>${rows}</table>`
+                  : `<div class="meta" style="margin-top:8px">No solved scenarios yet — build one in the Proforma tab and it rolls up here.</div>`);
+}
+
 async function refreshIssues() {
   if (!projectId) return;
   const topics = await api.pins(projectId);
@@ -655,7 +716,8 @@ window.addEventListener("keydown", (e) => {
     case "a": measure.setMode(measure.mode === "area" ? "off" : "area"); setStatus(`measure: ${measure.mode}`); break;
     case "s": section.enabled = !section.enabled; setStatus(`section ${section.enabled ? "on (dbl-click face)" : "off"}`); break;
     case "h": visibility.showAll(); colorize.reset(); break;
-    case "?": toast(SHORTCUTS, "info", 6000); break;
+    case "\\": toggleSidebar(); break;
+    case "?": toast(SHORTCUTS + " · \\ panel", "info", 6000); break;
     default: return;
   }
 });

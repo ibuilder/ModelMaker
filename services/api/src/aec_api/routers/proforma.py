@@ -13,8 +13,10 @@ from sqlalchemy import delete
 
 from .. import cost as cost_engine
 from .. import modules as me
+from .. import rbac
 from ..db import get_db
 from ..models import Scenario
+from ..rbac import current_user
 from ..proforma.draws import reforecast
 from ..proforma.sensitivity import sensitivity
 from ..proforma.solve import solve
@@ -140,12 +142,37 @@ def list_scenarios(project_id: str | None = None, db: Session = Depends(get_db))
              "returns": (s.result or {}).get("returns")} for s in q.order_by(Scenario.created_at).all()]
 
 
+def _can_read(db: Session, s: Scenario, user: str) -> bool:
+    """RBAC off → open. RBAC on → the scenario owner's project members or LPs it's shared with."""
+    if not rbac.RBAC_ON:
+        return True
+    if user in (s.shared_with or []):
+        return True
+    if s.project_id and rbac.role_for(db, s.project_id, user) is not None:
+        return True
+    return False
+
+
 @router.get("/proforma/scenarios/{sid}")
-def get_scenario(sid: str, db: Session = Depends(get_db)):
+def get_scenario(sid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
     s = db.get(Scenario, sid)
     if not s:
         raise HTTPException(404, "scenario not found")
-    return {"id": s.id, "name": s.name, "assumptions": s.assumptions, "result": s.result}
+    if not _can_read(db, s, user):
+        raise HTTPException(403, "not shared with you")
+    return {"id": s.id, "name": s.name, "assumptions": s.assumptions, "result": s.result,
+            "shared_with": s.shared_with or []}
+
+
+@router.post("/proforma/scenarios/{sid}/share", status_code=201)
+def share_scenario(sid: str, user: str = Body(..., embed=True), db: Session = Depends(get_db)):
+    """Grant an LP (or any party) read access to this scenario."""
+    s = db.get(Scenario, sid)
+    if not s:
+        raise HTTPException(404, "scenario not found")
+    s.shared_with = sorted(set((s.shared_with or []) + [user]))
+    db.commit()
+    return {"id": s.id, "shared_with": s.shared_with}
 
 
 @router.put("/proforma/scenarios/{sid}")
@@ -236,6 +263,47 @@ def draw_package(sid: str, body: DrawPackageIn, db: Session = Depends(get_db)):
         "g702": g702, "g703_totals": g703["totals"],
         "g702_pdf": f"/projects/{pid}/cost/g702.pdf?app_no={body.app_no}",
         "forecast_returns": fc["forecast_returns"],
+    }
+
+
+@router.get("/proforma/portfolio")
+def portfolio(db: Session = Depends(get_db)):
+    """Multi-deal roll-up across all solved scenarios: total capitalization, equity-weighted
+    blended IRR, aggregate equity multiple, and per-deal metrics."""
+    scens = [s for s in db.query(Scenario).order_by(Scenario.created_at).all() if s.result]
+    deals = []
+    tot_uses = tot_equity = tot_debt = 0.0
+    w_eq = w_irr = 0.0
+    tot_contrib = tot_dist = 0.0
+    for s in scens:
+        su = s.result.get("sources_uses", {})
+        ret = s.result.get("returns", {})
+        eq = float(su.get("equity", 0))
+        tot_uses += float(su.get("total_uses", 0))
+        tot_equity += eq
+        tot_debt += float(su.get("loan_amount", 0))
+        tot_contrib += float(ret.get("total_contributions", 0))
+        tot_dist += float(ret.get("total_distributions", 0))
+        eirr = ret.get("equity_irr")
+        if eirr is not None:
+            w_eq += eq; w_irr += eirr * eq
+        deals.append({
+            "id": s.id, "name": s.name, "project_id": s.project_id,
+            "total_uses": round(float(su.get("total_uses", 0)), 0),
+            "equity": round(eq, 0), "loan": round(float(su.get("loan_amount", 0)), 0),
+            "equity_irr": eirr, "equity_multiple": ret.get("equity_multiple"),
+        })
+    return {
+        "deal_count": len(deals),
+        "totals": {
+            "total_capitalization": round(tot_uses, 0),
+            "total_equity": round(tot_equity, 0),
+            "total_debt": round(tot_debt, 0),
+            "blended_ltc": round(tot_debt / tot_uses, 3) if tot_uses else 0,
+            "blended_equity_irr": round(w_irr / w_eq, 4) if w_eq else None,
+            "portfolio_equity_multiple": round(tot_dist / tot_contrib, 3) if tot_contrib else 0,
+        },
+        "deals": deals,
     }
 
 

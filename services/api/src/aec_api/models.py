@@ -42,6 +42,7 @@ class Scenario(Base):
     assumptions: Mapped[dict] = mapped_column(JSON, nullable=False)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     is_locked: Mapped[bool] = mapped_column(default=False)
+    shared_with: Mapped[list | None] = mapped_column(JSON, nullable=True)  # LP read-access users
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

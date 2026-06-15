@@ -8,9 +8,20 @@
   <body>
     <div id="app">
       <header id="toolbar">
+        <button id="sidebar-toggle" title="Toggle panel (\\)" aria-label="Toggle panel">☰</button>
         <strong>AEC BIM Viewer</strong>
         <label class="file-btn">Open IFC<input id="ifc-input" type="file" accept=".ifc" hidden /></label>
         <label class="file-btn">Open .frag<input id="frag-input" type="file" accept=".frag" hidden /></label>
+        <label id="persona-wrap" title="Show tools for your role">
+          <select id="persona">
+            <option value="all">All roles</option>
+            <option value="developer">Developer</option>
+            <option value="gc">General Contractor</option>
+            <option value="architect">Architect</option>
+            <option value="engineer">Engineer</option>
+            <option value="subcontractor">Subcontractor</option>
+          </select>
+        </label>
         <span id="status">ready</span>
       </header>
 
@@ -22,6 +33,7 @@
           <button class="tab" data-tab="tools">Tools</button>
           <button class="tab" data-tab="portal">Portal</button>
           <button class="tab" data-tab="proforma">Proforma</button>
+          <button class="tab" data-tab="portfolio">Portfolio</button>
         </div>
         <div id="panel-tree" class="panel active"></div>
         <div id="panel-layers" class="panel"></div>
@@ -29,6 +41,7 @@
         <div id="panel-tools" class="panel"></div>
         <div id="panel-portal" class="panel"></div>
         <div id="panel-proforma" class="panel"></div>
+        <div id="panel-portfolio" class="panel"></div>
       </nav>
 
       <div id="container"></div>
