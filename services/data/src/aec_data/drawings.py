@@ -391,9 +391,42 @@ def _view_for_spec(meshes, spec: dict) -> tuple[list[np.ndarray], str, str]:
         off = float(spec.get("offset", 0.0))
         polys = cut_baked(meshes, "section-x" if axis == "x" else "section-y", off)
         return polys, spec.get("title", f"SECTION {axis.upper()}"), f"{axis.upper()}={off:.1f} m"
+    if kind == "elevation":
+        d = spec.get("direction", "north")
+        items = elevation_outlines(meshes, d, with_depth=True)
+        items.sort(key=lambda it: it[1])  # far→near for hidden-line removal
+        return [c for c, _ in items], spec.get("title", f"{d.upper()} ELEVATION"), f"{d} elev"
     elev = float(spec.get("elevation", 0.0)) + float(spec.get("cut_height", 1.2))
     polys = cut_baked(meshes, "plan", elev)
     return polys, spec.get("title", "PLAN"), f"cut @ {elev:.2f} m"
+
+
+def _vertical_extras(spec, grid, levels, mn, mx, ox, oy, dh, scale):
+    """Grid verticals + bubbles + storey level datums for a section/elevation cell."""
+    extras = []
+    spanx = (mx[0] - mn[0]) * scale
+    kind = spec.get("kind")
+    # which world grid maps to the cell's horizontal axis, and any horizontal flip
+    if kind == "section":
+        glines = grid["y"] if spec.get("axis", "x") == "x" else grid["x"]
+        flip = False
+    else:  # elevation
+        _, flip, depth_axis, _ = _DIRS.get(spec.get("direction", "north"), _DIRS["north"])
+        glines = grid["x"] if depth_axis == 1 else grid["y"]
+    for g, lbl in glines:
+        h = -g if flip else g
+        if not (mn[0] - 0.5 <= h <= mx[0] + 0.5):
+            continue
+        px = ox + (h - mn[0]) * scale
+        extras.append(("line", px, oy - 9, px, oy + dh, True))
+        extras.append(("bub", px, oy - 9, 5.5, lbl))
+    for lv in levels:  # storey datums (Z → vertical axis)
+        z = lv["elevation"]
+        if not (mn[1] - 0.1 <= z <= mx[1] + 0.1):
+            continue
+        py = oy + dh - (z - mn[1]) * scale
+        extras.append(("lvl", ox, ox + spanx, py))
+    return extras
 
 
 def _plan_extras(grid, mn, mx, ox, oy, dh, scale):
@@ -419,7 +452,8 @@ def _plan_extras(grid, mn, mx, ox, oy, dh, scale):
 
 
 def compose(meshes, specs: list[dict], page: str = "A3", cols: int = 2,
-            margin: float = 36.0, tb_h: float = 90.0, annotate: bool = True) -> dict:
+            margin: float = 36.0, tb_h: float = 90.0, annotate: bool = True,
+            levels: list[dict] | None = None) -> dict:
     pw, ph = PAGES.get(page, PAGES["A3"])
     rows = max(1, -(-len(specs) // cols))
     area_x0, area_y0 = margin, margin
@@ -428,15 +462,16 @@ def compose(meshes, specs: list[dict], page: str = "A3", cols: int = 2,
     cell_w, cell_h = area_w / cols, area_h / rows
     pad, label_h, gut = 14.0, 20.0, 20.0
     grid = grid_from_meshes(meshes) if annotate else {"x": [], "y": []}
+    levels = levels or []
 
     views = []
     for i, spec in enumerate(specs):
         polys, label, sub = _view_for_spec(meshes, spec)
-        is_plan = spec.get("kind", "plan") == "plan"
+        kind = spec.get("kind", "plan")
         col, row = i % cols, i // cols
         cx = area_x0 + col * cell_w
         cy = area_y0 + tb_h + row * cell_h  # y-down (top-left origin)
-        g = gut if (is_plan and annotate) else 0.0
+        g = gut if annotate else 0.0
         iw, ih = cell_w - 2 * pad - g, cell_h - 2 * pad - label_h - g
         scale_text = "no geometry"
         placed: list[np.ndarray] = []
@@ -456,9 +491,13 @@ def compose(meshes, specs: list[dict], page: str = "A3", cols: int = 2,
                 placed.append(pts)
             ratio = round(1.0 / (scale * 0.000352778))
             scale_text = f"1:{ratio}"
-            if is_plan and annotate:
-                extras = _plan_extras(grid, mn, mx, ox, oy, dh, scale)
-        views.append({"label": label, "sub": sub, "scale_text": scale_text,
+            if annotate:
+                if kind == "plan":
+                    extras = _plan_extras(grid, mn, mx, ox, oy, dh, scale)
+                else:  # section / elevation
+                    extras = _vertical_extras(spec, grid, levels, mn, mx, ox, oy, dh, scale)
+        views.append({"label": label, "sub": sub, "scale_text": scale_text, "kind": kind,
+                      "filled": kind == "elevation",
                       "rect": (cx, cy, cell_w, cell_h), "polys": placed, "extras": extras})
     return {"page": (pw, ph), "tb_h": tb_h, "margin": margin, "views": views}
 
@@ -475,12 +514,19 @@ def render_sheet_svg(layout: dict, meta: dict) -> str:
         out.append(f'<text x="{x+14:.0f}" y="{y+16:.0f}" font-family="sans-serif" '
                    f'font-size="13" font-weight="700">{v["label"]}  <tspan fill="#666" '
                    f'font-weight="400">{v["sub"]}  ·  {v["scale_text"]}</tspan></text>')
+        # elevation cells use opaque white fill (hidden-line removal); others stroke-only
+        shape = "polygon" if v.get("filled") else "polyline"
+        fill = "#fff" if v.get("filled") else "none"
         for poly in v["polys"]:
             pts = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in poly)
-            out.append(f'<polyline points="{pts}" fill="none" stroke="#111" stroke-width="0.7"/>')
-        # grid / dimension annotations
+            out.append(f'<{shape} points="{pts}" fill="{fill}" stroke="#111" stroke-width="0.6"/>')
+        # grid / dimension / level annotations
         for e in v.get("extras", []):
-            if e[0] == "line":
+            if e[0] == "lvl":
+                _, x1, x2, yy = e
+                out.append(f'<line x1="{x1:.1f}" y1="{yy:.1f}" x2="{x2:.1f}" y2="{yy:.1f}" '
+                           f'stroke="#0a6" stroke-width="0.5" stroke-dasharray="6 3"/>')
+            elif e[0] == "line":
                 _, x1, y1, x2, y2, dash = e
                 da = ' stroke-dasharray="5 3"' if dash else ""
                 out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
@@ -535,16 +581,27 @@ def render_sheet_pdf(layout: dict, meta: dict) -> bytes:
         c.setFont("Helvetica", 9); c.setFillGray(0.4)
         c.drawString(x + 14 + 9 * len(v["label"]), fy(y + 16), f"  {v['sub']}  ·  {v['scale_text']}")
         c.setFillGray(0)
-        c.setLineWidth(0.7)
+        c.setLineWidth(0.6)
+        filled = v.get("filled")
         for poly in v["polys"]:
             p = c.beginPath()
             p.moveTo(poly[0][0], fy(poly[0][1]))
             for pt in poly[1:]:
                 p.lineTo(pt[0], fy(pt[1]))
-            c.drawPath(p)
-        # grid / dimension annotations
+            if filled:
+                p.close()
+                c.saveState(); c.setFillGray(1)
+                c.drawPath(p, stroke=1, fill=1)  # opaque white fill = hidden-line removal
+                c.restoreState()
+            else:
+                c.drawPath(p)
+        # grid / dimension / level annotations
         for e in v.get("extras", []):
-            if e[0] == "line":
+            if e[0] == "lvl":
+                _, x1, x2, yy = e
+                c.saveState(); c.setStrokeColorRGB(0, 0.6, 0.4); c.setLineWidth(0.5); c.setDash(6, 3)
+                c.line(x1, fy(yy), x2, fy(yy)); c.restoreState()
+            elif e[0] == "line":
                 _, x1, y1, x2, y2, dash = e
                 c.saveState(); c.setStrokeGray(0.73); c.setLineWidth(0.5)
                 if dash:
@@ -583,7 +640,7 @@ def render_sheet_pdf(layout: dict, meta: dict) -> bytes:
 
 def sheet(model: ifcopenshell.file, specs: list[dict], meta: dict,
           page: str = "A3", cols: int = 2, fmt: str = "svg"):
-    layout = compose(bake(model), specs, page=page, cols=cols)
+    layout = compose(bake(model), specs, page=page, cols=cols, levels=storey_elevations(model))
     return render_sheet_pdf(layout, meta) if fmt == "pdf" else render_sheet_svg(layout, meta)
 
 
@@ -604,6 +661,7 @@ def default_sheet(model: ifcopenshell.file, meta: dict, page: str = "A3", fmt: s
     specs = [{"kind": "plan", "elevation": s["elevation"], "title": f"PLAN {s['name']}"}
              for s in storeys if s["elevation"] < top - 0.01]
     specs.append({"kind": "section", "axis": "x", "offset": mid_x, "title": "SECTION A-A"})
+    specs.append({"kind": "elevation", "direction": "north", "title": "NORTH ELEVATION"})
 
-    layout = compose(meshes, specs, page=page, cols=2)
+    layout = compose(meshes, specs, page=page, cols=2, levels=storeys)
     return render_sheet_pdf(layout, meta) if fmt == "pdf" else render_sheet_svg(layout, meta)

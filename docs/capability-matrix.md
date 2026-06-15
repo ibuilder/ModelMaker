@@ -72,7 +72,7 @@ real structural + architectural discipline frags loaded together. `POST /project
   (opaque silhouettes; nearer occludes farther) + grid bubbles + level datums.
 - **Room tags / leaders**: needs `IfcSpace` (architectural model; only its `.frag` is published
   for this sample, not the IFC) — wire once an arch IFC is available.
-- **Grid on section/elevation *sheet cells***: standalone elevations/sections are annotated;
-  composed-sheet cells carry grid on plan cells so far.
+- ~~Grid on section/elevation sheet cells~~ ✅ done — composed-sheet cells are all annotated:
+  plans (grid + dims), sections (grid + level datums), elevations (grid + levels + HLR).
 - **Federation UI**: a discipline picker to load several `.frag` and toggle by model.
 - **Authoring in-browser**: stays a Bonsai-bridge concern by design (GPL boundary).
