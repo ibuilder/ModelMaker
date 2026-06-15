@@ -333,6 +333,23 @@ function buildToolsPanel() {
   }
   panel.appendChild(cst);
 
+  // --- Schedule visuals (Gantt + Line-of-Balance) ---
+  const sch = document.createElement("div");
+  sch.innerHTML = `<div class="section-title" style="margin-top:14px">Schedule</div>`;
+  if (!projectId) {
+    const n = document.createElement("div"); n.className = "meta"; n.textContent = "connect a project for schedule";
+    sch.appendChild(n);
+  } else {
+    for (const [label, file] of [["Gantt chart", "gantt"], ["Line of Balance", "lob"]] as const) {
+      const b = document.createElement("button");
+      b.className = "tool-btn"; b.textContent = `▤ ${label}`;
+      b.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
+      b.onclick = () => window.open(api.url(`/projects/${projectId}/schedule/${file}.svg`), "_blank");
+      sch.appendChild(b);
+    }
+  }
+  panel.appendChild(sch);
+
   // --- Coordination & QA (clash + IDS validation) ---
   const qa = document.createElement("div");
   qa.innerHTML = `<div class="section-title" style="margin-top:14px">Coordination & QA</div>`;
