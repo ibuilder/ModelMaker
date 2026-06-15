@@ -36,6 +36,24 @@ export interface Viewpoint {
 
 export interface Vec3 { x: number; y: number; z: number; }
 
+export interface ModuleField {
+  name: string; label: string; type: string; required?: boolean; options?: string[];
+}
+export interface ModuleDef {
+  key: string; name: string; section: string; icon: string; pinnable: boolean;
+  fields: ModuleField[];
+  workflow: { initial: string; states: string[]; transitions: { from: string; to: string; action: string; party: string[] }[] };
+}
+export interface ModuleRecord {
+  id: string; ref: string; title: string | null; workflow_state: string;
+  party_owner: string | null; created_by: string | null; created_at: string;
+  anchor: Vec3 | null; element_guids: string[] | null;
+  links: { module: string; id: string; ref: string }[];
+  data: Record<string, unknown>;
+  activity?: { ts: string; actor: string; party: string; action: string; detail: unknown }[];
+  available_actions?: { action: string; to: string; party: string[] }[];
+}
+
 export interface ModulePin {
   module: string;
   module_name: string;
@@ -124,13 +142,24 @@ export class ApiClient {
 
   // GC portal modules + model pins
   modules() {
-    return this.json<{ key: string; name: string; section: string; icon: string; pinnable: boolean }[]>(`/modules`);
+    return this.json<ModuleDef[]>(`/modules`);
   }
   modulePins(pid: string) {
     return this.json<ModulePin[]>(`/projects/${pid}/module-pins`);
   }
   moduleRecords(pid: string, key: string) {
-    return this.json<Record<string, unknown>[]>(`/projects/${pid}/modules/${key}`);
+    return this.json<ModuleRecord[]>(`/projects/${pid}/modules/${key}`);
+  }
+  moduleRecord(pid: string, key: string, rid: string) {
+    return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}`);
+  }
+  createModuleRecord(pid: string, key: string, body: Record<string, unknown>) {
+    return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}`, {
+      method: "POST", body: JSON.stringify(body) });
+  }
+  transitionRecord(pid: string, key: string, rid: string, action: string, note?: string) {
+    return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/transition`, {
+      method: "POST", body: JSON.stringify({ action, note }) });
   }
 
   // authoring round-trip (Phase 6)

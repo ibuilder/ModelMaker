@@ -12,6 +12,7 @@ import { LayerManager } from "./tools/layers";
 import { OriginTool } from "./tools/origin";
 import { buildTree } from "./tree/tree";
 import { PinOverlay, restoreCamera } from "./pins/pins";
+import { PortalUI } from "./portal/portal";
 import { ApiClient, type ElementProps, type Topic } from "./api/client";
 
 // ---- DOM refs ---------------------------------------------------------------
@@ -39,6 +40,7 @@ let projectId: string | null = null;
 let connected = false;
 let selection: ModelIdMap | null = null;
 let lastPoint: THREE.Vector3 | null = null;
+let selectedGuid: string | null = null;
 let modelCount = 0;
 const nextId = () => `model-${++modelCount}`;
 
@@ -97,6 +99,7 @@ function renderProps(el: ElementProps) {
 }
 
 async function selectByGuid(guid: string, fit = false) {
+  selectedGuid = guid;
   const map = await sets.fromGuids([guid]);
   await selectMap(map, { guid, fit });
 }
@@ -112,6 +115,7 @@ container.addEventListener("click", async (e) => {
   if (!hit) { await selectMap(null); return; }
   lastPoint = hit.point.clone();
   const [guid] = await hit.fragments.getGuidsByLocalIds([hit.localId]);
+  selectedGuid = guid ?? null;
   await selectMap({ [hit.fragments.modelId]: new Set([hit.localId]) }, { guid: guid ?? undefined });
   setStatus(`selected ${guid ?? hit.localId}`);
 });
@@ -159,6 +163,7 @@ document.querySelectorAll<HTMLButtonElement>(".tab").forEach((tab) => {
     document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
     tab.classList.add("active");
     $(`panel-${tab.dataset.tab}`).classList.add("active");
+    if (tab.dataset.tab === "portal") openPortalTab();
   };
 });
 
@@ -217,6 +222,11 @@ async function buildPanels() {
 
   // Issues / pins (BCF topics) + GC module record pins
   await refreshIssues();
+  await reloadModelPins();
+}
+
+async function reloadModelPins() {
+  if (!projectId) return;
   await pins.load(projectId);
   await pins.loadModulePins(projectId, async (pin) => {
     if (pin.element_guids?.[0]) await selectByGuid(pin.element_guids[0], true);
@@ -419,6 +429,23 @@ const pins = new PinOverlay(viewer.components, viewer.world, api, async (topic, 
   if (topic.element_guids?.[0]) await selectByGuid(topic.element_guids[0]);
   setStatus(`restored: ${topic.title}`);
 });
+
+// GC portal — config-driven module list/form/record UI
+const portal = new PortalUI($("panel-portal"), {
+  api,
+  projectId: () => projectId,
+  anchorPoint: () => (lastPoint ? { x: lastPoint.x, y: lastPoint.y, z: lastPoint.z } : null),
+  selectedGuid: () => selectedGuid,
+  onSelectGuids: (guids) => { if (guids[0]) void selectByGuid(guids[0], true); },
+  onPinsChanged: () => void reloadModelPins(),
+  setStatus,
+});
+let portalReady = false;
+function openPortalTab() {
+  if (portalReady) return;
+  portalReady = true;
+  void portal.init();
+}
 
 async function refreshIssues() {
   if (!projectId) return;

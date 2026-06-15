@@ -115,3 +115,27 @@ html, body, #app {
 .pin-clash { background: #e0457b; }
 .pin-info { background: #6aa84f; }
 .pin-gc { background: #8e44ad; }   /* GC portal module records (RFI/PCO/COR…) */
+
+/* GC portal panel */
+.portal-mod {
+  display: block; width: 100%; text-align: left; margin: 3px 0; padding: 7px 9px;
+  background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  border-radius: 5px; cursor: pointer; font-size: 12px;
+}
+.portal-mod:hover { background: #34373d; }
+.portal-mod .ic { display: inline-block; width: 18px; color: #b083d6; font-weight: 700; }
+.portal-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.portal-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.portal-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.portal-table td { padding: 5px 6px; border-bottom: 1px solid #2b2d31; cursor: pointer; }
+.portal-table tr:hover td { background: #34373d; }
+.portal-field { display: block; font-size: 11px; color: var(--muted); margin: 6px 0; }
+.portal-field input, .portal-field textarea, .portal-field select {
+  display: block; width: 100%; margin-top: 3px; padding: 5px; background: #1e1f22;
+  color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 12px;
+}
+.portal-field textarea { min-height: 56px; resize: vertical; }
+.portal-rec-title { font-size: 14px; font-weight: 700; margin: 4px 0; }
+.portal-kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 8px 0; font-size: 12px; }
+.portal-kv .k { color: var(--muted); }
+.portal-act { font-size: 11px; color: var(--muted); padding: 2px 0; border-bottom: 1px solid #2b2d31; }
