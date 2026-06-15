@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Scenario
+from ..proforma.draws import reforecast
 from ..proforma.sensitivity import sensitivity
 from ..proforma.solve import solve
 
@@ -166,6 +167,32 @@ def clone_scenario(sid: str, name: str = Body(..., embed=True), db: Session = De
     db.add(c)
     db.commit()
     return {"id": c.id, "name": c.name}
+
+
+class Actual(BaseModel):
+    actual_to_date: float = 0
+    committed: float = 0
+    cost_to_complete: float | None = None
+
+
+class ForecastIn(BaseModel):
+    actuals: list[Actual]
+    as_of_month: int = 0
+
+
+@router.post("/proforma/scenarios/{sid}/forecast")
+def forecast_scenario(sid: str, body: ForecastIn, db: Session = Depends(get_db)):
+    """Re-forecast the underwritten returns against actuals drawn to date (Phase 5 bridge)."""
+    s = db.get(Scenario, sid)
+    if not s:
+        raise HTTPException(404, "scenario not found")
+    return reforecast(s.assumptions, [a.model_dump() for a in body.actuals], body.as_of_month)
+
+
+@router.post("/proforma/forecast")
+def forecast_stateless(assumptions: Assumptions, actuals: list[Actual] = Body(...),
+                       as_of_month: int = Body(0)):
+    return reforecast(assumptions.model_dump(), [a.model_dump() for a in actuals], as_of_month)
 
 
 @router.post("/proforma/compare")

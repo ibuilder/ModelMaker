@@ -63,6 +63,15 @@ export interface ProformaResult {
   cash_flow: { dates: string[]; equity: number[]; project: number[]; noi_monthly: number[] };
 }
 
+export interface ProformaForecast {
+  as_of_month: number;
+  lines: { name: string; category: string; budget: number; committed: number; actual_to_date: number; budget_to_date: number; forecast_at_completion: number; variance_to_budget: number; pct_drawn: number }[];
+  totals: { budget: number; committed: number; actual_to_date: number; forecast_at_completion: number; variance_to_budget: number };
+  underwritten_returns: { equity_irr: number | null; equity_multiple: number };
+  forecast_returns: { equity_irr: number | null; equity_multiple: number };
+  irr_delta: number | null;
+}
+
 export interface EnergyResult {
   areas_m2: Record<string, number>;
   ua_w_per_k: Record<string, number>;
@@ -179,6 +188,10 @@ export class ApiClient {
   sensitivity(body: unknown) {
     return this.json<{ metric: string; x_values: number[]; y_values: number[]; matrix: (number | null)[][] }>(
       `/proforma/sensitivity`, { method: "POST", body: JSON.stringify(body) });
+  }
+  forecast(assumptions: unknown, actuals: unknown[], as_of_month: number) {
+    return this.json<ProformaForecast>(`/proforma/forecast`, {
+      method: "POST", body: JSON.stringify({ assumptions, actuals, as_of_month }) });
   }
 
   // GC portal modules + model pins

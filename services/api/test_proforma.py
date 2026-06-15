@@ -82,6 +82,23 @@ m = sens["matrix"]
 assert m[0][0] > m[0][-1]    # lower exit cap → higher IRR
 assert m[0][0] > m[-1][0]    # cheaper hard cost → higher IRR
 
+# --- draws bridge: a cost overrun re-forecasts a lower IRR -------------------
+from aec_api.proforma.draws import reforecast  # noqa: E402
+
+# at month 10, hard costs are 20% over budget-to-date; estimate cost-to-complete higher too
+actuals = [
+    {"actual_to_date": 4_000_000},                                    # land (on budget)
+    {"actual_to_date": 9_000_000, "committed": 22_000_000, "cost_to_complete": 15_000_000},  # hard: 24M vs 20M budget
+    {"actual_to_date": 1_800_000},                                    # soft
+    {"actual_to_date": 600_000},                                      # contingency
+]
+fc = reforecast(deal, actuals, as_of_month=10)
+assert fc["totals"]["forecast_at_completion"] > fc["totals"]["budget"]        # overrun
+assert fc["totals"]["variance_to_budget"] > 0
+assert fc["irr_delta"] is not None and fc["irr_delta"] < 0                    # overrun → lower IRR
+hard = next(L for L in fc["lines"] if L["category"] == "hard")
+assert hard["forecast_at_completion"] == 9_000_000 + 15_000_000              # actual + CTC
+
 print("PROFORMA OK")
 print(f"  S&U: uses ${su_r['total_uses']:,.0f} = loan ${su_r['loan_amount']:,.0f} + equity ${su_r['equity']:,.0f}"
       f" (int reserve ${su_r['interest_reserve']:,.0f})")

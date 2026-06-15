@@ -86,6 +86,52 @@ export class ProformaUI {
     this.root.appendChild(out);
     const sens = document.createElement("div"); sens.id = "pf-sens";
     this.root.appendChild(sens);
+    this.renderDraws();
+  }
+
+  /** Actuals / draw bridge — enter actual-to-date per cost line, re-forecast IRR vs underwritten. */
+  private renderDraws() {
+    const host = document.createElement("div"); host.id = "pf-draws";
+    const lines = this.a.cost_lines as any[];
+    let html = `<div class="section-title">Actuals / Draw — re-forecast vs underwritten</div>` +
+      `<table class="sens-table"><tr><th>Cost line</th><th>Budget</th><th>Actual to date</th></tr>`;
+    lines.forEach((ln, i) => {
+      html += `<tr><th style="text-align:left">${ln.name}</th><td>${money(ln.amount)}</td>` +
+        `<td><input class="pf-actual" data-i="${i}" type="number" step="any" value="0" style="width:90px"></td></tr>`;
+    });
+    html += `</table><button class="file-btn" id="pf-reforecast" style="margin-top:6px">Re-forecast</button>` +
+      `<div id="pf-fc-out"></div>`;
+    host.innerHTML = html;
+    this.root.appendChild(host);
+    (host.querySelector("#pf-reforecast") as HTMLButtonElement).onclick = () => this.reforecast();
+  }
+
+  private async reforecast() {
+    const inputs = [...document.querySelectorAll<HTMLInputElement>(".pf-actual")];
+    const actuals = (this.a.cost_lines as any[]).map((_, i) => {
+      const v = parseFloat(inputs.find((x) => +x.dataset.i! === i)?.value || "0") || 0;
+      return { actual_to_date: v, committed: 0 };
+    });
+    this.setStatus("re-forecasting against actuals…");
+    let f;
+    try { f = await this.api.forecast(this.a, actuals, 9); }
+    catch (e) { this.setStatus(`forecast error: ${(e as Error).message}`); return; }
+    const uw = f.underwritten_returns.equity_irr, fc = f.forecast_returns.equity_irr;
+    const delta = f.irr_delta == null ? "" : `${f.irr_delta >= 0 ? "+" : ""}${(f.irr_delta * 100).toFixed(1)}pp`;
+    const dColor = (f.irr_delta ?? 0) >= 0 ? "#2ecc71" : "#e74c3c";
+    const rows = f.lines.map((L) =>
+      `<tr><th style="text-align:left">${L.name}</th><td>${money(L.budget)}</td>` +
+      `<td>${money(L.actual_to_date)}</td><td>${money(L.forecast_at_completion)}</td>` +
+      `<td style="color:${L.variance_to_budget > 0 ? "#e74c3c" : "#2ecc71"}">${L.variance_to_budget >= 0 ? "+" : ""}${money(L.variance_to_budget)}</td></tr>`).join("");
+    document.getElementById("pf-fc-out")!.innerHTML =
+      `<div class="kpi-grid" style="grid-template-columns:1fr 1fr 1fr">` +
+      `<div class="kpi"><div class="kpi-v">${pct(uw)}</div><div class="kpi-l">Underwritten IRR</div></div>` +
+      `<div class="kpi"><div class="kpi-v">${pct(fc)}</div><div class="kpi-l">Re-forecast IRR</div></div>` +
+      `<div class="kpi"><div class="kpi-v" style="color:${dColor}">${delta}</div><div class="kpi-l">Δ IRR</div></div></div>` +
+      `<table class="sens-table"><tr><th>Line</th><th>Budget</th><th>Actual</th><th>Forecast</th><th>Var</th></tr>${rows}` +
+      `<tr><th style="text-align:left">TOTAL</th><td>${money(f.totals.budget)}</td><td>${money(f.totals.actual_to_date)}</td>` +
+      `<td>${money(f.totals.forecast_at_completion)}</td><td style="color:${f.totals.variance_to_budget > 0 ? "#e74c3c" : "#2ecc71"}">${money(f.totals.variance_to_budget)}</td></tr></table>`;
+    this.setStatus(`re-forecast IRR ${pct(fc)} (was ${pct(uw)})`);
   }
 
   private async solve() {
