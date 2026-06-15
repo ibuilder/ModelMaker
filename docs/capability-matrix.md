@@ -16,8 +16,8 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
 | Schedules / takeoff tied to model | Yes | Yes | Yes | **Built** — QTO + generic schedule export |
 | Sheet sets & title blocks | Partial | Yes | No | **Built** — sheet composer (multi-view + title block) → SVG + PDF |
 | **COORDINATION & REVIEW** | | | | |
-| Model federation (combine models) | Partial | Partial | Native | **Built** — multi `.frag` load, per-model layers |
-| **Clash detection** | Yes | Partial | Native | **Built** — AABB broad + **mesh narrow phase** (exact penetration volume), → BCF clash topics |
+| Model federation (combine models) | Partial | Partial | Native | **Built (verified)** — multi `.frag` load (structural + architectural disciplines), per-model layers |
+| **Clash detection** | Yes | Partial | Native | **Built** — AABB broad + **mesh narrow phase** (exact volume); intra-model **and cross-discipline (federated)** → BCF clash topics |
 | Markup / redline / viewpoints | Partial | Partial | Yes | **Built** — BCF pins/viewpoints, restore |
 | Real-time nav of huge models | Yes | Partial | Yes | **Built** — Fragments streaming + culling |
 | **4D / 5D** | | | | |
@@ -46,6 +46,13 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
   or built-in default specs. On the sample: Columns-have-a-Name 203/203 pass; Slabs-declare-
   LoadBearing 0/299 fail. `POST /projects/{id}/validate`. Verified in UI: result summary +
   "Highlight 299 failures" → failing slabs highlighted green in 3D.
+
+## Federated clash (verified)
+`clash.detect_federated` bakes each discipline model, tags elements by model, and clashes
+**across models only** (intra-model joints excluded). Verified: structural IFC vs an authored
+services IFC (ducts routed through the frame) → 400 mesh-verified cross-discipline clashes
+(beams 349, walls, columns, slabs), all cross-model. Viewer federation verified live with the
+real structural + architectural discipline frags loaded together. `POST /projects/{id}/clash/federated`.
 
 ## Honest gaps (next, all open-source)
 - ~~Clash narrow phase~~ ✅ done — trimesh + manifold3d boolean intersection gives exact

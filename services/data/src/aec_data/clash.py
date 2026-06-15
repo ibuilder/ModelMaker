@@ -73,8 +73,9 @@ def _mesh_intersection_volume(a: ElementGeom, b: ElementGeom) -> float | None:
     if not _MESH_OK or a.verts is None or b.verts is None:
         return None
     try:
-        ma = trimesh.Trimesh(vertices=a.verts, faces=a.faces, process=False)
-        mb = trimesh.Trimesh(vertices=b.verts, faces=b.faces, process=False)
+        ma = trimesh.Trimesh(vertices=a.verts, faces=a.faces, process=True)
+        mb = trimesh.Trimesh(vertices=b.verts, faces=b.faces, process=True)
+        ma.fix_normals(); mb.fix_normals()  # consistent winding for the boolean engine
         inter = trimesh.boolean.intersection([ma, mb], engine="manifold")
         vol = abs(float(inter.volume))
         return vol if np.isfinite(vol) else 0.0
@@ -159,3 +160,61 @@ def detect(
 def detect_file(ifc_path: str, group_a=None, group_b=None, min_volume=1e-3,
                 tolerance=0.0, narrow=True, max_narrow=800):
     return detect(open_model(ifc_path), group_a, group_b, min_volume, tolerance, narrow, max_narrow)
+
+
+def detect_federated(models: list[tuple[str, ifcopenshell.file]], min_volume: float = 1e-3,
+                     narrow: bool = True, max_narrow: int = 1500) -> list[dict[str, Any]]:
+    """Cross-discipline (federated) clash: clash elements ACROSS different models only.
+    Intra-model overlaps (e.g. beam-column joints, by design) are excluded — exactly the
+    coordination case Navisworks targets. `models` = [(discipline_name, ifc_file), ...]."""
+    tagged: list[tuple[str, ElementGeom]] = []
+    for name, model in models:
+        for g in _compute_geometry(model, keep_mesh=narrow and _MESH_OK):
+            tagged.append((name, g))
+    if len({t for t, _ in tagged}) < 2:
+        return []
+
+    mins = np.array([g.min for _, g in tagged])
+    maxs = np.array([g.max for _, g in tagged])
+    tags = np.array([t for t, _ in tagged])
+    overlap = (
+        (mins[:, None, :] <= maxs[None, :, :]).all(axis=2)
+        & (maxs[:, None, :] >= mins[None, :, :]).all(axis=2)
+    )
+    ia, ib = np.where(np.triu(overlap, k=1))  # unique pairs i<j
+
+    cands = []
+    for i, j in zip(ia.tolist(), ib.tolist()):
+        if tags[i] == tags[j]:  # cross-model only
+            continue
+        a, b = tagged[i][1], tagged[j][1]
+        cands.append((_aabb_overlap_volume(a, b), tagged[i][0], a, tagged[j][0], b))
+    cands.sort(key=lambda c: c[0], reverse=True)
+
+    do_narrow = narrow and _MESH_OK
+    clashes = []
+    for rank, (aabb_vol, ta, a, tb, b) in enumerate(cands):
+        method, vol = "aabb", aabb_vol
+        if do_narrow:
+            if rank >= max_narrow:
+                break
+            mv = _mesh_intersection_volume(a, b)
+            if mv is None:
+                continue
+            vol, method = mv, "mesh"
+        if vol < min_volume:
+            continue
+        center = ((np.maximum(a.min, b.min) + np.minimum(a.max, b.max)) / 2).tolist()
+        clashes.append({
+            "a_model": ta, "a_guid": a.guid, "a_class": a.ifc_class, "a_name": a.name,
+            "b_model": tb, "b_guid": b.guid, "b_class": b.ifc_class, "b_name": b.name,
+            "volume": round(vol, 6), "method": method,
+            "point": {"x": center[0], "y": center[1], "z": center[2]},
+        })
+    clashes.sort(key=lambda c: c["volume"], reverse=True)
+    return clashes
+
+
+def detect_federated_files(paths: dict[str, str], min_volume=1e-3, narrow=True, max_narrow=1500):
+    return detect_federated([(name, open_model(p)) for name, p in paths.items()],
+                            min_volume, narrow, max_narrow)

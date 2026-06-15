@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from .. import audit
@@ -72,6 +72,42 @@ def run_clash(
 
     return {"count": len(results), "created_topics": created, "clashes": results[:limit],
             "truncated": len(results) > limit}
+
+
+@router.post("/projects/{pid}/clash/federated")
+def run_clash_federated(
+    pid: str,
+    disciplines: dict = Body(..., embed=True),  # {"STR": "/path/str.ifc", "MEP": "/path/mep.ifc"}
+    min_volume: float = 1e-3,
+    create_topics: bool = False,
+    limit: int = 200,
+    db: Session = Depends(get_db),
+    actor: str = Depends(require_role("editor")),
+):
+    """Cross-discipline (federated) clash across 2+ models. Intra-model overlaps are
+    excluded. With create_topics=true, the top clashes become BCF clash topics."""
+    from aec_data import clash  # type: ignore
+
+    valid = {k: v for k, v in disciplines.items() if v and Path(v).exists()}
+    if len(valid) < 2:
+        raise HTTPException(409, "need >=2 accessible discipline IFCs")
+    results = clash.detect_federated_files(valid, min_volume=min_volume)
+
+    created = 0
+    if create_topics:
+        for c in results[:limit]:
+            db.add(Topic(
+                project_id=pid, type="clash", status="open",
+                title=f"Clash: {c['a_model']}:{c['a_class']} × {c['b_model']}:{c['b_class']} "
+                      f"({c['method']} vol {c['volume']})",
+                anchor=c["point"], element_guids=[c["a_guid"], c["b_guid"]]))
+            created += 1
+        audit.record(db, action="clash.federated", actor=actor, method="POST",
+                     path=f"/projects/{pid}/clash/federated", detail={"created": created})
+        db.commit()
+
+    return {"disciplines": list(valid), "count": len(results), "created_topics": created,
+            "clashes": results[:limit], "truncated": len(results) > limit}
 
 
 @router.post("/projects/{pid}/validate")

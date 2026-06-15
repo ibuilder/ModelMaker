@@ -482,14 +482,14 @@ async function startup() {
   } else {
     setStatus("offline — open a .frag to view (API not reachable)");
   }
-  // auto-load demo frag if present (served from public/)
-  try {
-    const res = await fetch("/school_str.frag");
-    if (res.ok) {
-      await loader.loadFragments(await res.arrayBuffer(), "school");
-      await fitToModels();
-    }
-  } catch { /* no demo frag */ }
+  // auto-load demo frags if present (federation: structural + architectural disciplines)
+  for (const [file, id] of [["/school_str.frag", "school-STR"], ["/school_arq.frag", "school-ARQ"]]) {
+    try {
+      const res = await fetch(file);
+      if (res.ok) await loader.loadFragments(await res.arrayBuffer(), id);
+    } catch { /* discipline frag not present */ }
+  }
+  await fitToModels();
   if (projectId) await buildPanels();
   buildToolsPanel();
 }
