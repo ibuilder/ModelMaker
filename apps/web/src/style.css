@@ -176,7 +176,13 @@ html, body, #app {
 
 /* properties */
 #props { grid-area: props; width: 320px; overflow: auto; padding: 12px 14px; background: var(--panel); border-left: 1px solid var(--line); }
-#props h3 { margin-top: 0; }
+#props-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--panel); padding-bottom: 6px; }
+#props-head h3 { margin: 0; }
+#props-close {
+  background: transparent; border: none; color: var(--muted); font-size: 16px; line-height: 1;
+  cursor: pointer; padding: 4px 6px; border-radius: 4px;
+}
+#props-close:hover { background: var(--accent); color: #fff; }
 #props-body { white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.4; }
 
 /* pin markers */

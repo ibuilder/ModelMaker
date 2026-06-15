@@ -24,6 +24,8 @@ const statusEl = $("status");
 const propsPanel = $("props");
 const propsBody = $("props-body");
 const toolbar = $("toolbar");
+$("props-close").addEventListener("click", () => void selectMap(null));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !propsPanel.hidden) void selectMap(null); });
 const setStatus = (m: string) => (statusEl.textContent = m);
 /** status bar + a transient toast for notable events */
 const notify = (m: string, kind: "info" | "success" | "error" = "info") => { setStatus(m); toast(m, kind); };
@@ -202,10 +204,19 @@ function buildMenu(mountId: string, label: string, items: MenuItem[]) {
   }
   // position: fixed so the panel escapes the toolbar's overflow clip at any breakpoint
   const place = () => { const r = btn.getBoundingClientRect(); panel.style.left = `${r.left}px`; panel.style.top = `${r.bottom + 4}px`; };
-  btn.onclick = (e) => { e.stopPropagation(); document.querySelectorAll(".menu-panel").forEach((p) => { if (p !== panel) (p as HTMLElement).hidden = true; }); const open = panel.hidden; if (open) place(); panel.hidden = !open; };
-  document.addEventListener("click", () => (panel.hidden = true));
+  btn.onclick = (e) => { e.stopPropagation(); closeMenus(panel); const open = panel.hidden; if (open) place(); panel.hidden = !open; };
   mount.append(btn, panel);
 }
+/** Close every open dropdown except `keep`. */
+function closeMenus(keep?: Element) {
+  document.querySelectorAll(".menu-panel").forEach((p) => { if (p !== keep) (p as HTMLElement).hidden = true; });
+}
+// Robust dismissal: capture phase fires before the viewer's camera controls can
+// stopPropagation, and covers click-drags on the canvas that never emit a "click".
+document.addEventListener("pointerdown", (e) => {
+  if (!(e.target as HTMLElement).closest(".menu")) closeMenus();
+}, true);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
 buildMenu("open-menu", "Open ▾", [
   { label: "Open IFC…", onClick: () => $("ifc-input").click() },
   { label: "Open Fragments (.frag)…", onClick: () => $("frag-input").click() },
