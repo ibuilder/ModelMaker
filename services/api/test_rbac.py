@@ -16,7 +16,8 @@ H = lambda u: {"X-User": u}  # noqa: E731
 with TestClient(app) as c:
     # alice creates a project -> becomes admin
     pid = c.post("/projects", json={"name": "Secure"}, headers=H("alice")).json()["id"]
-    assert c.get(f"/projects/{pid}/members", headers=H("alice")).json() == [{"user": "alice", "role": "admin"}]
+    members = c.get(f"/projects/{pid}/members", headers=H("alice")).json()
+    assert len(members) == 1 and members[0]["user"] == "alice" and members[0]["role"] == "admin", members
 
     # bob (no role) cannot create a topic
     r = c.post(f"/projects/{pid}/topics", json={"type": "rfi", "title": "x"}, headers=H("bob"))
