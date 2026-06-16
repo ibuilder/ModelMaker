@@ -23,6 +23,7 @@ export type Settings = {
   theme: "dark" | "light"; grid: boolean; projection: "Perspective" | "Orthographic";
   background: "dark" | "light" | "none"; zoomCursor: boolean;
   nav: "orbit" | "pan" | "cad"; units: "m" | "cm" | "mm" | "ft"; section: boolean;
+  snap: number;   // grid-snap increment in metres (0 = off) for authoring placement
 };
 
 /** What main passes in. */
@@ -286,10 +287,19 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     await authorAndReload("set_element_pset", { guid: selectedGuid, pset, prop: propName, value }, "property edit");
   });
 
+  /** Round a point's plan coords (x,z) to the grid-snap increment; leave height (y). */
+  function snapPoint(p: THREE.Vector3): THREE.Vector3 {
+    const inc = ctx.getSettings().snap;
+    if (!inc) return p;
+    return new THREE.Vector3(Math.round(p.x / inc) * inc, p.y, Math.round(p.z / inc) * inc);
+  }
+
   async function capturePlacePoint(e: MouseEvent, hitPoint: THREE.Vector3 | null) {
     if (!placeMode) return;
-    const p = hitPoint ?? screenToGround(e);
+    const raw = hitPoint ?? screenToGround(e);
+    const p = raw ? snapPoint(raw) : null;
     if (!p) { notify("couldn't pick a point — click on the floor or grid", "error"); return; }
+    showCoords(p);
     placePts.push(p.clone());
     if (placePts.length < PLACE_PTS[placeMode]) { notify(`${placeMode}: click the end point`, "info"); return; }
     const kind = placeMode; setPlaceMode(null);

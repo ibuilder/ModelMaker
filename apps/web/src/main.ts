@@ -189,7 +189,7 @@ resizer.addEventListener("pointerdown", (e) => {
 // ---- bottom settings bar ----------------------------------------------------
 const SETTINGS_DEFAULTS: Settings = {
   theme: "dark", grid: true, projection: "Perspective", background: "dark",
-  zoomCursor: true, nav: "orbit", units: "m", section: false,
+  zoomCursor: true, nav: "orbit", units: "m", section: false, snap: 0,
 };
 const settings: Settings = { ...SETTINGS_DEFAULTS, ...JSON.parse(localStorage.getItem("aec-settings") || "{}") };
 let savedTimer: number | undefined;
@@ -231,6 +231,17 @@ function buildStatusBar() {
     toggle("Zoom to cursor", "zoomCursor"),
     select("Units", "units", [["m", "m"], ["cm", "cm"], ["mm", "mm"], ["ft", "ft-in"]]), sep(),
   );
+  // grid-snap increment for authoring placement (number, so not the string select helper)
+  const snapWrap = document.createElement("span"); snapWrap.className = "sb-group";
+  const snapL = document.createElement("label"); snapL.textContent = "Snap";
+  const snapSel = document.createElement("select"); snapSel.className = "sb-sel";
+  for (const [v, t] of [["0", "off"], ["0.1", "0.1m"], ["0.5", "0.5m"], ["1", "1m"]]) {
+    const o = document.createElement("option"); o.value = v; o.textContent = t; snapSel.appendChild(o);
+  }
+  snapSel.value = String(settings.snap);
+  snapSel.onchange = () => { settings.snap = Number(snapSel.value); onSettingsChanged(); };
+  snapWrap.append(snapL, snapSel);
+  bar.append(snapWrap, sep());
   const coords = document.createElement("span"); coords.id = "sb-coords"; coords.textContent = "—";
   const saved = document.createElement("span"); saved.id = "sb-saved"; saved.textContent = "✓ saved";
   bar.append(coords, saved);

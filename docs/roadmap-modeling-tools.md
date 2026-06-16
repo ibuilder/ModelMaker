@@ -64,7 +64,10 @@ author → reload). Verified at the data layer on `basichouse.ifc`.
 > (e.g. basichouse) — invisible/unusable. Entity-count tests missed it; position checks caught it.
 
 ### Phase C — drafting aids (client-only, no IFC write)
-- Snap (endpoint / midpoint / grid / intersection), ortho lock, temp dimensions.
+- **Grid snap** ✅ — bottom-bar Snap selector (off / 0.1 / 0.5 / 1 m); authoring placement
+  clicks round their plan coords to the increment and the coordinate readout reflects it.
+  *(Endpoint/midpoint/edge snap to model geometry is next — needs nearest-vertex from the
+  fragment, more involved than the grid round.)*
 - Section box / clip plane (the ✂ tool already exists — extend to a 6-face box).
 - Grids & levels overlay (read from `IfcGrid` / storey elevations already parsed).
 - Measure (already shipped: ↔ distance, ▱ area).
