@@ -347,8 +347,12 @@ export class ApiClient {
       `/projects/${pid}/edit`, { method: "POST", body: JSON.stringify({ recipe, params, publish }) });
   }
   publish(pid: string) {
-    return this.json<{ reconverted: boolean; reindexed: number }>(
+    return this.json<{ state: string }>(
       `/projects/${pid}/publish`, { method: "POST", body: JSON.stringify({ reconvert: true }) });
+  }
+  publishStatus(pid: string) {
+    return this.json<{ state: "idle" | "running" | "done" | "error"; detail?: Record<string, unknown> }>(
+      `/projects/${pid}/publish/status`);
   }
 }
 

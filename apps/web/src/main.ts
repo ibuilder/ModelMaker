@@ -276,6 +276,19 @@ function setWallMode(on: boolean) {
   if (on) notify("wall: click the start point on the floor/grid", "info");
 }
 
+/** Poll the async publish job until it finishes (or a 12-min cap). */
+async function waitForPublish(pid: string, onTick?: (s: string) => void): Promise<string> {
+  const deadline = Date.now() + 12 * 60 * 1000;
+  while (Date.now() < deadline) {
+    let s: { state: string };
+    try { s = await api.publishStatus(pid); } catch { return "error"; }
+    onTick?.(s.state);
+    if (s.state === "done" || s.state === "error") return s.state;
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return "running";
+}
+
 /** Load the server-published model.frag for the current project (reflects authored edits).
  *  Returns false if the project hasn't been published (404) so callers can fall back. */
 async function loadProjectModel(): Promise<boolean> {
@@ -315,8 +328,15 @@ async function captureWallPoint(e: MouseEvent, hitPoint: THREE.Vector3 | null) {
     try {
       const r = await api.editIfc(projectId!, "add_wall",
         { start: [a.x, -a.z], end: [b.x, -b.z], height, thickness }, true);
-      const shown = await loadProjectModel();   // reload published frag so the wall appears
-      notify(`wall authored (${String(r.changed).slice(0, 8)})${shown ? " — shown" : " — republished"}`, "success");
+      const guid = String(r.changed).slice(0, 8);
+      notify(`wall ${guid} authored — converting…`, "info");
+      const state = await waitForPublish(projectId!);   // convert runs off-thread now
+      if (state === "done") {
+        const shown = await loadProjectModel();
+        notify(`wall ${guid} added${shown ? " — shown" : ""}`, "success");
+      } else {
+        notify(`wall ${guid} authored — publish ${state}`, state === "error" ? "error" : "info");
+      }
       await reloadModelPins();
     } catch (err) { notify(`author failed: ${(err as Error).message}`, "error"); }
   });
@@ -797,20 +817,26 @@ function buildToolsPanel() {
     fixBtn.className = "tool-btn"; fixBtn.textContent = "✎ Fix slabs: set LoadBearing";
     fixBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
     fixBtn.onclick = async () => {
-      auOut.textContent = "editing IFC + republishing…";
+      auOut.textContent = "editing IFC…";
       const r = await api.editIfc(projectId!, "set_pset",
         { ifc_class: "IfcSlab", pset: "Pset_SlabCommon", prop: "LoadBearing", value: true, dtype: "bool" }, true);
       const v = await api.validate(projectId!);
-      auOut.innerHTML = `edited ${r.changed} slabs · republished<br><b>IDS now: ${v.status.toUpperCase()}</b> ` +
+      auOut.innerHTML = `edited ${r.changed} slabs · IDS now: <b>${v.status.toUpperCase()}</b> ` +
         `(${v.summary.passed} pass / ${v.summary.failed} fail)`;
+      auOut.textContent += " · converting…";
+      const state = await waitForPublish(projectId!);
+      if (state === "done") await loadProjectModel();
+      auOut.innerHTML += `<br>publish: ${state}`;
     };
     const pubBtn = document.createElement("button");
     pubBtn.className = "tool-btn"; pubBtn.textContent = "⟳ Republish (reconvert + reindex)";
     pubBtn.style.cssText = "display:block;margin:4px 0;width:100%;text-align:left";
     pubBtn.onclick = async () => {
-      auOut.textContent = "publishing…";
-      const r = await api.publish(projectId!);
-      auOut.textContent = `reconverted=${r.reconverted} · reindexed ${r.reindexed} elements`;
+      auOut.textContent = "publishing… (running in background)";
+      await api.publish(projectId!);
+      const state = await waitForPublish(projectId!, (s) => (auOut.textContent = `publish: ${s}…`));
+      if (state === "done") await loadProjectModel();
+      auOut.textContent = `publish ${state}`;
     };
     au.append(fixBtn, pubBtn, auOut);
   }

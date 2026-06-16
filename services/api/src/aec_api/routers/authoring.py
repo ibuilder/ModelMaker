@@ -4,10 +4,12 @@ clashes survive. This is the server-side / AI-driven path; the desktop path is B
 Bonsai driven over Bonsai-MCP (same ifcopenshell.api operations)."""
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 import tempfile
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -55,20 +57,23 @@ def edit(pid: str, recipe: str = Body(...), params: dict = Body(default={}),
     audit.record(db, action="ifc.edit", actor=actor, method="POST",
                  path=f"/projects/{pid}/edit", detail=result)
     db.commit()
-    published = _publish(p) if publish else None
-    return {**result, "published": published}
+    if publish:                       # reconvert off-thread; client polls publish/status
+        _publish_bg(pid)
+        result["publish"] = "running"
+    return result
 
 
-@router.post("/projects/{pid}/publish")
+@router.post("/projects/{pid}/publish", status_code=202)
 def publish(pid: str, reconvert: bool = Body(default=True), db: Session = Depends(get_db),
             actor: str = Depends(require_role("editor"))):
-    """Re-run the pipeline on the current source IFC: convert to .frag + rebuild the
-    properties index, so the viewer streams the updated model."""
+    """Re-run the pipeline on the current source IFC (convert to .frag + reindex), off the
+    request thread. Returns immediately; poll GET publish/status for completion."""
     p = _project(db, pid)
     audit.record(db, action="ifc.publish", actor=actor, method="POST",
                  path=f"/projects/{pid}/publish")
     db.commit()
-    return _publish(p, reconvert=reconvert)
+    _publish_bg(pid)
+    return {"state": "running"}
 
 
 @router.post("/projects/{pid}/source-ifc")
@@ -91,8 +96,9 @@ async def upload_source_ifc(pid: str, file: UploadFile = File(...), publish: boo
                  path=f"/projects/{pid}/source-ifc")
     db.commit()
     out: dict = {"source_ifc": str(ifc_path), "size": len(data)}
-    if publish:
-        out["published"] = _publish(p)
+    if publish:                       # convert off-thread; client polls publish/status
+        _publish_bg(pid)
+        out["publish"] = "running"
     return out
 
 
@@ -120,3 +126,39 @@ def _publish(p: Project, reconvert: bool = True) -> dict:
     storage.put(f"{p.id}/props.json", __import__("json").dumps(idx).encode("utf-8"))
     out["reindexed"] = idx["counts"]["elements"]
     return out
+
+
+# --- background publish (convert/reindex off the request thread) -------------
+def _set_pub_status(pid: str, state: str, detail: dict | None = None) -> None:
+    storage.put(f"{pid}/publish_status.json", json.dumps(
+        {"state": state, "detail": detail,
+         "at": datetime.now(timezone.utc).isoformat()}).encode())
+
+
+def _publish_bg(pid: str) -> None:
+    """Run _publish in a daemon thread (fresh DB session). A 50MB IFC convert takes
+    minutes — doing it in-request would tie up a worker; clients poll publish/status."""
+    from ..db import SessionLocal
+
+    def run():
+        try:
+            with SessionLocal() as db:
+                p = db.get(Project, pid)
+                if not p:
+                    return
+                result = _publish(p)
+            _set_pub_status(pid, "error" if result.get("reconvert_error") else "done", result)
+        except Exception as e:
+            _set_pub_status(pid, "error", {"error": str(e)[:300]})
+
+    _set_pub_status(pid, "running")
+    threading.Thread(target=run, daemon=True).start()
+
+
+@router.get("/projects/{pid}/publish/status")
+def publish_status(pid: str, _: str = Depends(require_role("viewer"))):
+    """Poll the async publish job: idle | running | done | error (+ detail)."""
+    key = f"{pid}/publish_status.json"
+    if storage.exists(key):
+        return json.loads(storage.get(key))
+    return {"state": "idle"}
