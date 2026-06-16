@@ -16,7 +16,13 @@
     {
       "name": "amount",
       "label": "Amount",
-      "type": "number"
+      "type": "currency"
+    },
+    {
+      "name": "prime_contract",
+      "label": "Prime contract",
+      "type": "reference",
+      "module": "prime_contract"
     }
   ],
   "workflow": {

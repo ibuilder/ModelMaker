@@ -27,7 +27,15 @@
     {
       "name": "value",
       "label": "Value",
-      "type": "number"
+      "type": "currency"
+    },
+    {
+      "name": "invoiced",
+      "label": "Invoiced to date ($)",
+      "type": "rollup",
+      "source_module": "owner_invoice",
+      "source_field": "amount",
+      "op": "sum"
     }
   ],
   "workflow": {

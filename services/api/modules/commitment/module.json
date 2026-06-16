@@ -2,22 +2,65 @@
   "key": "commitment",
   "name": "Commitments (POs)",
   "section": "Cost",
-  "icon": "▣",
+  "icon": "\u25a3",
   "ref_prefix": "PO",
   "title_field": "description",
   "pinnable": false,
   "fields": [
-    {"name": "description", "label": "Description", "type": "text", "required": true},
-    {"name": "cost_code", "label": "Cost Code", "type": "text"},
-    {"name": "vendor", "label": "Vendor / Sub", "type": "text"},
-    {"name": "amount", "label": "Committed Amount", "type": "number", "required": true}
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "cost_code",
+      "label": "Cost code",
+      "type": "reference",
+      "module": "cost_code"
+    },
+    {
+      "name": "vendor",
+      "label": "Vendor / Sub",
+      "type": "text"
+    },
+    {
+      "name": "amount",
+      "label": "Committed Amount",
+      "type": "currency",
+      "required": true
+    },
+    {
+      "name": "subcontract",
+      "label": "Subcontract",
+      "type": "reference",
+      "module": "subcontract"
+    }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "executed", "closed"],
+    "states": [
+      "draft",
+      "executed",
+      "closed"
+    ],
     "transitions": [
-      {"from": "draft", "to": "executed", "action": "execute", "party": ["GC"]},
-      {"from": "executed", "to": "closed", "action": "close", "party": ["GC"]}
+      {
+        "from": "draft",
+        "to": "executed",
+        "action": "execute",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "executed",
+        "to": "closed",
+        "action": "close",
+        "party": [
+          "GC"
+        ]
+      }
     ]
   }
 }

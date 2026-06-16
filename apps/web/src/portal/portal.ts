@@ -101,6 +101,19 @@ export class PortalUI {
         this.root.appendChild(cd);
       }
 
+      // charts from by_module: workflow-state mix + busiest sections
+      const states = new Map<string, number>();
+      const sections = new Map<string, number>();
+      for (const bm of d.by_module) {
+        for (const [st, n] of Object.entries(bm.by_state)) states.set(st, (states.get(st) ?? 0) + n);
+        if (bm.count) sections.set(bm.section || "Other", (sections.get(bm.section || "Other") ?? 0) + bm.count);
+      }
+      const STATE_COLOR: Record<string, string> = { draft: "#9aa0a6", open: "#ffd479", answered: "#6cb6ff", closed: "#33d17a", void: "#e2554a", approved: "#33d17a", rejected: "#e2554a" };
+      if (states.size) this.root.appendChild(this.barChart("Records by status",
+        [...states.entries()].sort((a, b) => b[1] - a[1]), (k) => STATE_COLOR[k] ?? "#b083d6"));
+      if (sections.size) this.root.appendChild(this.barChart("Busiest sections",
+        [...sections.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6), () => "#4a8cff"));
+
       // ball-in-your-court action items
       if (d.action_items.length) {
         const t = document.createElement("div"); t.className = "section-title"; t.textContent = "Ball in your court";
@@ -490,6 +503,25 @@ export class PortalUI {
       e.textContent = `${(a.ts || "").slice(0, 16).replace("T", " ")} · ${a.actor ?? ""} · ${a.action}`;
       this.root.appendChild(e);
     }
+  }
+
+  /** Compact horizontal bar chart (inline SVG, no deps). */
+  private barChart(title: string, data: [string, number][], color: (k: string) => string): HTMLElement {
+    const box = document.createElement("div"); box.className = "chart-box";
+    const t = document.createElement("div"); t.className = "section-title"; t.textContent = title;
+    box.appendChild(t);
+    const max = Math.max(1, ...data.map(([, v]) => v));
+    const rowH = 20, w = 240, labelW = 90, barW = w - labelW - 34;
+    const svg = `<svg viewBox="0 0 ${w} ${data.length * rowH}" width="100%" role="img" aria-label="${title}">` +
+      data.map(([k, v], i) => {
+        const y = i * rowH, bw = Math.max(2, (v / max) * barW);
+        return `<text x="0" y="${y + 14}" fill="var(--muted)" font-size="11">${k.slice(0, 14)}</text>` +
+          `<rect x="${labelW}" y="${y + 4}" width="${bw}" height="12" rx="2" fill="${color(k)}"/>` +
+          `<text x="${labelW + bw + 4}" y="${y + 14}" fill="var(--text)" font-size="11">${v}</text>`;
+      }).join("") + `</svg>`;
+    const holder = document.createElement("div"); holder.innerHTML = svg;
+    box.appendChild(holder.firstChild!);
+    return box;
   }
 
   /** Open a record given a module key + id (used by reference + related links). */

@@ -17,6 +17,12 @@
       "name": "company",
       "label": "Company",
       "type": "text"
+    },
+    {
+      "name": "observation",
+      "label": "Source observation",
+      "type": "reference",
+      "module": "observation"
     }
   ],
   "workflow": {

@@ -7,14 +7,42 @@
   "title_field": "description",
   "pinnable": false,
   "fields": [
-    {"name": "description", "label": "Description", "type": "text", "required": true},
-    {"name": "cost_code", "label": "Cost Code", "type": "text"},
-    {"name": "type", "label": "Type", "type": "select", "options": ["Labor", "Material", "Equipment", "Subcontract", "Other"]},
-    {"name": "amount", "label": "Actual Amount", "type": "number", "required": true}
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "cost_code",
+      "label": "Cost code",
+      "type": "reference",
+      "module": "cost_code"
+    },
+    {
+      "name": "type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Labor",
+        "Material",
+        "Equipment",
+        "Subcontract",
+        "Other"
+      ]
+    },
+    {
+      "name": "amount",
+      "label": "Actual Amount",
+      "type": "currency",
+      "required": true
+    }
   ],
   "workflow": {
     "initial": "posted",
-    "states": ["posted"],
+    "states": [
+      "posted"
+    ],
     "transitions": []
   }
 }

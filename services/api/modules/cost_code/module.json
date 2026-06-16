@@ -17,6 +17,22 @@
       "name": "description",
       "label": "Description",
       "type": "text"
+    },
+    {
+      "name": "committed",
+      "label": "Committed ($)",
+      "type": "rollup",
+      "source_module": "commitment",
+      "source_field": "amount",
+      "op": "sum"
+    },
+    {
+      "name": "direct",
+      "label": "Direct cost ($)",
+      "type": "rollup",
+      "source_module": "direct_cost",
+      "source_field": "amount",
+      "op": "sum"
     }
   ],
   "workflow": {

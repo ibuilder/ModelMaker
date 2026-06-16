@@ -21,7 +21,7 @@
     {
       "name": "value",
       "label": "Value",
-      "type": "number"
+      "type": "currency"
     }
   ],
   "workflow": {

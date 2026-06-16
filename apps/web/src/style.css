@@ -243,6 +243,7 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 .chip { display: inline-block; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-size: 11px; margin: 1px 0; }
 .computed { font-style: italic; color: #b083d6; }
 .portal-filter { background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.chart-box { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
 .notif { border-left: 3px solid var(--accent); }
 .notif-meta { color: var(--muted); font-size: 10px; }
 .bulk-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; background: var(--panel2); border: 1px solid var(--accent); border-radius: 6px; padding: 5px 8px; margin: 4px 0; }

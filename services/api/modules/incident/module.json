@@ -28,6 +28,12 @@
         "Recordable",
         "Lost Time"
       ]
+    },
+    {
+      "name": "jha",
+      "label": "Related JHA",
+      "type": "reference",
+      "module": "jha"
     }
   ],
   "workflow": {
