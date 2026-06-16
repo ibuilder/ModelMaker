@@ -16,13 +16,42 @@
     {
       "name": "rom",
       "label": "ROM Cost",
-      "type": "number"
+      "type": "currency"
     },
     {
       "name": "source_rfi",
       "label": "Source RFI",
       "type": "reference",
       "module": "rfi"
+    },
+    {
+      "name": "trades",
+      "label": "Affected trades",
+      "type": "multiselect",
+      "options": [
+        "Concrete",
+        "Steel",
+        "MEP",
+        "Drywall",
+        "Glazing",
+        "Sitework"
+      ]
+    },
+    {
+      "name": "pco_total",
+      "label": "PCO total ($)",
+      "type": "rollup",
+      "source_module": "pco_request",
+      "source_field": "rough_cost",
+      "op": "sum"
+    },
+    {
+      "name": "pco_count",
+      "label": "# PCOs",
+      "type": "rollup",
+      "source_module": "pco_request",
+      "source_field": "rough_cost",
+      "op": "count"
     }
   ],
   "workflow": {

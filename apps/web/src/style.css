@@ -240,6 +240,8 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 .portal-act { font-size: 11px; color: var(--muted); padding: 2px 0; border-bottom: 1px solid #2b2d31; }
 .ref-link { color: var(--accent); cursor: pointer; text-decoration: none; }
 .ref-link:hover { text-decoration: underline; }
+.chip { display: inline-block; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-size: 11px; margin: 1px 0; }
+.computed { font-style: italic; color: #b083d6; }
 
 /* kanban / scrum board */
 .kanban { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0; align-items: flex-start; }

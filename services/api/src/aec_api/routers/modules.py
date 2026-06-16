@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, Response
+from fastapi import APIRouter, Body, Depends, File, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from .. import modules as mod_engine
@@ -116,6 +116,30 @@ def link_record(pid: str, key: str, rid: str, target: dict = Body(...),
 def add_comment(pid: str, key: str, rid: str, text: str = Body(..., embed=True),
                 db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
     return mod_engine.add_comment(db, key, pid, rid, text, user)
+
+
+@router.post("/projects/{pid}/modules/{key}/{rid}/assign")
+def assign_record(pid: str, key: str, rid: str, assignee: str | None = Body(None, embed=True),
+                  db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
+    """Set (or clear) the record's assignee — drives the cross-module work queue."""
+    return mod_engine.set_assignee(db, key, pid, rid, assignee, user, _party(pid, db, user))
+
+
+@router.post("/projects/{pid}/modules/{key}/{rid}/attachments", status_code=201)
+async def upload_attachment(pid: str, key: str, rid: str, file: UploadFile = File(...),
+                            db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
+    """Attach a file to a record (stored in object storage / MinIO)."""
+    data = await file.read()
+    return mod_engine.add_attachment(db, key, pid, rid, file.filename or "file",
+                                     file.content_type, data, user)
+
+
+@router.get("/attachments/{att_id}/download")
+def download_attachment(att_id: str, db: Session = Depends(get_db),
+                        _: str = Depends(require_role("viewer"))):
+    att, data = mod_engine.get_attachment(db, att_id)
+    return Response(data, media_type=att.content_type or "application/octet-stream",
+                    headers={"Content-Disposition": f'attachment; filename="{att.filename}"'})
 
 
 @router.get("/projects/{pid}/modules/{key}/{rid}/pdf")

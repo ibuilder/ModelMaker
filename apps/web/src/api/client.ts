@@ -57,9 +57,14 @@ export interface ModuleRecord {
   links: { module: string; id: string; ref: string }[];
   data: Record<string, unknown>;
   data_refs?: Record<string, RecordBrief>;   // resolved reference fields
+  attachments?: RecordAttachmentMeta[];
   activity?: { ts: string; actor: string; party: string; action: string; detail: unknown }[];
   comments?: { author: string | null; text: string; created_at: string }[];
   available_actions?: { action: string; to: string; party: string[] }[];
+}
+export interface RecordAttachmentMeta {
+  id: string; filename: string; size: number; content_type: string | null;
+  uploaded_by: string | null; created_at: string | null;
 }
 export interface RelatedRecords {
   outgoing: (RecordBrief & { label: string })[];
@@ -275,6 +280,20 @@ export class ApiClient {
   }
   myWork(pid: string) {
     return this.json<WorkItem[]>(`/projects/${pid}/my-work`);
+  }
+  assignRecord(pid: string, key: string, rid: string, assignee: string | null) {
+    return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/assign`, {
+      method: "POST", body: JSON.stringify({ assignee }) });
+  }
+  async uploadAttachment(pid: string, key: string, rid: string, file: File) {
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(this.url(`/projects/${pid}/modules/${key}/${rid}/attachments`), {
+      method: "POST", body: fd });
+    if (!res.ok) throw new Error(`upload -> ${res.status}`);
+    return res.json() as Promise<RecordAttachmentMeta>;
+  }
+  attachmentUrl(attId: string) {
+    return this.url(`/attachments/${attId}/download`);
   }
 
   // cost / financials (GC portal)

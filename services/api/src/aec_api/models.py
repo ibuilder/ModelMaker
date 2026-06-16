@@ -72,6 +72,21 @@ class RecordComment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class RecordAttachment(Base):
+    """File attached to any GC module record (object bytes live in storage/MinIO)."""
+    __tablename__ = "record_attachments"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    module: Mapped[str] = mapped_column(String, index=True)
+    record_id: Mapped[str] = mapped_column(String, index=True)
+    filename: Mapped[str] = mapped_column(String, nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    size: Mapped[int] = mapped_column(default=0)
+    storage_key: Mapped[str] = mapped_column(String, nullable=False)
+    uploaded_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class RecordActivity(Base):
     """Per-record activity timeline shared by all GC modules (create/update/transition/link)."""
     __tablename__ = "record_activity"

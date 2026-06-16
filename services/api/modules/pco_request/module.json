@@ -33,7 +33,7 @@
     {
       "name": "rough_cost",
       "label": "Rough Order Cost",
-      "type": "number"
+      "type": "currency"
     },
     {
       "name": "source_rfi",

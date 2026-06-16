@@ -38,6 +38,17 @@ def reference_fields(mod: dict) -> list[dict]:
     return [f for f in mod.get("fields", []) if f.get("type") == "reference" and f.get("module")]
 
 
+def rollup_fields(mod: dict) -> list[dict]:
+    """Computed fields that aggregate a numeric field across incoming related records.
+    e.g. {"type":"rollup","source_module":"pco_request","source_field":"rough_cost","op":"sum"}"""
+    return [f for f in mod.get("fields", []) if f.get("type") == "rollup"]
+
+
+def input_fields(mod: dict) -> list[dict]:
+    """Fields the user actually enters (excludes computed rollups)."""
+    return [f for f in mod.get("fields", []) if f.get("type") != "rollup"]
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -183,6 +194,7 @@ def get_record(db: Session, key: str, project_id: str, rid: str) -> dict:
             RecordComment.module == key, RecordComment.record_id == rid)
         .order_by(RecordComment.created_at).all()
     ]
+    rec["attachments"] = list_attachments(db, key, project_id, rid)
     # resolve reference fields to a clickable brief {module, id, ref, title}
     mod = get_module(key)
     data = rec.get("data") or {}
@@ -194,7 +206,88 @@ def get_record(db: Session, key: str, project_id: str, rid: str) -> dict:
             if b:
                 refs[f["name"]] = b
     rec["data_refs"] = refs
+    # computed rollup fields: aggregate a numeric field across incoming related records
+    rolls = rollup_fields(mod)
+    if rolls:
+        for f in rolls:
+            rec.setdefault("data", {})[f["name"]] = _rollup(db, key, project_id, rid, f)
     return rec
+
+
+def _rollup(db: Session, key: str, project_id: str, rid: str, f: dict) -> float | int:
+    """Aggregate f['source_field'] over incoming records of f['source_module'] that point here."""
+    src_key, field = f.get("source_module"), f.get("source_field")
+    if not src_key or src_key not in TABLES:
+        return 0
+    # which reference field in the source module points at *this* module
+    ref_field = next((fn for (sk, fn, _) in REVERSE_REFS.get(key, []) if sk == src_key), None)
+    if not ref_field:
+        return 0
+    t = TABLES[src_key]
+    total, count = 0.0, 0
+    for r in db.execute(select(t.c.data).where(t.c.project_id == project_id)):
+        d = r._mapping["data"] or {}
+        if d.get(ref_field) == rid:
+            count += 1
+            try:
+                total += float(d.get(field) or 0)
+            except (TypeError, ValueError):
+                pass
+    op = f.get("op", "sum")
+    if op == "count":
+        return count
+    if op == "avg":
+        return round(total / count, 2) if count else 0
+    return round(total, 2)
+
+
+def set_assignee(db: Session, key: str, project_id: str, rid: str, assignee: str | None,
+                 actor: str, party: str | None) -> dict:
+    t = TABLES[key]
+    get_record(db, key, project_id, rid)  # 404 if missing
+    db.execute(update(t).where(t.c.id == rid, t.c.project_id == project_id)
+               .values(assignee=assignee, modified_at=_now()))
+    _log(db, project_id, key, rid, actor, party, "assign", {"assignee": assignee})
+    db.commit()
+    return get_record(db, key, project_id, rid)
+
+
+# --- attachments (bytes live in storage/MinIO) ------------------------------
+def add_attachment(db: Session, key: str, project_id: str, rid: str, filename: str,
+                   content_type: str | None, data: bytes, actor: str) -> dict:
+    from . import storage
+    from .models import RecordAttachment
+
+    get_record(db, key, project_id, rid)  # 404 if missing
+    aid = str(uuid.uuid4())
+    skey = f"records/{project_id}/{key}/{rid}/{aid}_{filename}"
+    storage.put(skey, data)
+    att = RecordAttachment(id=aid, project_id=project_id, module=key, record_id=rid,
+                           filename=filename, content_type=content_type, size=len(data),
+                           storage_key=skey, uploaded_by=actor)
+    db.add(att)
+    _log(db, project_id, key, rid, actor, None, "attach", {"filename": filename})
+    db.commit()
+    return {"id": aid, "filename": filename, "size": len(data), "content_type": content_type}
+
+
+def list_attachments(db: Session, key: str, project_id: str, rid: str) -> list[dict]:
+    from .models import RecordAttachment
+    return [{"id": a.id, "filename": a.filename, "size": a.size,
+             "content_type": a.content_type, "uploaded_by": a.uploaded_by,
+             "created_at": a.created_at.isoformat() if a.created_at else None}
+            for a in db.query(RecordAttachment).filter(
+                RecordAttachment.module == key, RecordAttachment.record_id == rid)
+            .order_by(RecordAttachment.created_at).all()]
+
+
+def get_attachment(db: Session, att_id: str):
+    from . import storage
+    from .models import RecordAttachment
+    a = db.get(RecordAttachment, att_id)
+    if not a:
+        raise HTTPException(404, "attachment not found")
+    return a, storage.get(a.storage_key)
 
 
 def _brief(db: Session, key: str, project_id: str, rid: str) -> dict | None:

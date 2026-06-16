@@ -147,8 +147,9 @@ export class PortalUI {
       () => (editing ? this.openRecord(m, existing!.id) : this.openModule(m))));
     const inputs: Record<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> = {};
     const sigs: Record<string, () => string> = {};   // signature field getters (data-URI)
-    const cur = (n: string) => (existing?.data?.[n] as string | number | undefined);
+    const cur = (n: string) => (existing?.data?.[n] as string | number | string[] | undefined);
     for (const f of m.fields) {
+      if (f.type === "rollup") continue;   // computed, not user-entered
       const wrap = document.createElement("label"); wrap.className = "portal-field";
       wrap.textContent = f.label + (f.required ? " *" : "");
       if (f.type === "signature") {
@@ -162,12 +163,16 @@ export class PortalUI {
         el = document.createElement("select");
         for (const o of f.options ?? []) { const opt = document.createElement("option"); opt.value = opt.textContent = o; el.appendChild(opt); }
         if (cur(f.name) != null) el.value = String(cur(f.name));
+      } else if (f.type === "multiselect") {
+        el = document.createElement("select"); el.multiple = true; el.size = Math.min((f.options ?? []).length, 5);
+        const chosen = new Set(Array.isArray(cur(f.name)) ? (cur(f.name) as string[]) : []);
+        for (const o of f.options ?? []) { const opt = document.createElement("option"); opt.value = opt.textContent = o; opt.selected = chosen.has(o); el.appendChild(opt); }
       } else if (f.type === "reference") {
         el = document.createElement("select");
         const none = document.createElement("option"); none.value = ""; none.textContent = `— none —`; el.appendChild(none);
         for (const o of refOpts.get(f.name) ?? []) { const opt = document.createElement("option"); opt.value = o.id; opt.textContent = o.label; el.appendChild(opt); }
         if (cur(f.name) != null) el.value = String(cur(f.name));
-      } else { el = document.createElement("input"); (el as HTMLInputElement).type = f.type === "number" ? "number" : f.type === "date" ? "date" : "text"; (el as HTMLInputElement).value = String(cur(f.name) ?? ""); }
+      } else { el = document.createElement("input"); (el as HTMLInputElement).type = (f.type === "number" || f.type === "currency") ? "number" : f.type === "date" ? "date" : "text"; if (f.type === "currency") (el as HTMLInputElement).step = "0.01"; (el as HTMLInputElement).value = String(cur(f.name) ?? ""); }
       inputs[f.name] = el; wrap.appendChild(el); this.root.appendChild(wrap);
     }
     // assignee (drives the cross-module "My work" queue) — set at creation
@@ -191,8 +196,11 @@ export class PortalUI {
     save.onclick = async () => {
       const data: Record<string, unknown> = {};
       for (const f of m.fields) {
+        if (f.type === "rollup") continue;
         if (f.type === "signature") { const s = sigs[f.name]?.(); if (s) data[f.name] = s; continue; }
-        const v = inputs[f.name].value; if (v) data[f.name] = f.type === "number" ? Number(v) : v;
+        const el = inputs[f.name];
+        if (f.type === "multiselect") { data[f.name] = [...(el as HTMLSelectElement).selectedOptions].map((o) => o.value); continue; }
+        const v = el.value; if (v) data[f.name] = (f.type === "number" || f.type === "currency") ? Number(v) : v;
       }
       try {
         if (editing) {
@@ -265,10 +273,31 @@ export class PortalUI {
         fields.insertAdjacentHTML("beforeend",
           `<div class="k">${f.label}</div><div class="v"><img src="${v}" style="max-width:200px;border:1px solid var(--line);background:#fff"/></div>`);
       } else {
-        fields.insertAdjacentHTML("beforeend", `<div class="k">${f.label}</div><div class="v">${v}</div>`);
+        let disp = String(v);
+        if (f.type === "currency") disp = `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        else if (f.type === "multiselect" && Array.isArray(v)) disp = (v as string[]).map((x) => `<span class="chip">${x}</span>`).join(" ");
+        else if (f.type === "rollup") disp = `<span class="computed">${Number(v).toLocaleString()}</span>`;
+        fields.insertAdjacentHTML("beforeend", `<div class="k">${f.label}</div><div class="v">${disp}</div>`);
       }
     }
     this.root.appendChild(fields);
+
+    // assignee + reassign
+    const asgRow = document.createElement("div"); asgRow.className = "meta"; asgRow.style.margin = "4px 0";
+    asgRow.innerHTML = `Assignee: <b>${r.assignee ?? "—"}</b> `;
+    const reassign = document.createElement("button"); reassign.className = "tool-btn"; reassign.textContent = "Reassign";
+    reassign.style.marginLeft = "6px";
+    reassign.onclick = async () => {
+      const who = prompt("Assign to (user id, blank to clear):", r.assignee ?? "");
+      if (who === null) return;
+      try { await this.host.api.assignRecord(pid, m.key, rid, who.trim() || null); this.openRecord(m, rid); }
+      catch (e) { this.host.setStatus(`error: ${(e as Error).message}`); }
+    };
+    asgRow.appendChild(reassign);
+    this.root.appendChild(asgRow);
+
+    // attachments (files in object storage)
+    this.renderAttachments(m, r, rid);
 
     // related records (outgoing references + incoming records that point here)
     const relatedBox = document.createElement("div");
@@ -359,6 +388,28 @@ export class PortalUI {
     };
     for (const o of rel.outgoing) link(o.label, o);
     for (const i of rel.incoming) link(i.module_name, i);
+  }
+
+  /** Attachments section: list existing files (download) + upload a new one. */
+  private renderAttachments(m: ModuleDef, r: ModuleRecord, rid: string) {
+    const pid = this.host.projectId()!;
+    const t = document.createElement("div"); t.className = "section-title"; t.textContent = "Attachments";
+    this.root.appendChild(t);
+    for (const a of r.attachments ?? []) {
+      const row = document.createElement("div"); row.className = "portal-act";
+      const kb = a.size > 1024 ? `${Math.round(a.size / 1024)} KB` : `${a.size} B`;
+      const link = document.createElement("a"); link.className = "ref-link"; link.textContent = `📎 ${a.filename}`;
+      link.href = this.host.api.attachmentUrl(a.id); link.target = "_blank";
+      row.append(link, document.createTextNode(`  ${kb}`));
+      this.root.appendChild(row);
+    }
+    const file = document.createElement("input"); file.type = "file"; file.style.cssText = "font-size:11px;margin:4px 0;max-width:100%";
+    file.onchange = async () => {
+      const f = file.files?.[0]; if (!f) return;
+      try { await this.host.api.uploadAttachment(pid, m.key, rid, f); this.host.setStatus(`attached ${f.name}`); this.openRecord(m, rid); }
+      catch (e) { this.host.setStatus(`upload failed: ${(e as Error).message}`); }
+    };
+    this.root.appendChild(file);
   }
 
   // --- kanban / "scrum" board: columns by workflow state, drag to transition --

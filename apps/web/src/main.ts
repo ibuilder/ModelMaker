@@ -457,12 +457,14 @@ function buildStatusBar() {
   bar.append(coords, saved);
 }
 
-// initialise navigation + settings
+// build the settings bar now; navigation init is deferred to the end of the module
+// (initNav) because setWorkspace/applyPersona can call openPortalTab/openProformaTab,
+// which reference the `portal`/`proforma` consts declared later (temporal dead zone).
 showRail("tree");
 buildStatusBar();
 applySettings();
-applyPersona(personaSel.value);
-{
+function initNav() {
+  applyPersona(personaSel.value);
   const savedWs = localStorage.getItem("workspace");
   const allowWs = PERSONAS[personaSel.value]?.ws ?? null;
   setWorkspace(savedWs && (!allowWs || allowWs.includes(savedWs)) ? savedWs : currentWs);
@@ -988,4 +990,6 @@ window.addEventListener("keydown", (e) => {
 // debug hook for automated/preview testing
 (window as unknown as Record<string, unknown>).__viewer = { viewer, loader, fitToModels, selectByGuid, THREE };
 
-startup();
+// run nav init AFTER startup connects, so restoring a saved Construction/Finance
+// workspace opens the portal/proforma with a live projectId (not "connect a project").
+startup().finally(initNav);
