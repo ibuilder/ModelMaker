@@ -173,6 +173,9 @@ export class ApiClient {
   me() {
     return this.json<{ username: string; role: string | null; authenticated: boolean }>("/auth/me");
   }
+  logout() {
+    return this.json<{ ok: boolean }>("/auth/logout", { method: "POST" }).catch(() => ({ ok: false }));
+  }
 
   /** Absolute URL for a GET endpoint, e.g. an export download. */
   url(path: string): string {

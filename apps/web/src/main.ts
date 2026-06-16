@@ -338,7 +338,7 @@ async function buildAuthControl() {
     try { const m = await api.me(); if (m.authenticated) name = m.username; else api.setToken(""); }
     catch { /* keep token; offline */ }
     el.textContent = `${name} ⏻`; el.title = "Sign out";
-    el.onclick = () => { api.setToken(""); location.reload(); };
+    el.onclick = async () => { await api.logout(); api.setToken(""); location.reload(); };
   } else {
     el.textContent = "Sign in"; el.title = "Sign in";
     el.onclick = loginModal;

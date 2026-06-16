@@ -95,8 +95,10 @@ A development-finance engine for the owner/developer side (the **Finance** works
   (stdlib, dependency-free) at `/auth/{register,login,me}`. The token is the identity the RBAC
   layer trusts (replacing the dev `X-User` header); per-project authorization stays in
   `ProjectMember`. First account bootstraps as admin. Web app has a sign-in control + token
-  store. *(SSE feed + direct-download links can't carry the header yet — a follow-up for
-  fully-RBAC-on deployments.)*
+  store. Login also sets an **httpOnly cookie** so the SSE notification feed and
+  direct-download links (which can't set a header) authenticate same-origin via the `/api`
+  proxy; `/auth/logout` clears it. *(Dev cross-origin `:5173→:8000` uses the header path;
+  the cookie applies to the deployed same-origin stack.)*
 - **CI gate** — `services/api/run_tests.py` runs all suites; GitHub Actions runs it + the web build.
 
 ## Gallery

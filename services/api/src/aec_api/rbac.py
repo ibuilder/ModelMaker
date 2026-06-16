@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import os
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Cookie, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from .db import get_db
@@ -25,16 +25,22 @@ API_KEY = os.environ.get("AEC_API_KEY")
 
 
 def current_user(x_user: str | None = Header(default=None),
-                 authorization: str | None = Header(default=None)) -> str:
+                 authorization: str | None = Header(default=None),
+                 aec_token: str | None = Cookie(default=None)) -> str:
     """Identify the caller: a signed bearer token (real auth) → its user; the AEC_API_KEY
-    bearer → 'api-key' (admin); otherwise the dev X-User header. Token + key both ride in
-    Authorization, so they coexist."""
+    bearer → 'api-key' (admin); the aec_token cookie (for SSE / direct-download links that
+    can't set an Authorization header); otherwise the dev X-User header. They coexist."""
     if authorization and authorization.startswith("Bearer "):
         token = authorization[len("Bearer "):]
         if API_KEY and token == API_KEY:
             return "api-key"
         from . import auth
         sub = auth.verify_token(token)
+        if sub:
+            return sub
+    if aec_token:
+        from . import auth
+        sub = auth.verify_token(aec_token)
         if sub:
             return sub
     return x_user or "dev"

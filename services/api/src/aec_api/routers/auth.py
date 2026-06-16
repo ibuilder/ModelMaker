@@ -3,7 +3,7 @@ RBAC layer accepts as identity (see rbac.current_user). The first registered use
 as admin; after that, registering others requires an admin token."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from .. import auth
@@ -38,12 +38,23 @@ def register(username: str = Body(..., embed=True), password: str = Body(..., em
 
 
 @router.post("/auth/login")
-def login(username: str = Body(..., embed=True), password: str = Body(..., embed=True),
-          db: Session = Depends(get_db)):
+def login(response: Response, username: str = Body(..., embed=True),
+          password: str = Body(..., embed=True), db: Session = Depends(get_db)):
     u = db.get(User, username)
     if not u or not auth.verify_password(password, u.password_hash):
         raise HTTPException(401, "invalid username or password")
-    return {"token": auth.create_token(username), "username": username, "role": u.role}
+    token = auth.create_token(username)
+    # httpOnly cookie so SSE + direct-download links (which can't set a header) authenticate
+    # same-origin (via the /api proxy in prod). Fetches use the token in the body for the header.
+    response.set_cookie("aec_token", token, httponly=True, samesite="lax",
+                        max_age=7 * 24 * 3600, path="/")
+    return {"token": token, "username": username, "role": u.role}
+
+
+@router.post("/auth/logout")
+def logout(response: Response):
+    response.delete_cookie("aec_token", path="/")
+    return {"ok": True}
 
 
 @router.get("/auth/me")
