@@ -76,33 +76,37 @@ with TestClient(app) as c:
     t2 = c.get(f"/projects/{pid2}/topics").json()
     assert t2[0]["title"] == "Beam clash at grid C3"
 
-    # 10. properties index upload + lookup by GUID
-    #     generate the props.json dynamically using aec_data.cli (like smoke-stack.sh does)
+    # 10. properties index upload + lookup by GUID.
+    #     Prefer generating the index from the sample IFC (like smoke-stack.sh); fall back to the
+    #     committed fixture when the IFC isn't present (fresh CI checkout — samples/ is gitignored).
     ifc_path = "../../samples/school_str.ifc"
-    if not os.path.exists(ifc_path):
-        raise FileNotFoundError(f"Sample IFC not found at {ifc_path}")
-    
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp:
-        tmp_path = tmp.name
-    
-    try:
-        # Generate props.json from the sample IFC using the data service
+    fixture = "tests/fixtures/school_str.props.json"
+    tmp_path = None
+    if os.path.exists(ifc_path):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+            tmp_path = tmp.name
         result = subprocess.run(
             [sys.executable, "-m", "aec_data.cli", "index", ifc_path, tmp_path],
             cwd=os.path.join(os.path.dirname(__file__), "..", "data"),
             capture_output=True,
             text=True,
-            env={**os.environ, "PYTHONPATH": os.path.join(os.path.dirname(__file__), "..", "data", "src")}
+            env={**os.environ, "PYTHONPATH": os.path.join(os.path.dirname(__file__), "..", "data", "src")},
         )
         if result.returncode != 0:
             raise RuntimeError(f"Failed to generate props.json: {result.stderr}")
-        
-        with open(tmp_path, "rb") as fh:
+        props_path = tmp_path
+    elif os.path.exists(fixture):
+        props_path = fixture
+    else:
+        raise FileNotFoundError(f"need {ifc_path} (to generate) or {fixture} (committed fallback)")
+
+    try:
+        with open(props_path, "rb") as fh:
             up = c.post(f"/projects/{pid}/properties/index", files={"file": ("props.json", fh, "application/json")}).json()
     finally:
-        if os.path.exists(tmp_path):
+        if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
-    
+
     assert up["loaded"] > 1000, up
     el = c.get(f"/projects/{pid}/elements/1WrzGm1SD2ev45B_OWQ39B").json()
     assert el["ifc_class"] == "IfcBeam", el
