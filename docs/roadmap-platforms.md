@@ -40,10 +40,13 @@ WebView-wrapper path preserves the entire existing renderer and tool set.
    service worker that precaches the app shell + WASM/worker and runtime-caches .frag tiles,
    and the coi-serviceworker COOP/COEP injection so cross-origin isolation holds offline /
    on static hosts. Verify install prompt + offline load. Unlocks "install" on every platform.
-2. **Tauri desktop** — wrap the build; wire native Open/Save dialogs to the existing
-   Open ▾ / Save ▾ menus (replace the hidden `<input type=file>` with Tauri's `dialog` +
-   `fs` APIs); bundle the local converter cache. Sign + notarize (Win Authenticode, macOS
-   notarization).
+2. **Tauri 2 desktop** *(scaffolded)* — `apps/web/src-tauri/` is build-ready (tauri.conf.json
+   wrapping `../dist`, Cargo manifest, lib/main, capabilities; COOP/COEP headers set so
+   SharedArrayBuffer works in the WebView; `VITE_API_URL` points the client at the hosted API).
+   `npm run tauri dev|build` on a Rust+Tauri machine; `tauri icon public/icon.svg` for icons.
+   See `apps/web/src-tauri/README.md`. Next: native Open/Save dialogs (replace the hidden
+   `<input type=file>` with Tauri `dialog`+`fs`), code-signing/notarization, and per-OS WebView
+   validation of the WebGL/WASM viewer (Electron fallback if a WebView underperforms).
 3. **Capacitor mobile** — same build; add filesystem + share plugins; tune the responsive
    layout (already has an 820px breakpoint) for touch; on-site photo capture into BCF topics.
 4. **Backend** — the FastAPI + Postgres + MinIO stack stays server-side (cloud or on-prem);
