@@ -24,6 +24,8 @@ COPY services/data/src /app/services/data/src
 # GC portal module definitions (module.json catalog) — the module engine loads these
 # at startup from services/api/modules; without them the portal registers 0 modules
 COPY services/api/modules /app/services/api/modules
+# demo seeder (stdlib-only) so the stack can self-populate via the compose `seed` profile
+COPY services/api/seed_demo.py /app/services/api/seed_demo.py
 
 EXPOSE 8000
 CMD ["uvicorn", "aec_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -48,7 +48,21 @@ services:
       APS_CLIENT_ID: "${APS_CLIENT_ID:-}"              # optional paid Autodesk RVT bridge
       APS_CLIENT_SECRET: "${APS_CLIENT_SECRET:-}"
     ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     profiles: ["full"]
+
+  # one-shot demo seeder (api must be enabled, so pass both profiles):
+  #   docker compose --profile full --profile seed run --rm seed
+  seed:
+    image: modelmaker-api
+    depends_on:
+      api: { condition: service_healthy }
+    command: ["python", "/app/services/api/seed_demo.py", "--url", "http://api:8000", "--user", "gc"]
+    profiles: ["seed"]
 
   web:
     build:
