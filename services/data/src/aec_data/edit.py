@@ -166,11 +166,12 @@ def add_wall(model: ifcopenshell.file, start, end, height: float = 3.0,
     length = math.hypot(ex - sx, ey - sy) or 1.0
     ang = math.atan2(ey - sy, ex - sx)
     st = _first_storey(model, storey)
-    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0   # file units
+    elev = (float(getattr(st, "Elevation", 0) or 0) if st else 0.0) * scale   # file units -> m
     wall = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcWall", name="Wall")
     mx, my = (sx + ex) / 2, (sy + ey) / 2
     c, s = math.cos(ang), math.sin(ang)
-    matrix = np.array([[c, -s, 0, mx / scale], [s, c, 0, my / scale],
+    # placement in metres; edit_object_placement(is_si=True) converts to file units
+    matrix = np.array([[c, -s, 0, mx], [s, c, 0, my],
                        [0, 0, 1, elev], [0, 0, 0, 1]], dtype=float)
     ifcopenshell.api.run("geometry.edit_object_placement", model, product=wall, matrix=matrix)
     profile = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA",
@@ -192,9 +193,11 @@ def add_slab(model: ifcopenshell.file, points, thickness: float = 0.2,
     Returns the new slab's GUID."""
     import numpy as np
 
+    import ifcopenshell.util.unit as uunit
+    scale = uunit.calculate_unit_scale(model)
     body = _body_context(model)
     st = _first_storey(model, storey)
-    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0
+    elev = (float(getattr(st, "Elevation", 0) or 0) if st else 0.0) * scale
     slab = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSlab", name="Slab")
     matrix = np.eye(4); matrix[2, 3] = elev
     ifcopenshell.api.run("geometry.edit_object_placement", model, product=slab, matrix=matrix)
@@ -221,10 +224,10 @@ def add_column(model: ifcopenshell.file, point, height: float = 3.0, width: floa
     scale = uunit.calculate_unit_scale(model)
     body = _body_context(model)
     st = _first_storey(model, storey)
-    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0
+    elev = (float(getattr(st, "Elevation", 0) or 0) if st else 0.0) * scale
     col = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcColumn", name="Column")
     matrix = np.eye(4)
-    matrix[0, 3] = float(point[0]) / scale; matrix[1, 3] = float(point[1]) / scale; matrix[2, 3] = elev
+    matrix[0, 3] = float(point[0]); matrix[1, 3] = float(point[1]); matrix[2, 3] = elev
     ifcopenshell.api.run("geometry.edit_object_placement", model, product=col, matrix=matrix)
     profile = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA", XDim=float(width), YDim=float(depth))
     rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body, profile=profile, depth=float(height))
@@ -251,10 +254,10 @@ def add_beam(model: ifcopenshell.file, start, end, width: float = 0.3, depth: fl
     length = math.hypot(ex - sx, ey - sy) or 1.0
     dx, dy = (ex - sx) / length, (ey - sy) / length
     st = _first_storey(model, storey)
-    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0
+    elev = (float(getattr(st, "Elevation", 0) or 0) if st else 0.0) * scale
     beam = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcBeam", name="Beam")
     # local Z = beam axis (horizontal), local Y = up, local X = Y×Z; extrude along local Z
-    matrix = np.array([[-dy, 0, dx, sx / scale], [dx, 0, dy, sy / scale],
+    matrix = np.array([[-dy, 0, dx, sx], [dx, 0, dy, sy],
                        [0, 1, 0, elev], [0, 0, 0, 1]], dtype=float)
     ifcopenshell.api.run("geometry.edit_object_placement", model, product=beam, matrix=matrix)
     profile = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA", XDim=float(width), YDim=float(depth))
@@ -273,9 +276,11 @@ def add_roof(model: ifcopenshell.file, points, thickness: float = 0.3,
     at the storey elevation. (Pitched roofs are a future enhancement.)"""
     import numpy as np
 
+    import ifcopenshell.util.unit as uunit
+    scale = uunit.calculate_unit_scale(model)
     body = _body_context(model)
     st = _first_storey(model, storey)
-    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0
+    elev = (float(getattr(st, "Elevation", 0) or 0) if st else 0.0) * scale
     roof = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcRoof", name="Roof")
     matrix = np.eye(4); matrix[2, 3] = elev
     ifcopenshell.api.run("geometry.edit_object_placement", model, product=roof, matrix=matrix)
@@ -304,9 +309,10 @@ def add_opening(model: ifcopenshell.file, host_guid: str, width: float = 0.9, he
         raise ValueError(f"host wall {host_guid} not found (select a wall first)")
     scale = uunit.calculate_unit_scale(model)
     body = _body_context(model)
-    # opening placement = wall world placement, raised by the sill (local +Z is up)
-    wm = uplace.get_local_placement(host.ObjectPlacement)
-    off = np.eye(4); off[2, 3] = float(sill) / scale
+    # opening placement = wall world placement (in metres), raised by the sill (local +Z up)
+    wm = np.array(uplace.get_local_placement(host.ObjectPlacement), dtype=float)
+    wm[0:3, 3] *= scale   # file units -> metres
+    off = np.eye(4); off[2, 3] = float(sill)
     opm = wm @ off
 
     opening = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcOpeningElement", name=f"{kind} opening")
@@ -343,6 +349,48 @@ def delete_element(model: ifcopenshell.file, guid: str) -> int:
     return 1
 
 
+def _element(model: ifcopenshell.file, guid: str):
+    el = next((e for e in model.by_type("IfcElement") if e.GlobalId == guid), None)
+    if el is None:
+        raise ValueError(f"element {guid} not found")
+    return el
+
+
+def move_element(model: ifcopenshell.file, guid: str, dx: float = 0.0, dy: float = 0.0,
+                 dz: float = 0.0) -> str:
+    """Translate an element by (dx,dy,dz) metres in IFC E/N/Z. GUID-stable."""
+    import ifcopenshell.util.placement as uplace
+    import ifcopenshell.util.unit as uunit
+    import numpy as np
+
+    el = _element(model, guid)
+    scale = uunit.calculate_unit_scale(model)
+    m = np.array(uplace.get_local_placement(el.ObjectPlacement), dtype=float)
+    m[0:3, 3] *= scale                     # world translation -> metres
+    m[0, 3] += float(dx); m[1, 3] += float(dy); m[2, 3] += float(dz)
+    ifcopenshell.api.run("geometry.edit_object_placement", model, product=el, matrix=m)  # is_si
+    return guid
+
+
+def rotate_element(model: ifcopenshell.file, guid: str, angle_deg: float = 0.0) -> str:
+    """Rotate an element about its own vertical (Z) axis by `angle_deg`. GUID-stable."""
+    import math
+
+    import ifcopenshell.util.placement as uplace
+    import numpy as np
+
+    import ifcopenshell.util.unit as uunit
+    el = _element(model, guid)
+    scale = uunit.calculate_unit_scale(model)
+    a = math.radians(float(angle_deg))
+    c, s = math.cos(a), math.sin(a)
+    rz = np.array([[c, -s, 0, 0], [s, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
+    m = np.array(uplace.get_local_placement(el.ObjectPlacement), dtype=float)
+    m[0:3, 3] *= scale                     # world translation -> metres (is_si placement)
+    ifcopenshell.api.run("geometry.edit_object_placement", model, product=el, matrix=m @ rz)
+    return guid
+
+
 # recipe registry — what an API endpoint / Bonsai-MCP can invoke by name
 RECIPES = {
     "add_wall": lambda m, p: add_wall(m, p["start"], p["end"], float(p.get("height", 3.0)),
@@ -358,6 +406,9 @@ RECIPES = {
     "add_window": lambda m, p: add_opening(m, p["host_guid"], float(p.get("width", 1.2)),
                                            float(p.get("height", 1.2)), float(p.get("sill", 0.9)), "window", p.get("storey")),
     "delete_element": lambda m, p: delete_element(m, p["guid"]),
+    "move_element": lambda m, p: move_element(m, p["guid"], float(p.get("dx", 0)),
+                                              float(p.get("dy", 0)), float(p.get("dz", 0))),
+    "rotate_element": lambda m, p: rotate_element(m, p["guid"], float(p.get("angle", 0))),
     "set_pset": lambda m, p: set_pset_on_class(
         m, p["ifc_class"], p["pset"], p["prop"],
         _coerce(p.get("value"), p.get("dtype", "str"))),

@@ -47,8 +47,16 @@ author → reload). Verified at the data layer on `basichouse.ifc`.
   `IfcWindow` that fills it (`feature.add_filling`). Viewer tools act on the selected wall.
   Centered for now (positioning along the wall + swing/hand are future). Verified at the data
   layer: door 8→9 with +1 void/+1 fill; window 19→20.
-- Move / rotate / copy by GUID (operate on `IfcLocalPlacement`).  *(next)*
+- **Move / rotate by GUID** ✅ — `move_element` (E/N/Z metre delta) and `rotate_element`
+  (degrees about Z) edit the world placement via `geometry.edit_object_placement(is_si=True)`;
+  viewer Move (✥) / Rotate (⟲) tools act on the selection. Verified: wall moves
+  (2.5,0,0)→(4.5,1,0) m, column rotates 45°. Copy is next.
 - Property/Pset edit (already have property read; `set_pset` recipe exists for batch).
+
+> **Unit fix (this phase):** all authoring recipes now build placement matrices in **metres**
+> and let `edit_object_placement(is_si=True)` convert to file units. Previously they divided by
+> the unit scale *and* the API converted again, placing geometry 1000× too far on mm-unit IFCs
+> (e.g. basichouse) — invisible/unusable. Entity-count tests missed it; position checks caught it.
 
 ### Phase C — drafting aids (client-only, no IFC write)
 - Snap (endpoint / midpoint / grid / intersection), ortho lock, temp dimensions.

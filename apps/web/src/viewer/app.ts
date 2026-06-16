@@ -262,6 +262,21 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   };
   toolBtn("◧", "Add door to selected wall", () => void addOpening("door"));
   toolBtn("◨", "Add window to selected wall", () => void addOpening("window"));
+  toolBtn("✥", "Move selected element (E,N,Z metres)", async () => {
+    if (!selectedGuid) { notify("select an element first", "error"); return; }
+    if (!projectId) { notify("connect a project with a source IFC to edit", "error"); return; }
+    const v = prompt("Move by E, N, Z metres (comma-separated):", "1, 0, 0");
+    if (!v) return;
+    const [dx, dy, dz] = v.split(",").map((n) => Number(n.trim()) || 0);
+    await authorAndReload("move_element", { guid: selectedGuid, dx, dy, dz }, "move");
+  });
+  toolBtn("⟲", "Rotate selected element (degrees about Z)", async () => {
+    if (!selectedGuid) { notify("select an element first", "error"); return; }
+    if (!projectId) { notify("connect a project with a source IFC to edit", "error"); return; }
+    const a = Number(prompt("Rotate by degrees (about vertical axis):", "90"));
+    if (!a) return;
+    await authorAndReload("rotate_element", { guid: selectedGuid, angle: a }, "rotate");
+  });
 
   async function capturePlacePoint(e: MouseEvent, hitPoint: THREE.Vector3 | null) {
     if (!placeMode) return;
