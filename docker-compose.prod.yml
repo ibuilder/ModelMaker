@@ -1,0 +1,39 @@
+# Production overlay — adds TLS (Caddy auto-HTTPS), enforces auth, and sets restart policies.
+# Layer it on top of the base compose:
+#
+#   DOMAIN=app.example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#       --profile full up -d --build
+#
+# Requires: a VM with Docker, a DNS A record for $DOMAIN pointing at it, and ports 80+443 open.
+# Lock the rest down with a firewall (e.g. `ufw allow 80,443/tcp` and deny 8000/8080/5432/9000).
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: "${DOMAIN:?set DOMAIN to your public hostname}"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web]
+    profiles: ["full"]
+
+  web:
+    restart: unless-stopped
+
+  api:
+    restart: unless-stopped
+    environment:
+      AEC_RBAC: "1"      # enforce auth/roles in production (override the dev default)
+
+  postgres:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

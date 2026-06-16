@@ -1,0 +1,7 @@
+# TLS-terminating reverse proxy for the production deploy. Caddy fetches + renews a
+# Let's Encrypt certificate for $DOMAIN automatically, and forwards to the web container
+# (nginx), which serves the SPA and proxies /api to the API.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:80
+}

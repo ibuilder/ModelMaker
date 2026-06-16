@@ -54,6 +54,44 @@ Every write records an `AuditLog` row (actor, action, method, path, topic, detai
 punchlist are contractual records. Back up Postgres + the object store on a schedule; `.frag`
 tiles are reproducible from source IFC, the DB + attachments are the system of record.
 
+## Deploy to a cloud VM with HTTPS (turnkey demo / production)
+
+The base stack runs anywhere Docker does. For a public, TLS-secured demo, layer the
+production overlay — it adds a **Caddy** reverse proxy that fetches + renews a Let's Encrypt
+cert automatically, enforces auth (`AEC_RBAC=1`), and sets restart policies.
+
+```bash
+# 1. a small VM (1–2 vCPU, 2–4 GB) with Docker + a DNS A record for your domain → the VM IP
+# 2. firewall: allow only 80 + 443
+sudo ufw allow OpenSSH && sudo ufw allow 80,443/tcp && sudo ufw enable
+
+# 3. clone + configure secrets (REQUIRED in prod)
+git clone https://github.com/ibuilder/ModelMaker.git && cd ModelMaker
+cp .env.example .env       # set POSTGRES_PASSWORD, S3_ACCESS_KEY/SECRET, AEC_API_KEY, AEC_AUTH_SECRET
+
+# 4. bring it up behind Caddy (auto-HTTPS for $DOMAIN)
+DOMAIN=app.example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile full up -d --build
+
+# 5. create the first admin (bootstraps as admin), then sign in at https://app.example.com
+curl -s -X POST https://app.example.com/api/auth/register \
+    -H "Content-Type: application/json" -d '{"username":"admin","password":"<strong-password>"}'
+
+# optional: seed a demo project across all relation chains
+DOMAIN=app.example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile full --profile seed run --rm seed
+```
+
+Caddy is the only public entrypoint (web/api/postgres/minio stay on the Docker network — keep
+8000/8080/5432/9000 off the public firewall). Cookie auth + the SSE feed + downloads all work
+because everything is same-origin behind the proxy. Managed hosts (Fly.io, Render, Railway)
+work too — run the same images, swap MinIO for their S3-compatible bucket + managed Postgres,
+and front the web service with their TLS.
+
+> **GitHub note:** Pages is static-only and can't host this stack (it needs the API + Postgres
+> + MinIO). Pages can serve the marketing page (`docs/index.html`) and, with extra setup, a
+> viewer-only build; the full app needs a Docker host as above.
+
 ## Offline / jobsite
 web-ifc WASM + the Fragments worker are bundled into the web image; tiles serve from your own
 MinIO. No external CDN — the viewer runs fully offline.
