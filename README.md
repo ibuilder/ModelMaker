@@ -35,10 +35,13 @@ and verified** in this repo unless noted:
 - **Data export** — QTO, COBie, space schedules → XLSX.
 - **2D documentation** — dimensioned grid **plans** (grid derived from columns), **sections**,
   **elevations** (N/S/E/W) with level lines, and composed **PDF sheets** with title blocks.
-- **Authoring round-trip** — edit IFC via recipes (`set_pset`, `batch_tag`, `place_type`,
-  **`add_wall`**, **`add_slab`**) → republish (reconvert + reindex, off-thread). GUID-stable,
-  so pins/RFIs/clashes survive. The viewer's **Add-wall** tool authors from two ground clicks;
-  desktop GUI authoring is the Blender + Bonsai bridge (driven via Bonsai-MCP).
+- **Authoring round-trip (in-viewer modeling)** — a full toolbar of authoring ops, each a
+  server-side `ifcopenshell` recipe → background republish (reconvert + reindex). GUID-stable,
+  so pins/RFIs/clashes survive. **Create:** walls, slabs, columns, beams, roofs (sketch on the
+  model/grid). **Openings:** doors/windows void the host wall + fill it. **Edit:** delete,
+  move, rotate, copy, per-element Pset edit. **Drafting aids:** grid + corner snap, a 6-face
+  section box, a storey-levels overlay. Verified live end-to-end (upload IFC → add wall →
+  republish → updated `.frag` + reindex). Desktop GUI authoring is the Blender + Bonsai bridge.
 
 ## General Contracting Portal
 
@@ -82,6 +85,12 @@ A development-finance engine for the owner/developer side (the **Finance** works
   plus a **kanban board**, **cross-module search**, **bulk actions**, **saved views**, and
   real-time **SSE notifications** — all engine-level, so every module gets them.
 - **Background conversion** — IFC convert/reindex runs off-thread; clients poll a publish status.
+- **In-viewer modeling** — 18-tool authoring toolbar (walls/slabs/columns/beams/roofs,
+  doors/windows, delete/move/rotate/copy, Pset edit) + grid/corner snap, section box, levels
+  overlay — all server-authored via `ifcopenshell` and proven live.
+- **Installable + offline** — PWA (manifest + Workbox service worker; lean ~97 KB precache,
+  viewer libs/WASM/tiles runtime-cached). **Desktop** is scaffolded as a Tauri 2 shell
+  (`apps/web/src-tauri/`) wrapping the same build; mobile (Capacitor/Tauri-mobile) is next.
 - **CI gate** — `services/api/run_tests.py` runs all suites; GitHub Actions runs it + the web build.
 
 ## Gallery

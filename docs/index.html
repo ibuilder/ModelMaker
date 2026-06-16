@@ -85,8 +85,8 @@
     <p class="sub">Switch via the Model / Construction / Finance workspace bar. Everything keys off the IFC GlobalId, so geometry, issues, and records stay in sync.</p>
     <div class="grid">
       <div class="card">
-        <h3><span class="ic">🧊</span> BIM viewer</h3>
-        <p>Streams large models offline (local WASM). Tree, layers, isolate/ghost, section, measure, color-by-data, set-origin. Clash detection + IDS validation + BCF issues that round-trip with Solibri/ACC/BIMcollab. 2D plans, sections, elevations, PDF sheets.</p>
+        <h3><span class="ic">🧊</span> BIM viewer + modeling</h3>
+        <p>Streams large models offline (local WASM). Tree, layers, isolate/ghost, section box, measure, set-origin. Clash + IDS validation + BCF issues (round-trip with Solibri/ACC/BIMcollab); 2D plans/sections/elevations + PDF sheets. In-viewer authoring — walls, slabs, columns, beams, roofs, doors/windows, move/rotate/copy — written back to IFC server-side.</p>
       </div>
       <div class="card">
         <h3><span class="ic">🏗️</span> GC portal</h3>
@@ -103,7 +103,7 @@
 <section id="run">
   <div class="wrap">
     <h2>Run it</h2>
-    <p class="sub">The platform is a web app + services stack, run with Docker. (Native Windows/macOS/mobile installers are on the <a href="https://github.com/ibuilder/ModelMaker/blob/main/docs/roadmap-platforms.md">roadmap</a> — today it runs as a self-hosted web app.)</p>
+    <p class="sub">The platform is a web app + services stack, run with Docker. It's an installable <strong>PWA</strong> (offline-capable), and a <strong>Tauri 2 desktop</strong> shell is scaffolded (<code>apps/web/src-tauri</code>); mobile is on the <a href="https://github.com/ibuilder/ModelMaker/blob/main/docs/roadmap-platforms.md">roadmap</a>.</p>
     <ol class="steps">
       <li>Install <b>Docker Desktop</b> (Windows/macOS/Linux) and <b>git</b>.</li>
       <li>Clone the repo and start the stack — first build pulls the toolchain, so give it a few minutes.</li>
