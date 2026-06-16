@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AEC BIM Platform + GC Portal</title>
+<meta name="description" content="Open, self-hosted web BIM viewer + general-contracting portal + real-estate development proforma. IFC is the source of truth." />
+<style>
+  :root{
+    --bg:#16171a; --panel:#1e1f22; --panel2:#25272b; --line:#2b2d31;
+    --text:#e7e7e7; --muted:#9aa0a6; --accent:#4a8cff; --green:#33d17a; --code:#0f1012;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  /* hero */
+  header.hero{padding:64px 0 40px;border-bottom:1px solid var(--line);background:radial-gradient(900px 300px at 70% -10%, #23304d 0%, transparent 60%)}
+  .badge{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:3px 12px;margin-bottom:18px}
+  h1{font-size:40px;line-height:1.15;margin:0 0 12px;font-weight:650;letter-spacing:-.02em}
+  h1 .accent{color:var(--accent)}
+  .tag{font-size:19px;color:var(--muted);max-width:680px;margin:0 0 24px}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .btn{display:inline-block;padding:11px 20px;border-radius:8px;font-weight:550;font-size:15px}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover{filter:brightness(1.08);text-decoration:none}
+  .btn.ghost{border:1px solid var(--line);color:var(--text)}
+  .btn.ghost:hover{background:var(--panel2);text-decoration:none}
+  .pills{margin-top:26px;display:flex;gap:8px;flex-wrap:wrap}
+  .pill{font-size:13px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 11px}
+  .pill b{color:var(--green);font-weight:600}
+  /* sections */
+  section{padding:44px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:24px;margin:0 0 6px;font-weight:600;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 24px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 18px}
+  .card h3{margin:0 0 6px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  .ic{width:28px;height:28px;border-radius:7px;background:var(--panel2);display:inline-flex;align-items:center;justify-content:center;font-size:15px}
+  /* code block */
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13.5px;line-height:1.7;color:#d7dbe0}
+  pre .c{color:#6b7280}
+  pre .g{color:var(--green)}
+  ol.steps{counter-reset:s;list-style:none;padding:0;margin:0 0 18px}
+  ol.steps li{position:relative;padding:2px 0 2px 34px;margin-bottom:6px;color:var(--muted)}
+  ol.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:12px;display:flex;align-items:center;justify-content:center}
+  ol.steps b{color:var(--text)}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:14px 16px;color:var(--muted);font-size:14px;margin-top:18px}
+  table.req{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+  table.req td{padding:7px 10px;border-bottom:1px solid var(--line)}
+  table.req td:first-child{color:var(--muted);white-space:nowrap;width:1%}
+  footer{padding:36px 0 60px;color:var(--muted);font-size:13px}
+  @media(max-width:640px){h1{font-size:30px}.tag{font-size:17px}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">Open · self-hosted · IFC-native</span>
+    <h1>AEC <span class="accent">BIM Platform</span> + GC Portal</h1>
+    <p class="tag">A web BIM viewer, a 68-module general-contracting portal, and a real-estate
+      development proforma — one platform for a project's whole lifecycle, acquisition to turnover.
+      No proprietary format, no per-seat license.</p>
+    <div class="cta">
+      <a class="btn primary" href="#run">Run it →</a>
+      <a class="btn ghost" href="https://github.com/ibuilder/ModelMaker">View on GitHub</a>
+      <a class="btn ghost" href="https://github.com/ibuilder/ModelMaker/actions/workflows/ci.yml">CI status</a>
+    </div>
+    <div class="pills">
+      <span class="pill"><b>Web</b> · Vite + Three.js + Fragments</span>
+      <span class="pill"><b>API</b> · FastAPI + Postgres + MinIO</span>
+      <span class="pill"><b>Geometry</b> · IfcOpenShell</span>
+      <span class="pill"><b>Deploy</b> · Docker Compose</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Three pillars, one model</h2>
+    <p class="sub">Switch via the Model / Construction / Finance workspace bar. Everything keys off the IFC GlobalId, so geometry, issues, and records stay in sync.</p>
+    <div class="grid">
+      <div class="card">
+        <h3><span class="ic">🧊</span> BIM viewer</h3>
+        <p>Streams large models offline (local WASM). Tree, layers, isolate/ghost, section, measure, color-by-data, set-origin. Clash detection + IDS validation + BCF issues that round-trip with Solibri/ACC/BIMcollab. 2D plans, sections, elevations, PDF sheets.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">🏗️</span> GC portal</h3>
+        <p>68 config-driven modules (RFIs, submittals, the change-order chain, daily reports…) — each with role-gated workflow, cross-module relations + rollups, a kanban board, search, bulk actions, AIA G702/G703 pay apps, Gantt + Line-of-Balance, and model pins.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">💲</span> Development proforma</h3>
+        <p>Sources &amp; uses with interest-reserve circularity, S-curve draws, XIRR/NPV/equity-multiple, a JV waterfall, sensitivity tables, an actuals→pay-app bridge, and multi-deal portfolio roll-up with LP-shared access.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="run">
+  <div class="wrap">
+    <h2>Run it</h2>
+    <p class="sub">The platform is a web app + services stack, run with Docker. (Native Windows/macOS/mobile installers are on the <a href="https://github.com/ibuilder/ModelMaker/blob/main/docs/roadmap-platforms.md">roadmap</a> — today it runs as a self-hosted web app.)</p>
+    <ol class="steps">
+      <li>Install <b>Docker Desktop</b> (Windows/macOS/Linux) and <b>git</b>.</li>
+      <li>Clone the repo and start the stack — first build pulls the toolchain, so give it a few minutes.</li>
+      <li>Open <b>http://localhost:8080</b>. Optionally seed a demo project.</li>
+    </ol>
+<pre><span class="c"># 1. get the code</span>
+git clone https://github.com/ibuilder/ModelMaker.git &amp;&amp; cd ModelMaker
+
+<span class="c"># 2. configure (set strong secrets + AEC_RBAC=1 for anything but local dev)</span>
+cp .env.example .env
+
+<span class="c"># 3. build + run the whole stack (web, API, Postgres, MinIO)</span>
+docker compose --profile full up --build       <span class="c"># → web http://localhost:8080</span>
+
+<span class="c"># 4. (optional) fill a demo project across all relation chains</span>
+docker compose --profile full --profile seed run --rm seed</pre>
+    <div class="note">
+      The web container reverse-proxies <code>/api</code> to the API (same-origin, no CORS),
+      serves the viewer with the cross-origin isolation web-ifc needs, and persists
+      Postgres / MinIO / IFC volumes. Every config knob is documented in
+      <a href="https://github.com/ibuilder/ModelMaker/blob/main/.env.example">.env.example</a>.
+    </div>
+    <h2 style="margin-top:34px;font-size:18px">Requirements</h2>
+    <table class="req">
+      <tr><td>OS</td><td>Windows / macOS / Linux (anything Docker runs on)</td></tr>
+      <tr><td>Docker</td><td>Docker Desktop / Engine 24+ with Compose v2</td></tr>
+      <tr><td>Ports</td><td>8080 (web), 8000 (API), 5432 (Postgres), 9000/9001 (MinIO)</td></tr>
+      <tr><td>Browser</td><td>A current Chromium/Firefox/Safari (WebGL2 + WASM)</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Developer setup</h2>
+    <p class="sub">Run the web viewer and API directly for hacking on the code.</p>
+<pre><span class="c"># web viewer (offline; copies WASM automatically)</span>
+cd apps/web &amp;&amp; npm install &amp;&amp; npm run dev          <span class="c"># http://localhost:5173</span>
+
+<span class="c"># backend API (Python 3.11+ preferred)</span>
+cd services/api &amp;&amp; python -m venv .venv &amp;&amp; .venv/Scripts/activate
+pip install -r requirements.txt -r requirements-dev.txt
+PYTHONPATH=src uvicorn aec_api.main:app --reload    <span class="c"># http://localhost:8000</span>
+
+<span class="c"># run the test gate</span>
+python services/api/run_tests.py</pre>
+    <p style="color:var(--muted);font-size:14px">Full docs in the repo: the
+      <a href="https://github.com/ibuilder/ModelMaker#readme">README</a>,
+      <a href="https://github.com/ibuilder/ModelMaker/blob/main/docs/gc-portal.md">GC portal</a>,
+      <a href="https://github.com/ibuilder/ModelMaker/blob/main/docs/capability-matrix.md">capability matrix</a>,
+      and <a href="https://github.com/ibuilder/ModelMaker/blob/main/docs/roadmap-platforms.md">platform roadmap</a>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Open stack — That Open (MIT-style) · IfcOpenShell (LGPL) · the Blender + Bonsai desktop
+    editor (GPL) runs as a separate process. Optional Autodesk APS RVT→IFC is paid/flagged.
+    &nbsp;·&nbsp; <a href="https://github.com/ibuilder/ModelMaker">github.com/ibuilder/ModelMaker</a>
+  </div>
+</footer>
+
+</body>
+</html>

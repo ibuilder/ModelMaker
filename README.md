@@ -10,9 +10,13 @@ service does extraction, QA, clash, and 2D documentation; a FastAPI backend hand
 issues, the GC-portal module engine, and authoring on `ifcopenshell.api` (the engine Bonsai
 drives) — no proprietary format, no per-seat license.
 
-> Status: a working end-to-end vertical slice, verified against real models (the That Open
-> "school" structural IFC + a 52 MB architectural Revit export). Two halves: the **BIM
-> platform** (below) and the **[General Contracting Portal](docs/gc-portal.md)**.
+> Status: a working end-to-end platform, verified against real models (the That Open
+> "school" structural IFC + a 52 MB architectural Revit export). **Three pillars:** the
+> **BIM platform** (below), the **[General Contracting Portal](docs/gc-portal.md)**, and a
+> **Real-Estate Development Proforma** (sources & uses, S-curve draws, XIRR/NPV, JV
+> waterfall) — switched via a Model / Construction / Finance workspace bar.
+
+📄 **Project page:** [ibuilder.github.io/ModelMaker](https://ibuilder.github.io/ModelMaker/) — overview + how to run it.
 
 ## What it does (vs. Bonsai / Revit / Navisworks)
 
@@ -31,9 +35,10 @@ and verified** in this repo unless noted:
 - **Data export** — QTO, COBie, space schedules → XLSX.
 - **2D documentation** — dimensioned grid **plans** (grid derived from columns), **sections**,
   **elevations** (N/S/E/W) with level lines, and composed **PDF sheets** with title blocks.
-- **Authoring round-trip** — edit IFC via recipes (`set_pset`, `batch_tag`, `place_type`)
-  → republish (reconvert + reindex). GUID-stable, so pins/RFIs/clashes survive. Desktop
-  GUI authoring is the Blender + Bonsai bridge (driven via Bonsai-MCP).
+- **Authoring round-trip** — edit IFC via recipes (`set_pset`, `batch_tag`, `place_type`,
+  **`add_wall`**, **`add_slab`**) → republish (reconvert + reindex, off-thread). GUID-stable,
+  so pins/RFIs/clashes survive. The viewer's **Add-wall** tool authors from two ground clicks;
+  desktop GUI authoring is the Blender + Bonsai bridge (driven via Bonsai-MCP).
 
 ## General Contracting Portal
 
@@ -54,6 +59,30 @@ A construction-management portal on top of the viewer — full writeup in
 - **Model pins** — any anchored record (RFI/PCO/COR/punchlist/inspection/…) shows on the
   3D model; clicking selects the element and opens the record. Same GUID keys geometry,
   BCF, and GC records.
+
+## Real-Estate Development Proforma
+
+A development-finance engine for the owner/developer side (the **Finance** workspace):
+
+- **Sources & uses** with construction-loan **interest-reserve circularity** solved to a fixed point.
+- **S-curve cost draws**, **XIRR / NPV / equity multiple / yield-on-cost**, and a **JV waterfall**
+  (pref + promote tiers, American/European, clawback) with nested IRR-hurdle solving.
+- **Sensitivity** two-variable data tables; **actuals/draws bridge** that re-forecasts IRR and
+  generates AIA G702/G703 pay apps from the *same* cost tree the deal was underwritten on.
+- **Multi-deal portfolio** roll-up (true XIRR across combined cash flows) and **LP-shared**
+  read-only scenario access.
+
+## Recent platform work
+
+- **4-zone UI** (top chrome + Model/Construction/Finance workspaces + left icon rail + bottom
+  settings bar) with a **lazy-loaded 3D viewer** — the ~6 MB three/@thatopen bundle loads only
+  when the Model workspace opens, so portal/finance users get a ~16 KB-gzip first load.
+- **Module relations** — `reference` fields + reverse lookups + numeric **rollups** wire 9
+  domain chains (RFI→ChangeEvent→PCO→COR, inspection→NCR, bidding, daily/field, closeout, …),
+  plus a **kanban board**, **cross-module search**, **bulk actions**, **saved views**, and
+  real-time **SSE notifications** — all engine-level, so every module gets them.
+- **Background conversion** — IFC convert/reindex runs off-thread; clients poll a publish status.
+- **CI gate** — `services/api/run_tests.py` runs all suites; GitHub Actions runs it + the web build.
 
 ## Gallery
 
@@ -106,6 +135,22 @@ packages/            shared types
 families/            IFC type libraries (versioned)
 docs/                status, capability matrix, gc-portal, deploy, images
 ```
+
+## Run the full stack (Docker — easiest)
+
+```bash
+git clone https://github.com/ibuilder/ModelMaker.git && cd ModelMaker
+cp .env.example .env            # set secrets + AEC_RBAC=1 for anything but local dev
+docker compose --profile full up --build      # web → http://localhost:8080  (api → :8000)
+
+# optional: fill a demo project across all relation chains
+docker compose --profile full --profile seed run --rm seed
+```
+
+The web container reverse-proxies `/api` to the API (same-origin, no CORS), serves the
+viewer with the cross-origin isolation web-ifc needs, and persists Postgres/MinIO/IFC volumes.
+See [`.env.example`](.env.example) for every knob and [docs/roadmap-platforms.md](docs/roadmap-platforms.md)
+for the desktop (Tauri/Electron) and mobile (Capacitor) packaging plan.
 
 ## Quick start (dev)
 
