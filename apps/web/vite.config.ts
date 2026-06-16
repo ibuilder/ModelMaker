@@ -1,6 +1,13 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // force a single copy of three — the app, @thatopen/* and camera-controls each
+  // depend on it; without this they can resolve to different instances ("Multiple
+  // instances of Three.js being imported"), bloating the bundle and breaking
+  // instanceof checks across the boundary.
+  resolve: {
+    dedupe: ["three"],
+  },
   // web-ifc and the fragments worker ship their own WASM/worker assets; don't let
   // esbuild's dep pre-bundler rewrite them.
   optimizeDeps: {
