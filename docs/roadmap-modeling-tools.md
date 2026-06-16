@@ -39,12 +39,15 @@ author → reload). Verified at the data layer on `basichouse.ifc`.
 | Roof | polygon + thickness | `add_roof` | `IfcRoof` (flat; **pitch = future**) | ✅ |
 | Space | pick boundary | (room tags) | `IfcSpace` (+ quantities) | partial (existing) |
 
-### Phase B — editing & openings  *(delete done; rest next)*
+### Phase B — editing & openings  *(delete + openings done; move/rotate next)*
 - **Delete by GUID** ✅ — `delete_element` recipe (`root.remove_product`, drops placement /
   representation / voids); viewer **Delete** tool acts on the current selection.
-- Door / window placement → `IfcDoor`/`IfcWindow` hosted in a wall with an `IfcOpeningElement`
-  (void-fills-element relationship).  *(next)*
-- Move / rotate / copy by GUID (operate on `IfcLocalPlacement`).
+- **Door / window placement** ✅ — `add_door` / `add_window` recipes create an
+  `IfcOpeningElement` that voids the host wall (`feature.add_feature`) and an `IfcDoor`/
+  `IfcWindow` that fills it (`feature.add_filling`). Viewer tools act on the selected wall.
+  Centered for now (positioning along the wall + swing/hand are future). Verified at the data
+  layer: door 8→9 with +1 void/+1 fill; window 19→20.
+- Move / rotate / copy by GUID (operate on `IfcLocalPlacement`).  *(next)*
 - Property/Pset edit (already have property read; `set_pset` recipe exists for batch).
 
 ### Phase C — drafting aids (client-only, no IFC write)

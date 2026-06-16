@@ -290,6 +290,50 @@ def add_roof(model: ifcopenshell.file, points, thickness: float = 0.3,
     return roof.GlobalId
 
 
+def add_opening(model: ifcopenshell.file, host_guid: str, width: float = 0.9, height: float = 2.1,
+                sill: float = 0.0, kind: str = "door", storey: str | None = None) -> str:
+    """Cut a centered opening in the host wall (IfcOpeningElement voiding it) and fill it with
+    an IfcDoor/IfcWindow. `kind` ∈ door|window; `sill` is the bottom height (meters).
+    Centered on the wall for now — positioning along the wall is a future enhancement."""
+    import ifcopenshell.util.placement as uplace
+    import ifcopenshell.util.unit as uunit
+    import numpy as np
+
+    host = next((e for e in model.by_type("IfcWall") if e.GlobalId == host_guid), None)
+    if host is None:
+        raise ValueError(f"host wall {host_guid} not found (select a wall first)")
+    scale = uunit.calculate_unit_scale(model)
+    body = _body_context(model)
+    # opening placement = wall world placement, raised by the sill (local +Z is up)
+    wm = uplace.get_local_placement(host.ObjectPlacement)
+    off = np.eye(4); off[2, 3] = float(sill) / scale
+    opm = wm @ off
+
+    opening = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcOpeningElement", name=f"{kind} opening")
+    ifcopenshell.api.run("geometry.edit_object_placement", model, product=opening, matrix=opm)
+    # generous Y so the box cuts fully through the wall thickness
+    cut = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA", XDim=float(width), YDim=1.0)
+    crep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body, profile=cut, depth=float(height))
+    ifcopenshell.api.run("geometry.assign_representation", model, product=opening, representation=crep)
+    ifcopenshell.api.run("feature.add_feature", model, feature=opening, element=host)
+
+    cls = "IfcWindow" if kind == "window" else "IfcDoor"
+    el = ifcopenshell.api.run("root.create_entity", model, ifc_class=cls, name=kind.capitalize())
+    try:
+        el.OverallWidth = float(width); el.OverallHeight = float(height)
+    except Exception:
+        pass
+    ifcopenshell.api.run("geometry.edit_object_placement", model, product=el, matrix=opm)
+    panel = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA", XDim=float(width), YDim=0.06)
+    prep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body, profile=panel, depth=float(height))
+    ifcopenshell.api.run("geometry.assign_representation", model, product=el, representation=prep)
+    ifcopenshell.api.run("feature.add_filling", model, opening=opening, element=el)
+    st = _first_storey(model, storey)
+    if st:
+        ifcopenshell.api.run("spatial.assign_container", model, products=[el], relating_structure=st)
+    return el.GlobalId
+
+
 def delete_element(model: ifcopenshell.file, guid: str) -> int:
     """Remove an element (and its placement/representation/voids) by GlobalId. Returns 1/0."""
     el = next((e for e in model.by_type("IfcElement") if e.GlobalId == guid), None)
@@ -309,6 +353,10 @@ RECIPES = {
     "add_beam": lambda m, p: add_beam(m, p["start"], p["end"], float(p.get("width", 0.3)),
                                       float(p.get("depth", 0.5)), p.get("storey")),
     "add_roof": lambda m, p: add_roof(m, p["points"], float(p.get("thickness", 0.3)), p.get("storey")),
+    "add_door": lambda m, p: add_opening(m, p["host_guid"], float(p.get("width", 0.9)),
+                                         float(p.get("height", 2.1)), float(p.get("sill", 0.0)), "door", p.get("storey")),
+    "add_window": lambda m, p: add_opening(m, p["host_guid"], float(p.get("width", 1.2)),
+                                           float(p.get("height", 1.2)), float(p.get("sill", 0.9)), "window", p.get("storey")),
     "delete_element": lambda m, p: delete_element(m, p["guid"]),
     "set_pset": lambda m, p: set_pset_on_class(
         m, p["ifc_class"], p["pset"], p["prop"],

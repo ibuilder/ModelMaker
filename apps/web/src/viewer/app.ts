@@ -255,6 +255,13 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     if (!confirm(`Delete element ${selectedGuid.slice(0, 8)}? This re-authors the IFC.`)) return;
     await authorAndReload("delete_element", { guid: selectedGuid }, "delete");
   });
+  const addOpening = async (kind: "door" | "window") => {
+    if (!selectedGuid) { notify(`select a wall first, then add the ${kind}`, "error"); return; }
+    if (!projectId) { notify("connect a project with a source IFC to author", "error"); return; }
+    await authorAndReload(kind === "window" ? "add_window" : "add_door", { host_guid: selectedGuid }, kind);
+  };
+  toolBtn("◧", "Add door to selected wall", () => void addOpening("door"));
+  toolBtn("◨", "Add window to selected wall", () => void addOpening("window"));
 
   async function capturePlacePoint(e: MouseEvent, hitPoint: THREE.Vector3 | null) {
     if (!placeMode) return;
