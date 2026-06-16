@@ -1,10 +1,17 @@
 # API image. Build context = repo root (needs services/data for exports/clash/validate/drawings).
 # Mirrors the repo layout so routers' relative paths to ../data/src resolve.
+
+# --- converter stage: Node deps for the IFC->Fragments republish (authoring round-trip) ---
+FROM node:20-slim AS converter
+WORKDIR /conv
+RUN npm init -y >/dev/null 2>&1 && npm install --no-audit --no-fund @thatopen/fragments@3.4.5 web-ifc@0.0.77
+
 FROM python:3.12-slim
 
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/services/api/src:/app/services/data/src
+    PYTHONPATH=/app/services/api/src:/app/services/data/src \
+    IFC_DIR=/app/ifc
 
 # system libs some wheels (ifcopenshell, shapely) expect, + a toolchain so any
 # source-only dep (meson/cmake builds) can compile instead of failing
@@ -26,6 +33,13 @@ COPY services/data/src /app/services/data/src
 COPY services/api/modules /app/services/api/modules
 # demo seeder (stdlib-only) so the stack can self-populate via the compose `seed` profile
 COPY services/api/seed_demo.py /app/services/api/seed_demo.py
+
+# Node runtime + the IFC->Fragments converter so /publish can reconvert authored edits.
+# node_modules at /app/node_modules resolves from services/converter/src (node walks up).
+COPY --from=converter /usr/local/bin/node /usr/local/bin/node
+COPY --from=converter /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=converter /conv/node_modules /app/node_modules
+COPY services/converter /app/services/converter
 
 EXPOSE 8000
 CMD ["uvicorn", "aec_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

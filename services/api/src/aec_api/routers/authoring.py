@@ -4,12 +4,14 @@ clashes survive. This is the server-side / AI-driven path; the desktop path is B
 Bonsai driven over Bonsai-MCP (same ifcopenshell.api operations)."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from .. import audit, storage
@@ -18,6 +20,7 @@ from ..db import get_db
 from ..models import Project
 from . import properties as props_router
 
+_IFC_DIR = Path(os.environ.get("IFC_DIR", "/app/ifc"))   # local IFC copies the converter can read
 _REPO = Path(__file__).resolve().parents[5]
 _DATA_SRC = _REPO / "services" / "data" / "src"
 _CONVERTER = _REPO / "services" / "converter" / "src" / "cli.mjs"
@@ -68,22 +71,49 @@ def publish(pid: str, reconvert: bool = Body(default=True), db: Session = Depend
     return _publish(p, reconvert=reconvert)
 
 
+@router.post("/projects/{pid}/source-ifc")
+async def upload_source_ifc(pid: str, file: UploadFile = File(...), publish: bool = True,
+                            db: Session = Depends(get_db),
+                            actor: str = Depends(require_role("editor"))):
+    """Upload a project's source IFC (enables authoring + republish). Saves a local copy
+    the converter can read plus a durable copy in object storage, then publishes."""
+    p = db.get(Project, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    data = await file.read()
+    _IFC_DIR.joinpath(pid).mkdir(parents=True, exist_ok=True)
+    ifc_path = _IFC_DIR / pid / "source.ifc"
+    ifc_path.write_bytes(data)
+    storage.put(f"{pid}/source.ifc", data)          # durable copy
+    p.source_ifc = str(ifc_path)
+    db.commit()
+    audit.record(db, action="ifc.upload", actor=actor, method="POST",
+                 path=f"/projects/{pid}/source-ifc")
+    db.commit()
+    out: dict = {"source_ifc": str(ifc_path), "size": len(data)}
+    if publish:
+        out["published"] = _publish(p)
+    return out
+
+
 def _publish(p: Project, reconvert: bool = True) -> dict:
     from aec_data import properties_index  # type: ignore
 
     out = {"reconverted": False, "reindexed": 0}
-    # 1. reconvert IFC -> .frag (Node converter), store under the project key
-    if reconvert and _CONVERTER.exists():
+    # 1. reconvert IFC -> .frag (Node converter); convert to a temp file then push through
+    #    storage.put so it works with both the local and S3/MinIO backends.
+    if reconvert and _CONVERTER.exists() and p.source_ifc and Path(p.source_ifc).exists():
         frag_key = f"{p.id}/model.frag"
-        frag_path = storage.path(frag_key)
-        frag_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            subprocess.run(["node", str(_CONVERTER), p.source_ifc, str(frag_path)],
-                           check=True, capture_output=True, timeout=600)
+            with tempfile.TemporaryDirectory() as td:
+                frag_tmp = Path(td) / "model.frag"
+                subprocess.run(["node", str(_CONVERTER), p.source_ifc, str(frag_tmp)],
+                               check=True, capture_output=True, timeout=600)
+                storage.put(frag_key, frag_tmp.read_bytes())
             out["reconverted"] = True
             out["frag_key"] = frag_key
         except Exception as e:  # node missing / convert failed — non-fatal
-            out["reconvert_error"] = str(e)
+            out["reconvert_error"] = str(e)[:300]
     # 2. rebuild + hot-load the properties index
     idx = properties_index.index_file(p.source_ifc)
     props_router._load(p.id, idx)  # hot-swap the in-memory index

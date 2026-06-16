@@ -30,3 +30,7 @@ const secs = ((Date.now() - t0) / 1000).toFixed(1);
 console.log(
   `\n[ifc2frag] wrote ${out}  (${(ifcBytes.length / 1e6).toFixed(1)}MB ifc → ${(frag.length / 1e6).toFixed(1)}MB frag in ${secs}s)`,
 );
+// web-ifc / fragments keep a worker + wasm runtime alive, so the event loop never
+// drains and the process hangs after writing. Force-exit so callers (the API's
+// subprocess.run) don't block until their timeout.
+process.exit(0);
