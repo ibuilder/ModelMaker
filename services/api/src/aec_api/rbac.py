@@ -26,8 +26,17 @@ API_KEY = os.environ.get("AEC_API_KEY")
 
 def current_user(x_user: str | None = Header(default=None),
                  authorization: str | None = Header(default=None)) -> str:
-    if API_KEY and authorization == f"Bearer {API_KEY}":
-        return "api-key"
+    """Identify the caller: a signed bearer token (real auth) → its user; the AEC_API_KEY
+    bearer → 'api-key' (admin); otherwise the dev X-User header. Token + key both ride in
+    Authorization, so they coexist."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[len("Bearer "):]
+        if API_KEY and token == API_KEY:
+            return "api-key"
+        from . import auth
+        sub = auth.verify_token(token)
+        if sub:
+            return sub
     return x_user or "dev"
 
 

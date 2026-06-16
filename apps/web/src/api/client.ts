@@ -138,15 +138,40 @@ export interface ModulePin {
 const DEFAULT_API = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:8000" : "/api");
 
 export class ApiClient {
+  private token = localStorage.getItem("aec-token") || "";
   constructor(private baseUrl = DEFAULT_API) {}
+
+  /** Bearer token for authenticated requests (persisted). Empty string clears it. */
+  setToken(t: string) {
+    this.token = t;
+    if (t) localStorage.setItem("aec-token", t); else localStorage.removeItem("aec-token");
+  }
+  get authed() { return !!this.token; }
+  /** Auth header to merge into any raw fetch (uploads, etc.). */
+  authHeaders(): Record<string, string> {
+    return this.token ? { Authorization: `Bearer ${this.token}` } : {};
+  }
 
   private async json<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(this.baseUrl + path, {
-      headers: { "Content-Type": "application/json" },
       ...init,
+      headers: { "Content-Type": "application/json", ...this.authHeaders(), ...(init?.headers || {}) },
     });
     if (!res.ok) throw new Error(`${init?.method ?? "GET"} ${path} -> ${res.status}`);
     return res.json() as Promise<T>;
+  }
+
+  // --- auth ---------------------------------------------------------------
+  login(username: string, password: string) {
+    return this.json<{ token: string; username: string; role: string }>(
+      "/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
+  }
+  register(username: string, password: string) {
+    return this.json<{ username: string; role: string }>(
+      "/auth/register", { method: "POST", body: JSON.stringify({ username, password }) });
+  }
+  me() {
+    return this.json<{ username: string; role: string | null; authenticated: boolean }>("/auth/me");
   }
 
   /** Absolute URL for a GET endpoint, e.g. an export download. */
@@ -327,7 +352,7 @@ export class ApiClient {
   async uploadAttachment(pid: string, key: string, rid: string, file: File) {
     const fd = new FormData(); fd.append("file", file);
     const res = await fetch(this.url(`/projects/${pid}/modules/${key}/${rid}/attachments`), {
-      method: "POST", body: fd });
+      method: "POST", body: fd, headers: this.authHeaders() });
     if (!res.ok) throw new Error(`upload -> ${res.status}`);
     return res.json() as Promise<RecordAttachmentMeta>;
   }

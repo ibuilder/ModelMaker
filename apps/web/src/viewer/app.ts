@@ -186,7 +186,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     if (!file) return;
     await withLoading(container, `converting ${file.name} (Autodesk bridge)`, async () => {
       const fd = new FormData(); fd.append("file", file);
-      const res = await fetch(api.url("/convert"), { method: "POST", body: fd });
+      const res = await fetch(api.url("/convert"), { method: "POST", body: fd, headers: api.authHeaders() });
       if (!res.ok) { const msg = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(msg.detail || "conversion unavailable"); }
       await loader.loadFragments(await res.arrayBuffer(), nextId());
       await fitToModels();
@@ -214,7 +214,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       else if (kind === "ifc") await loader.loadIfc(bytes, nextId());
       else {
         const fd = new FormData(); fd.append("file", new Blob([bytes as BlobPart]), name);
-        const res = await fetch(api.url("/convert"), { method: "POST", body: fd });
+        const res = await fetch(api.url("/convert"), { method: "POST", body: fd, headers: api.authHeaders() });
         if (!res.ok) { const m = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(m.detail || "conversion unavailable"); }
         await loader.loadFragments(await res.arrayBuffer(), nextId());
       }
@@ -244,7 +244,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   async function exportIfc() {
     if (!projectId) { notify("connect a project to export its IFC", "error"); return; }
     if (isTauri()) {
-      const res = await fetch(api.url(`/projects/${projectId}/source.ifc`));
+      const res = await fetch(api.url(`/projects/${projectId}/source.ifc`), { headers: api.authHeaders() });
       if (!res.ok) { notify("no source IFC to export", "error"); return; }
       await tauriSave("model.ifc", "ifc", new Uint8Array(await res.arrayBuffer()));
       return;
@@ -472,7 +472,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   async function loadProjectModel(): Promise<boolean> {
     if (!projectId) return false;
     try {
-      const res = await fetch(api.url(`/projects/${projectId}/model.frag`));
+      const res = await fetch(api.url(`/projects/${projectId}/model.frag`), { headers: api.authHeaders() });
       if (!res.ok) return false;
       await loader.disposeAll();
       await loader.loadFragments(await res.arrayBuffer(), `project-${projectId}`);
@@ -602,7 +602,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       for (const [, model] of loader.fragments.list) origin.applyTo(model);
       await loader.fragments.core.update(true);
       if (connected && projectId) {
-        fetch(api.url(`/projects/${projectId}`), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: origin.getOrigin() }) }).catch(() => {});
+        fetch(api.url(`/projects/${projectId}`), { method: "PATCH", headers: { "Content-Type": "application/json", ...api.authHeaders() }, body: JSON.stringify({ origin: origin.getOrigin() }) }).catch(() => {});
       }
       setStatus(`origin set to E${inputs.e.value} N${inputs.n.value} Z${inputs.z.value}`);
     };

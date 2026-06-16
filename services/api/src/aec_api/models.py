@@ -72,6 +72,16 @@ class RecordComment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class User(Base):
+    """An account for token auth. Identity only — per-project authorization stays in
+    ProjectMember. `role` is a global hint (admin can register others / is the bootstrap)."""
+    __tablename__ = "users"
+    username: Mapped[str] = mapped_column(String, primary_key=True)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    role: Mapped[str] = mapped_column(String, default="user")   # admin | user
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class SavedView(Base):
     """A user's saved filter/sort/column config for a module's list (server-side, so it
     follows them across devices). Keyed by project + module + user + name."""

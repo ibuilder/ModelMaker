@@ -306,6 +306,46 @@ function buildProjectPicker(projects: { id: string; name: string }[]) {
   toolbar.insertBefore(sel, statusEl);
 }
 
+// ---- auth: sign-in control + modal ------------------------------------------
+function loginModal() {
+  const ov = document.createElement("div");
+  ov.style.cssText = "position:fixed;inset:0;z-index:200;background:#000a;display:flex;align-items:center;justify-content:center";
+  const card = document.createElement("div");
+  card.style.cssText = "background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:280px;display:flex;flex-direction:column;gap:10px";
+  const title = document.createElement("strong"); title.textContent = "Sign in"; title.style.fontSize = "15px";
+  const u = document.createElement("input"); u.placeholder = "username"; u.className = "portal-filter";
+  const p = document.createElement("input"); p.type = "password"; p.placeholder = "password"; p.className = "portal-filter";
+  const msg = document.createElement("div"); msg.className = "meta"; msg.style.color = "#e2554a";
+  const row = document.createElement("div"); row.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
+  const cancel = document.createElement("button"); cancel.className = "tool-btn"; cancel.textContent = "Cancel"; cancel.onclick = () => ov.remove();
+  const go = document.createElement("button"); go.className = "file-btn"; go.textContent = "Sign in";
+  const submit = async () => {
+    if (!u.value.trim() || !p.value) { msg.textContent = "enter a username and password"; return; }
+    try { const r = await api.login(u.value.trim(), p.value); api.setToken(r.token); ov.remove(); location.reload(); }
+    catch { msg.textContent = "invalid username or password"; }
+  };
+  go.onclick = () => void submit();
+  p.onkeydown = (e) => { if (e.key === "Enter") void submit(); };
+  row.append(cancel, go); card.append(title, u, p, msg, row); ov.append(card);
+  document.body.appendChild(ov); u.focus();
+}
+
+async function buildAuthControl() {
+  const el = document.createElement("button");
+  el.className = "tool-btn"; el.style.marginLeft = "6px";
+  if (api.authed) {
+    let name = "account";
+    try { const m = await api.me(); if (m.authenticated) name = m.username; else api.setToken(""); }
+    catch { /* keep token; offline */ }
+    el.textContent = `${name} ⏻`; el.title = "Sign out";
+    el.onclick = () => { api.setToken(""); location.reload(); };
+  } else {
+    el.textContent = "Sign in"; el.title = "Sign in";
+    el.onclick = loginModal;
+  }
+  toolbar.insertBefore(el, statusEl);
+}
+
 // live notification badge on the Construction workspace tab (SSE)
 function connectNotifications() {
   if (!projectId) return;
@@ -348,6 +388,7 @@ async function startup() {
     setStatus("offline — open a .frag to view (API not reachable)");
   }
   if (projectId) connectNotifications();
+  void buildAuthControl();
 }
 
 function initNav() {
