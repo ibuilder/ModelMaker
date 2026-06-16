@@ -212,11 +212,104 @@ def add_slab(model: ifcopenshell.file, points, thickness: float = 0.2,
     return slab.GlobalId
 
 
+def add_column(model: ifcopenshell.file, point, height: float = 3.0, width: float = 0.4,
+               depth: float = 0.4, storey: str | None = None) -> str:
+    """Author an IfcColumn at an XY point (meters): a rectangular profile extruded to `height`."""
+    import ifcopenshell.util.unit as uunit
+    import numpy as np
+
+    scale = uunit.calculate_unit_scale(model)
+    body = _body_context(model)
+    st = _first_storey(model, storey)
+    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0
+    col = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcColumn", name="Column")
+    matrix = np.eye(4)
+    matrix[0, 3] = float(point[0]) / scale; matrix[1, 3] = float(point[1]) / scale; matrix[2, 3] = elev
+    ifcopenshell.api.run("geometry.edit_object_placement", model, product=col, matrix=matrix)
+    profile = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA", XDim=float(width), YDim=float(depth))
+    rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body, profile=profile, depth=float(height))
+    ifcopenshell.api.run("geometry.assign_representation", model, product=col, representation=rep)
+    if st:
+        ifcopenshell.api.run("spatial.assign_container", model, products=[col], relating_structure=st)
+    ps = ifcopenshell.api.run("pset.add_pset", model, product=col, name="Pset_ColumnCommon")
+    ifcopenshell.api.run("pset.edit_pset", model, pset=ps, properties={"LoadBearing": True})
+    return col.GlobalId
+
+
+def add_beam(model: ifcopenshell.file, start, end, width: float = 0.3, depth: float = 0.5,
+             storey: str | None = None) -> str:
+    """Author an IfcBeam between two XY points (meters): a rectangular cross-section swept
+    horizontally along the start→end axis at the storey elevation."""
+    import math
+
+    import ifcopenshell.util.unit as uunit
+    import numpy as np
+
+    scale = uunit.calculate_unit_scale(model)
+    body = _body_context(model)
+    sx, sy, ex, ey = float(start[0]), float(start[1]), float(end[0]), float(end[1])
+    length = math.hypot(ex - sx, ey - sy) or 1.0
+    dx, dy = (ex - sx) / length, (ey - sy) / length
+    st = _first_storey(model, storey)
+    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0
+    beam = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcBeam", name="Beam")
+    # local Z = beam axis (horizontal), local Y = up, local X = Y×Z; extrude along local Z
+    matrix = np.array([[-dy, 0, dx, sx / scale], [dx, 0, dy, sy / scale],
+                       [0, 1, 0, elev], [0, 0, 0, 1]], dtype=float)
+    ifcopenshell.api.run("geometry.edit_object_placement", model, product=beam, matrix=matrix)
+    profile = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA", XDim=float(width), YDim=float(depth))
+    rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body, profile=profile, depth=length)
+    ifcopenshell.api.run("geometry.assign_representation", model, product=beam, representation=rep)
+    if st:
+        ifcopenshell.api.run("spatial.assign_container", model, products=[beam], relating_structure=st)
+    ps = ifcopenshell.api.run("pset.add_pset", model, product=beam, name="Pset_BeamCommon")
+    ifcopenshell.api.run("pset.edit_pset", model, pset=ps, properties={"LoadBearing": True})
+    return beam.GlobalId
+
+
+def add_roof(model: ifcopenshell.file, points, thickness: float = 0.3,
+             storey: str | None = None) -> str:
+    """Author a flat IfcRoof from a polygon of XY points (meters) extruded by `thickness`
+    at the storey elevation. (Pitched roofs are a future enhancement.)"""
+    import numpy as np
+
+    body = _body_context(model)
+    st = _first_storey(model, storey)
+    elev = float(getattr(st, "Elevation", 0) or 0) if st else 0.0
+    roof = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcRoof", name="Roof")
+    matrix = np.eye(4); matrix[2, 3] = elev
+    ifcopenshell.api.run("geometry.edit_object_placement", model, product=roof, matrix=matrix)
+    pts = [model.create_entity("IfcCartesianPoint", Coordinates=(float(p[0]), float(p[1]))) for p in points]
+    pts.append(pts[0])
+    poly = model.create_entity("IfcPolyline", Points=pts)
+    profile = model.create_entity("IfcArbitraryClosedProfileDef", ProfileType="AREA", OuterCurve=poly)
+    rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body, profile=profile, depth=float(thickness))
+    ifcopenshell.api.run("geometry.assign_representation", model, product=roof, representation=rep)
+    if st:
+        ifcopenshell.api.run("spatial.assign_container", model, products=[roof], relating_structure=st)
+    return roof.GlobalId
+
+
+def delete_element(model: ifcopenshell.file, guid: str) -> int:
+    """Remove an element (and its placement/representation/voids) by GlobalId. Returns 1/0."""
+    el = next((e for e in model.by_type("IfcElement") if e.GlobalId == guid), None)
+    if el is None:
+        return 0
+    ifcopenshell.api.run("root.remove_product", model, product=el)
+    return 1
+
+
 # recipe registry — what an API endpoint / Bonsai-MCP can invoke by name
 RECIPES = {
     "add_wall": lambda m, p: add_wall(m, p["start"], p["end"], float(p.get("height", 3.0)),
                                       float(p.get("thickness", 0.2)), p.get("storey")),
     "add_slab": lambda m, p: add_slab(m, p["points"], float(p.get("thickness", 0.2)), p.get("storey")),
+    "add_column": lambda m, p: add_column(m, p["point"], float(p.get("height", 3.0)),
+                                          float(p.get("width", 0.4)), float(p.get("depth", 0.4)), p.get("storey")),
+    "add_beam": lambda m, p: add_beam(m, p["start"], p["end"], float(p.get("width", 0.3)),
+                                      float(p.get("depth", 0.5)), p.get("storey")),
+    "add_roof": lambda m, p: add_roof(m, p["points"], float(p.get("thickness", 0.3)), p.get("storey")),
+    "delete_element": lambda m, p: delete_element(m, p["guid"]),
     "set_pset": lambda m, p: set_pset_on_class(
         m, p["ifc_class"], p["pset"], p["prop"],
         _coerce(p.get("value"), p.get("dtype", "str"))),

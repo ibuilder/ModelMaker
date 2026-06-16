@@ -145,7 +145,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     const hit = await loader.fragments.raycast({
       camera: viewer.world.camera.three, mouse, dom: viewer.world.renderer!.three.domElement,
     });
-    if (wallMode) { await captureWallPoint(e, hit?.point ?? null); return; }
+    if (placeMode) { await capturePlacePoint(e, hit?.point ?? null); return; }
     if (!hit) { await selectMap(null); return; }
     lastPoint = hit.point.clone();
     showCoords(lastPoint);
@@ -233,17 +233,67 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   toolBtn("◐", "Color selection", () => selection && colorize.color(selection, "#ffb000"));
   toolBtn("⊞", "Show all (H)", async () => { await visibility.showAll(); await colorize.reset(); });
 
-  // ---- modeling: author a wall from two ground clicks ----------------------
-  let wallMode = false;
-  const wallPts: THREE.Vector3[] = [];
+  // ---- modeling: author walls / columns / beams from ground clicks ---------
+  type PlaceKind = "wall" | "column" | "beam";
+  const PLACE_PTS: Record<PlaceKind, number> = { wall: 2, column: 1, beam: 2 };
+  let placeMode: PlaceKind | null = null;
+  const placePts: THREE.Vector3[] = [];
+  const placeBtns = {} as Record<PlaceKind, HTMLButtonElement>;
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const groundRay = new THREE.Raycaster();
-  const wallBtn = toolBtn("▭", "Add wall (click two points)", () => setWallMode(!wallMode));
-  function setWallMode(on: boolean) {
-    wallMode = on; wallPts.length = 0;
-    wallBtn.classList.toggle("on", on);
-    if (on) notify("wall: click the start point on the floor/grid", "info");
+  function setPlaceMode(kind: PlaceKind | null) {
+    placeMode = kind; placePts.length = 0;
+    (Object.keys(placeBtns) as PlaceKind[]).forEach((k) => placeBtns[k].classList.toggle("on", k === kind));
+    if (kind) notify(`${kind}: click the ${PLACE_PTS[kind] === 1 ? "point" : "start point"} on the floor/grid`, "info");
   }
+  placeBtns.wall = toolBtn("▭", "Add wall (click two points)", () => setPlaceMode(placeMode === "wall" ? null : "wall"));
+  placeBtns.column = toolBtn("▮", "Add column (click one point)", () => setPlaceMode(placeMode === "column" ? null : "column"));
+  placeBtns.beam = toolBtn("▬", "Add beam (click two points)", () => setPlaceMode(placeMode === "beam" ? null : "beam"));
+  toolBtn("␡", "Delete selected element", async () => {
+    if (!selectedGuid) { notify("select an element first", "error"); return; }
+    if (!projectId) { notify("connect a project with a source IFC to edit", "error"); return; }
+    if (!confirm(`Delete element ${selectedGuid.slice(0, 8)}? This re-authors the IFC.`)) return;
+    await authorAndReload("delete_element", { guid: selectedGuid }, "delete");
+  });
+
+  async function capturePlacePoint(e: MouseEvent, hitPoint: THREE.Vector3 | null) {
+    if (!placeMode) return;
+    const p = hitPoint ?? screenToGround(e);
+    if (!p) { notify("couldn't pick a point — click on the floor or grid", "error"); return; }
+    placePts.push(p.clone());
+    if (placePts.length < PLACE_PTS[placeMode]) { notify(`${placeMode}: click the end point`, "info"); return; }
+    const kind = placeMode; setPlaceMode(null);
+    if (!projectId) { notify("connect a project with a source IFC to author", "error"); return; }
+    // plan coordinates: E = world x, N = -world z (matches the origin/coords convention)
+    const pl = (v: THREE.Vector3) => [v.x, -v.z];
+    let recipe = "add_wall"; let params: Record<string, unknown> = {};
+    if (kind === "wall") {
+      const [a, b] = placePts;
+      params = { start: pl(a), end: pl(b), height: Number(prompt("Wall height (m):", "3.0")) || 3.0, thickness: Number(prompt("Wall thickness (m):", "0.2")) || 0.2 };
+    } else if (kind === "column") {
+      recipe = "add_column";
+      params = { point: pl(placePts[0]), height: Number(prompt("Column height (m):", "3.0")) || 3.0 };
+    } else {
+      recipe = "add_beam";
+      const [a, b] = placePts;
+      params = { start: pl(a), end: pl(b), depth: Number(prompt("Beam depth (m):", "0.5")) || 0.5 };
+    }
+    await authorAndReload(recipe, params, kind);
+  }
+
+  async function authorAndReload(recipe: string, params: Record<string, unknown>, label: string) {
+    await withLoading(container, `authoring ${label} + republishing`, async () => {
+      try {
+        await api.editIfc(projectId!, recipe, params, true);
+        notify(`${label} authored — converting…`, "info");
+        const state = await waitForPublish(projectId!);
+        if (state === "done") { const shown = await loadProjectModel(); notify(`${label} applied${shown ? " — shown" : ""}`, "success"); }
+        else notify(`${label} authored — publish ${state}`, state === "error" ? "error" : "info");
+        await reloadModelPins();
+      } catch (err) { notify(`${label} failed: ${(err as Error).message}`, "error"); }
+    });
+  }
+
   async function waitForPublish(pid: string, onTick?: (s: string) => void): Promise<string> {
     const deadline = Date.now() + 12 * 60 * 1000;
     while (Date.now() < deadline) {
@@ -274,30 +324,6 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     const pt = new THREE.Vector3();
     return groundRay.ray.intersectPlane(groundPlane, pt) ? pt : null;
   }
-  async function captureWallPoint(e: MouseEvent, hitPoint: THREE.Vector3 | null) {
-    const p = hitPoint ?? screenToGround(e);
-    if (!p) { notify("couldn't pick a point — click on the floor or grid", "error"); return; }
-    wallPts.push(p.clone());
-    if (wallPts.length === 1) { notify("wall: click the end point", "info"); return; }
-    const [a, b] = wallPts;
-    const height = Number(prompt("Wall height (m):", "3.0")) || 3.0;
-    const thickness = Number(prompt("Wall thickness (m):", "0.2")) || 0.2;
-    setWallMode(false);
-    if (!projectId) { notify("connect a project with a source IFC to author walls", "error"); return; }
-    await withLoading(container, "authoring wall + republishing", async () => {
-      try {
-        const r = await api.editIfc(projectId, "add_wall",
-          { start: [a.x, -a.z], end: [b.x, -b.z], height, thickness }, true);
-        const guid = String(r.changed).slice(0, 8);
-        notify(`wall ${guid} authored — converting…`, "info");
-        const state = await waitForPublish(projectId);
-        if (state === "done") { const shown = await loadProjectModel(); notify(`wall ${guid} added${shown ? " — shown" : ""}`, "success"); }
-        else notify(`wall ${guid} authored — publish ${state}`, state === "error" ? "error" : "info");
-        await reloadModelPins();
-      } catch (err) { notify(`author failed: ${(err as Error).message}`, "error"); }
-    });
-  }
-
   // ---- settings application + coordinate readout ---------------------------
   const UNIT_FACTOR: Record<string, number> = { m: 1, cm: 100, mm: 1000, ft: 3.28084 };
   const BG: Record<string, number | null> = { dark: 0x1e1f22, light: 0xf0f1f3, none: null };

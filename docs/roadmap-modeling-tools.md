@@ -24,25 +24,28 @@ toolbar (sketch params) ──POST /authoring/{type}──► ifcopenshell.api m
 
 ## Tool set (phased)
 
-### Phase A — primitives (parametric, server-authored)
-| Tool | Input gesture | IFC entity | API |
-|------|---------------|-----------|-----|
-| Wall | 2-pt polyline + height + type | `IfcWallStandardCase` (axis + extrusion) | `POST /authoring/wall` |
-| Slab / floor | closed boundary + thickness + level | `IfcSlab` | `POST /authoring/slab` |
-| Roof | boundary + pitch/eave | `IfcRoof` (+ slabs) | `POST /authoring/roof` |
-| Column | point + height + profile | `IfcColumn` | `POST /authoring/column` |
-| Beam | 2-pt + profile | `IfcBeam` | `POST /authoring/beam` |
-| Space | pick bounding walls / boundary | `IfcSpace` (+ quantities) | already partially built (room tags) |
+### Phase A — primitives (parametric, server-authored)  ✅ DONE
+Implemented as `ifcopenshell.api` recipes in `services/data/src/aec_data/edit.py`, invoked
+through the existing `POST /projects/{id}/edit` (+ background republish) — *not* per-type
+endpoints. Each has a viewer tool in the floating toolbar (ground-click capture → params →
+author → reload). Verified at the data layer on `basichouse.ifc`.
 
-Reuse the existing IfcSpace authoring (storey resolution via aggregation, quantities) as the
-template for the rest.
+| Tool | Gesture | Recipe | IFC entity | Status |
+|------|---------|--------|-----------|--------|
+| Wall | 2 clicks + height/thickness | `add_wall` | `IfcWall` (rect profile, rotated extrusion) | ✅ |
+| Slab | polygon + thickness | `add_slab` | `IfcSlab` (arbitrary profile) | ✅ |
+| Column | 1 click + height | `add_column` | `IfcColumn` | ✅ |
+| Beam | 2 clicks + depth | `add_beam` | `IfcBeam` (horizontal sweep) | ✅ |
+| Roof | polygon + thickness | `add_roof` | `IfcRoof` (flat; **pitch = future**) | ✅ |
+| Space | pick boundary | (room tags) | `IfcSpace` (+ quantities) | partial (existing) |
 
-### Phase B — editing & openings
+### Phase B — editing & openings  *(delete done; rest next)*
+- **Delete by GUID** ✅ — `delete_element` recipe (`root.remove_product`, drops placement /
+  representation / voids); viewer **Delete** tool acts on the current selection.
 - Door / window placement → `IfcDoor`/`IfcWindow` hosted in a wall with an `IfcOpeningElement`
-  (void-fills-element relationship).
+  (void-fills-element relationship).  *(next)*
 - Move / rotate / copy by GUID (operate on `IfcLocalPlacement`).
-- Delete by GUID (remove element + dependent voids).
-- Property/Pset edit (already have property read; add write via `ifcopenshell.api.pset`).
+- Property/Pset edit (already have property read; `set_pset` recipe exists for batch).
 
 ### Phase C — drafting aids (client-only, no IFC write)
 - Snap (endpoint / midpoint / grid / intersection), ortho lock, temp dimensions.
