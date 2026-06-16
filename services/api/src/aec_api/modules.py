@@ -356,6 +356,39 @@ def board(db: Session, key: str, project_id: str) -> dict:
             "transitions": mod.get("workflow", {}).get("transitions", [])}
 
 
+def search_all(db: Session, project_id: str, q: str, limit: int = 50) -> list[dict]:
+    """Cross-module full-text search (ref / title / data) across every module."""
+    out = []
+    for key, mod in REGISTRY.items():
+        for r in list_records(db, key, project_id, q=q, limit=limit):
+            out.append({"module": key, "module_name": mod.get("name", key),
+                        "icon": mod.get("icon", "•"), "id": r["id"], "ref": r["ref"],
+                        "title": r["title"], "state": r["workflow_state"]})
+            if len(out) >= limit:
+                return out
+    return out
+
+
+def bulk(db: Session, key: str, project_id: str, ids: list[str], action: str,
+         actor: str, party: str | None, value: str | None = None) -> dict:
+    """Apply an action to many records at once. action ∈ transition|assign|delete."""
+    ok, failed = [], []
+    for rid in ids:
+        try:
+            if action == "delete":
+                delete_record(db, key, project_id, rid, actor, party)
+            elif action == "assign":
+                set_assignee(db, key, project_id, rid, value or None, actor, party)
+            elif action == "transition":
+                transition(db, key, project_id, rid, value or "", actor, party)
+            else:
+                raise HTTPException(400, f"unknown bulk action {action!r}")
+            ok.append(rid)
+        except HTTPException as e:
+            failed.append({"id": rid, "error": e.detail})
+    return {"ok": len(ok), "failed": failed}
+
+
 def my_work(db: Session, project_id: str, user: str, party: str | None) -> list[dict]:
     """Cross-module: records assigned to me, plus those where my party can act now."""
     out = []

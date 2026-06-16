@@ -29,7 +29,7 @@ def list_modules():
         {"key": m["key"], "name": m["name"], "section": m.get("section"),
          "icon": m.get("icon"), "pinnable": m.get("pinnable", False),
          "fields": m.get("fields", []), "workflow": m.get("workflow", {}),
-         "relations": m.get("relations", [])}
+         "relations": m.get("relations", []), "list_columns": m.get("list_columns")}
         for m in mod_engine.REGISTRY.values()
     ]
 
@@ -38,6 +38,21 @@ def list_modules():
 def my_work(pid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
     """Cross-module work queue for the current user (assigned + ball-in-court)."""
     return mod_engine.my_work(db, pid, user, _party(pid, db, user))
+
+
+@router.get("/projects/{pid}/search")
+def search(pid: str, q: str, limit: int = 50, db: Session = Depends(get_db),
+           _: str = Depends(require_role("viewer"))):
+    """Cross-module full-text search (ref / title / field data)."""
+    return mod_engine.search_all(db, pid, q, limit)
+
+
+@router.post("/projects/{pid}/modules/{key}/bulk")
+def bulk_action(pid: str, key: str, ids: list[str] = Body(..., embed=True),
+                action: str = Body(..., embed=True), value: str | None = Body(None, embed=True),
+                db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
+    """Apply transition / assign / delete to many records at once."""
+    return mod_engine.bulk(db, key, pid, ids, action, user, _party(pid, db, user), value)
 
 
 @router.get("/projects/{pid}/modules/{key}")

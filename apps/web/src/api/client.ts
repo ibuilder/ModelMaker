@@ -45,6 +45,7 @@ export interface ModuleDef {
   fields: ModuleField[];
   workflow: { initial: string; states: string[]; transitions: WorkflowTransition[] };
   relations?: { label: string; module: string }[];
+  list_columns?: string[];
 }
 export interface WorkflowTransition { from: string; to: string; action: string; party: string[] }
 export interface RecordBrief {
@@ -280,6 +281,20 @@ export class ApiClient {
   }
   myWork(pid: string) {
     return this.json<WorkItem[]>(`/projects/${pid}/my-work`);
+  }
+  searchAll(pid: string, q: string, limit = 50) {
+    return this.json<WorkItem[]>(`/projects/${pid}/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+  }
+  bulkAction(pid: string, key: string, ids: string[], action: "transition" | "assign" | "delete", value?: string) {
+    return this.json<{ ok: number; failed: { id: string; error: string }[] }>(
+      `/projects/${pid}/modules/${key}/bulk`, { method: "POST", body: JSON.stringify({ ids, action, value }) });
+  }
+  moduleRecordsFiltered(pid: string, key: string, opts: { q?: string; state?: string } = {}) {
+    const p = new URLSearchParams();
+    if (opts.q) p.set("q", opts.q);
+    if (opts.state) p.set("state", opts.state);
+    const qs = p.toString();
+    return this.json<ModuleRecord[]>(`/projects/${pid}/modules/${key}${qs ? `?${qs}` : ""}`);
   }
   assignRecord(pid: string, key: string, rid: string, assignee: string | null) {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/assign`, {

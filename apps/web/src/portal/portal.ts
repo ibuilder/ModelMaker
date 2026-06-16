@@ -30,6 +30,30 @@ export class PortalUI {
   private async renderHome() {
     this.root.innerHTML = "";
     const pid = this.host.projectId()!;
+
+    // global cross-module search
+    const search = document.createElement("input");
+    search.type = "search"; search.placeholder = "🔍 Search all records…"; search.className = "portal-filter";
+    search.style.cssText = "width:100%;margin-bottom:8px";
+    const results = document.createElement("div");
+    let timer: number | undefined;
+    search.oninput = () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(async () => {
+        results.innerHTML = "";
+        if (search.value.trim().length < 2) return;
+        const hits = await this.host.api.searchAll(pid, search.value.trim());
+        if (!hits.length) { results.innerHTML = `<div class="meta">no matches</div>`; return; }
+        for (const h of hits) {
+          const row = document.createElement("button"); row.className = "portal-mod";
+          row.innerHTML = `<span class="ic">${h.icon}</span> ${h.ref} ${h.title ?? ""} <span class="badge">${h.module_name}</span>`;
+          row.onclick = () => { const m = this.mods.find((x) => x.key === h.module); if (m) this.openRecord(m, h.id); };
+          results.appendChild(row);
+        }
+      }, 250);
+    };
+    this.root.append(search, results);
+
     try {
       const d = await this.host.api.dashboard(pid);
       const head = document.createElement("div");
@@ -92,43 +116,104 @@ export class PortalUI {
     }
   }
 
-  // --- record list -----------------------------------------------------------
-  private async openModule(m: ModuleDef) {
+  // --- record list (sortable / filterable data table + bulk actions) ---------
+  private sort: Record<string, { col: string; dir: 1 | -1 }> = {};
+
+  private async openModule(m: ModuleDef, filter: { q?: string; state?: string } = {}) {
     const pid = this.host.projectId()!;
-    const records = await this.host.api.moduleRecords(pid, m.key);
+    const records = await this.host.api.moduleRecordsFiltered(pid, m.key, filter);
     this.root.innerHTML = "";
     this.root.appendChild(this.bar(m.name, () => this.renderHome()));
 
-    const actions = document.createElement("div"); actions.style.cssText = "display:flex;gap:6px;margin:6px 0";
-    const newBtn = document.createElement("button");
-    newBtn.className = "tool-btn"; newBtn.textContent = "+ New";
+    const actions = document.createElement("div"); actions.style.cssText = "display:flex;gap:6px;margin:6px 0;flex-wrap:wrap;align-items:center";
+    const newBtn = document.createElement("button"); newBtn.className = "tool-btn"; newBtn.textContent = "+ New";
     newBtn.onclick = () => this.renderForm(m);
-    const boardBtn = document.createElement("button");
-    boardBtn.className = "tool-btn"; boardBtn.textContent = "▦ Board";
+    const boardBtn = document.createElement("button"); boardBtn.className = "tool-btn"; boardBtn.textContent = "▦ Board";
     boardBtn.onclick = () => this.renderBoard(m);
-    const csvBtn = document.createElement("button");
-    csvBtn.className = "tool-btn"; csvBtn.textContent = "↓ CSV";
+    const csvBtn = document.createElement("button"); csvBtn.className = "tool-btn"; csvBtn.textContent = "↓ CSV";
     csvBtn.onclick = () => window.open(this.host.api.url(`/projects/${pid}/modules/${m.key}/export.csv`), "_blank");
-    actions.append(newBtn, boardBtn, csvBtn);
+    // filter box + state dropdown
+    const fbox = document.createElement("input"); fbox.type = "search"; fbox.placeholder = "filter…";
+    fbox.value = filter.q ?? ""; fbox.className = "portal-filter";
+    fbox.onkeydown = (e) => { if (e.key === "Enter") this.openModule(m, { ...filter, q: fbox.value || undefined }); };
+    const stateSel = document.createElement("select"); stateSel.className = "sb-sel";
+    const anyOpt = document.createElement("option"); anyOpt.value = ""; anyOpt.textContent = "any state"; stateSel.appendChild(anyOpt);
+    for (const s of m.workflow.states ?? []) { const o = document.createElement("option"); o.value = o.textContent = s; stateSel.appendChild(o); }
+    stateSel.value = filter.state ?? "";
+    stateSel.onchange = () => this.openModule(m, { ...filter, state: stateSel.value || undefined });
+    actions.append(newBtn, boardBtn, csvBtn, fbox, stateSel);
     this.root.appendChild(actions);
 
     if (!records.length) {
-      const e = document.createElement("div"); e.className = "meta"; e.textContent = "no records yet";
+      const e = document.createElement("div"); e.className = "meta";
+      e.textContent = filter.q || filter.state ? "no matching records" : "no records yet";
       this.root.appendChild(e);
       return;
     }
+
+    // columns: module.json list_columns, else first 2 input fields; always ref/status/assignee
+    const inputFields = m.fields.filter((f) => f.type !== "rollup" && f.type !== "signature");
+    const cols = (m.list_columns ?? inputFields.slice(0, 2).map((f) => f.name))
+      .map((name) => m.fields.find((f) => f.name === name)).filter(Boolean) as ModuleDef["fields"];
+
+    // sort
+    const sort = this.sort[m.key];
+    const val = (r: ModuleRecord, col: string) => col === "ref" ? r.ref : col === "status" ? r.workflow_state
+      : col === "assignee" ? (r.assignee ?? "") : col === "title" ? (r.title ?? "") : (r.data[col] ?? "");
+    if (sort) records.sort((a, b) => { const x = val(a, sort.col), y = val(b, sort.col); return (x < y ? -1 : x > y ? 1 : 0) * sort.dir; });
+
+    // bulk action bar
+    const selected = new Set<string>();
+    const bulkBar = document.createElement("div"); bulkBar.className = "bulk-bar"; bulkBar.hidden = true;
+    const bulkCount = document.createElement("span"); bulkCount.className = "meta";
+    const syncBulk = () => { bulkBar.hidden = selected.size === 0; bulkCount.textContent = `${selected.size} selected`; };
+    const mkBulk = (label: string, fn: () => Promise<void>) => { const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = label; b.onclick = () => void fn().then(() => this.openModule(m, filter)); return b; };
+    bulkBar.append(bulkCount,
+      mkBulk("Assign…", async () => { const who = prompt("Assign selected to:"); if (who !== null) await this.host.api.bulkAction(pid, m.key, [...selected], "assign", who.trim()); }),
+      mkBulk("Transition…", async () => { const act = prompt("Workflow action to apply:"); if (act) await this.host.api.bulkAction(pid, m.key, [...selected], "transition", act.trim()); }),
+      mkBulk("Delete", async () => { if (confirm(`Delete ${selected.size} record(s)?`)) await this.host.api.bulkAction(pid, m.key, [...selected], "delete"); }));
+    this.root.appendChild(bulkBar);
+
     const table = document.createElement("table"); table.className = "portal-table";
-    table.innerHTML = "<thead><tr><th>Ref</th><th>Title</th><th>Status</th></tr></thead>";
+    const headRow = document.createElement("tr");
+    headRow.appendChild(document.createElement("th"));  // checkbox col
+    const th = (label: string, col: string) => {
+      const h = document.createElement("th"); h.textContent = label + (sort?.col === col ? (sort.dir === 1 ? " ▲" : " ▼") : "");
+      h.style.cursor = "pointer";
+      h.onclick = () => { const cur = this.sort[m.key]; this.sort[m.key] = { col, dir: cur?.col === col && cur.dir === 1 ? -1 : 1 }; this.openModule(m, filter); };
+      headRow.appendChild(h);
+    };
+    th("Ref", "ref"); th("Title", "title");
+    for (const c of cols) th(c.label, c.name);
+    th("Assignee", "assignee"); th("Status", "status");
+    const thead = document.createElement("thead"); thead.appendChild(headRow); table.appendChild(thead);
+
     const tb = document.createElement("tbody");
     for (const r of records) {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${r.ref}</td><td>${r.title ?? ""}</td>` +
-        `<td><span class="badge">${r.workflow_state}</span></td>`;
+      const cbTd = document.createElement("td");
+      const cb = document.createElement("input"); cb.type = "checkbox";
+      cb.onclick = (e) => { e.stopPropagation(); if (cb.checked) selected.add(r.id); else selected.delete(r.id); syncBulk(); };
+      cbTd.appendChild(cb); cbTd.onclick = (e) => e.stopPropagation(); tr.appendChild(cbTd);
+      const cell = (html: string) => { const td = document.createElement("td"); td.innerHTML = html; tr.appendChild(td); };
+      cell(r.ref); cell(r.title ?? "");
+      for (const c of cols) cell(this.fmtCell(c, r.data[c.name]));
+      cell(r.assignee ?? "—");
+      cell(`<span class="badge">${r.workflow_state}</span>`);
       tr.onclick = () => this.openRecord(m, r.id);
       tb.appendChild(tr);
     }
     table.appendChild(tb);
     this.root.appendChild(table);
+  }
+
+  /** Format a field value for a compact table cell. */
+  private fmtCell(f: ModuleDef["fields"][number], v: unknown): string {
+    if (v == null || v === "") return "";
+    if (f.type === "currency") return `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    if (f.type === "multiselect" && Array.isArray(v)) return (v as string[]).join(", ");
+    if (f.type === "reference") return String(v).slice(0, 8);
+    return String(v).slice(0, 40);
   }
 
   // --- create / edit form (fields from module.json) --------------------------
