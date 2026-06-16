@@ -80,6 +80,10 @@ export interface WorkItem {
   module: string; module_name: string; icon: string; id: string; ref: string;
   title: string | null; state: string; assignee: string | null; reason: string;
 }
+export interface NotifItem {
+  module: string; module_name: string; icon: string; record_id: string; ref: string;
+  title: string | null; action: string; actor: string | null; ts: string | null; reason: string;
+}
 
 export interface ProformaResult {
   sources_uses: { total_uses: number; loan_amount: number; loan_fees: number; interest_reserve: number; equity: number; ltc: number; lp_contribution: number; gp_contribution: number };
@@ -281,6 +285,9 @@ export class ApiClient {
   }
   myWork(pid: string) {
     return this.json<WorkItem[]>(`/projects/${pid}/my-work`);
+  }
+  notifications(pid: string) {
+    return this.json<NotifItem[]>(`/projects/${pid}/notifications`);
   }
   searchAll(pid: string, q: string, limit = 50) {
     return this.json<WorkItem[]>(`/projects/${pid}/search?q=${encodeURIComponent(q)}&limit=${limit}`);

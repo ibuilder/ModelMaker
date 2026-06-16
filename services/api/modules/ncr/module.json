@@ -28,6 +28,12 @@
         "Use-as-is",
         "Reject"
       ]
+    },
+    {
+      "name": "inspection",
+      "label": "Source Inspection",
+      "type": "reference",
+      "module": "inspection"
     }
   ],
   "workflow": {

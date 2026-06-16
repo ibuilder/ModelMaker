@@ -22,6 +22,12 @@
       "name": "trade",
       "label": "Trade",
       "type": "text"
+    },
+    {
+      "name": "observation",
+      "label": "Source Observation",
+      "type": "reference",
+      "module": "observation"
     }
   ],
   "workflow": {

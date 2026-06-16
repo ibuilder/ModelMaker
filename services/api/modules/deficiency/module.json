@@ -17,6 +17,12 @@
       "name": "location",
       "label": "Location",
       "type": "text"
+    },
+    {
+      "name": "inspection",
+      "label": "Source Inspection",
+      "type": "reference",
+      "module": "inspection"
     }
   ],
   "workflow": {

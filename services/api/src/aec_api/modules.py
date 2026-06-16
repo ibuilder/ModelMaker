@@ -389,6 +389,47 @@ def bulk(db: Session, key: str, project_id: str, ids: list[str], action: str,
     return {"ok": len(ok), "failed": failed}
 
 
+def notifications(db: Session, project_id: str, user: str, party: str | None,
+                  limit: int = 30) -> list[dict]:
+    """Recent activity on records relevant to the user (assigned to them, or their party
+    can act on), excluding their own actions — drives the bell feed + unread badge."""
+    recent = (db.query(RecordActivity)
+              .filter(RecordActivity.project_id == project_id)
+              .order_by(RecordActivity.ts.desc()).limit(200).all())
+    cache: dict[tuple[str, str], dict | None] = {}
+    out = []
+    for a in recent:
+        if a.actor == user:                      # don't notify me about my own actions
+            continue
+        ckey = (a.module, a.record_id)
+        if ckey not in cache:
+            t = TABLES.get(a.module)
+            if t is None:
+                cache[ckey] = None
+            else:
+                r = db.execute(select(t.c.ref, t.c.title, t.c.assignee, t.c.workflow_state)
+                               .where(t.c.id == a.record_id)).first()
+                cache[ckey] = dict(r._mapping) if r else None
+        rec = cache[ckey]
+        if not rec:
+            continue
+        mine = rec["assignee"] == user
+        actionable = bool(available_actions(REGISTRY.get(a.module, {}), rec["workflow_state"], party))
+        if not (mine or actionable):
+            continue
+        out.append({
+            "module": a.module, "module_name": REGISTRY.get(a.module, {}).get("name", a.module),
+            "icon": REGISTRY.get(a.module, {}).get("icon", "•"),
+            "record_id": a.record_id, "ref": rec["ref"], "title": rec["title"],
+            "action": a.action, "actor": a.actor,
+            "ts": a.ts.isoformat() if a.ts else None,
+            "reason": "assigned" if mine else "your move",
+        })
+        if len(out) >= limit:
+            break
+    return out
+
+
 def my_work(db: Session, project_id: str, user: str, party: str | None) -> list[dict]:
     """Cross-module: records assigned to me, plus those where my party can act now."""
     out = []

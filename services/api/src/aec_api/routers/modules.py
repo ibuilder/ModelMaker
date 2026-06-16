@@ -40,6 +40,12 @@ def my_work(pid: str, db: Session = Depends(get_db), user: str = Depends(current
     return mod_engine.my_work(db, pid, user, _party(pid, db, user))
 
 
+@router.get("/projects/{pid}/notifications")
+def notifications(pid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
+    """Recent activity relevant to the caller (assigned / ball-in-court), newest first."""
+    return mod_engine.notifications(db, pid, user, _party(pid, db, user))
+
+
 @router.get("/projects/{pid}/search")
 def search(pid: str, q: str, limit: int = 50, db: Session = Depends(get_db),
            _: str = Depends(require_role("viewer"))):

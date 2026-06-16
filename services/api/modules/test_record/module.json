@@ -22,6 +22,12 @@
       "name": "date",
       "label": "Date",
       "type": "date"
+    },
+    {
+      "name": "inspection",
+      "label": "Inspection",
+      "type": "reference",
+      "module": "inspection"
     }
   ],
   "workflow": {

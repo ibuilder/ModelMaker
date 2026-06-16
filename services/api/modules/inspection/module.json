@@ -27,6 +27,22 @@
         "Fail",
         "Conditional"
       ]
+    },
+    {
+      "name": "ncr_count",
+      "label": "# NCRs",
+      "type": "rollup",
+      "source_module": "ncr",
+      "source_field": "subject",
+      "op": "count"
+    },
+    {
+      "name": "deficiency_count",
+      "label": "# Deficiencies",
+      "type": "rollup",
+      "source_module": "deficiency",
+      "source_field": "subject",
+      "op": "count"
     }
   ],
   "workflow": {
