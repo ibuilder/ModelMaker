@@ -48,6 +48,10 @@ class Debt(BaseModel):
     rate: float = Field(ge=0)
     points: float = 0.0
     funding: Literal["equity_first", "pari_passu", "loan_first"] = "equity_first"
+    # optional debt-sizing constraints; the loan is sized to the lesser of LTC and any of these
+    max_ltv: float | None = Field(default=None, ge=0, le=1)        # loan ≤ ltv × stabilized value
+    min_dscr: float | None = Field(default=None, gt=0)             # NOI / (loan × rate) ≥ dscr
+    min_debt_yield: float | None = Field(default=None, gt=0)       # NOI / loan ≥ debt yield
 
 
 class Equity(BaseModel):

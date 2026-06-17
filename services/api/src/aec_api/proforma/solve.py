@@ -32,10 +32,34 @@ def solve(a: dict) -> dict:
     debt, eq = a["debt"], a["equity"]
     o, ex, wf = a["operations"], a["exit"], a["waterfall"]
 
+    # stabilized NOI is needed up front to size debt by value/coverage (LTV / DSCR / debt yield)
+    stabilized_noi_annual = (float(o["potential_rent_annual"]) * float(o["stabilized_occ"])
+                             * (1 - float(o.get("credit_loss_pct", 0)))
+                             + float(o.get("other_income_annual", 0)) * float(o["stabilized_occ"])
+                             - float(o["opex_annual"]))
+
+    # debt sizing: loan = lesser of LTC and any value/coverage cap supplied (all optional).
+    # LTV uses the as-stabilized value (NOI / exit cap); DSCR/debt-yield assume interest-only debt.
+    rate = float(debt["rate"])
+    stabilized_value = stabilized_noi_annual / float(ex["exit_cap"])
+    caps: dict[str, float] = {}
+    if debt.get("max_ltv") is not None:
+        caps["ltv"] = float(debt["max_ltv"]) * stabilized_value
+    if debt.get("min_dscr") is not None and rate > 0:
+        caps["dscr"] = stabilized_noi_annual / (float(debt["min_dscr"]) * rate)
+    if debt.get("min_debt_yield") is not None:
+        caps["debt_yield"] = stabilized_noi_annual / float(debt["min_debt_yield"])
+    max_loan = min(caps.values()) if caps else None
+
     # 1-2-3. cost schedule + sources & uses (resolves interest-reserve circularity)
     uses_ex_int = monthly_uses(a["cost_lines"], C)
-    su = solve_sources_uses(uses_ex_int, float(debt["ltc"]), float(debt["rate"]),
-                            debt.get("funding", "equity_first"))
+    su = solve_sources_uses(uses_ex_int, float(debt["ltc"]), rate,
+                            debt.get("funding", "equity_first"), max_loan=max_loan)
+    # which constraint actually bound the loan (LTC if no cap undercut it)
+    ltc_loan = su["total_uses"] * float(debt["ltc"])
+    binding = "ltc"
+    if caps and max_loan is not None and max_loan < ltc_loan - 1.0:
+        binding = min(caps, key=lambda k: caps[k])
     loan_fees = su["loan_amount"] * float(debt.get("points", 0.0))
     total_dev_cost = su["total_uses"] + loan_fees
     equity_total = su["equity"] + loan_fees  # fees funded by equity for simplicity
@@ -48,10 +72,7 @@ def solve(a: dict) -> dict:
     opex_m = float(o["opex_annual"]) / 12.0
     noi_monthly = ops.operating_noi(ops_m, pr_m, oi_m, opex_m, leaseup,
                                     float(o["stabilized_occ"]), float(o.get("credit_loss_pct", 0)))
-    stabilized_noi_annual = (float(o["potential_rent_annual"]) * float(o["stabilized_occ"])
-                             * (1 - float(o.get("credit_loss_pct", 0)))
-                             + float(o.get("other_income_annual", 0)) * float(o["stabilized_occ"])
-                             - float(o["opex_annual"]))
+    # (stabilized_noi_annual computed up front for debt sizing)
 
     # 5. reversion (sale at exit cap, less selling + loan payoff)
     loan_payoff = su["loan"]["ending_balance"]
@@ -102,8 +123,18 @@ def solve(a: dict) -> dict:
             "interest_reserve": round(su["interest_reserve"], 2),
             "equity": round(equity_total, 2),
             "ltc": su["ltc"],
+            "effective_ltc": su["effective_ltc"],
             "lp_contribution": round(lp_contrib, 2),
             "gp_contribution": round(gp_contrib, 2),
+        },
+        "debt_sizing": {
+            # which constraint set the loan, plus the dollar cap each one implies
+            "binding_constraint": binding,
+            "stabilized_value": round(stabilized_value, 2),
+            "actual_dscr": round(stabilized_noi_annual / (su["loan_amount"] * rate), 3) if su["loan_amount"] and rate else None,
+            "actual_debt_yield": round(stabilized_noi_annual / su["loan_amount"], 4) if su["loan_amount"] else None,
+            "actual_ltv": round(su["loan_amount"] / stabilized_value, 4) if stabilized_value else None,
+            "caps": {k: round(v, 2) for k, v in caps.items()},
         },
         "operations": {
             "stabilized_noi_annual": round(stabilized_noi_annual, 2),

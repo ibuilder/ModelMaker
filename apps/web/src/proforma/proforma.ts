@@ -14,7 +14,7 @@ const DEFAULT = {
     { category: "soft", name: "Soft costs", amount: 3_000_000, curve: "linear", start_month: 0, end_month: 17 },
     { category: "contingency", name: "Contingency", amount: 1_000_000, curve: "scurve", start_month: 1, end_month: 17 },
   ],
-  debt: { ltc: 0.65, rate: 0.085, points: 0.01, funding: "equity_first" },
+  debt: { ltc: 0.65, rate: 0.085, points: 0.01, funding: "equity_first", max_ltv: null as number | null, min_dscr: null as number | null },
   equity: { lp_pct: 0.9, gp_pct: 0.1 },
   operations: { potential_rent_annual: 3_600_000, other_income_annual: 120_000, opex_annual: 1_300_000, stabilized_occ: 0.94, credit_loss_pct: 0.02 },
   exit: { exit_cap: 0.055, selling_cost_pct: 0.02 },
@@ -82,6 +82,23 @@ export class ProformaUI {
       };
       wrap.appendChild(inp); form.appendChild(wrap);
     }
+    // optional debt-sizing constraints (blank = off → loan sized by LTC only)
+    const sizingField = (label: string, path: string, scale: number, placeholder: string) => {
+      const wrap = document.createElement("label"); wrap.className = "pf-field";
+      wrap.innerHTML = `<span>${label}</span>`;
+      const inp = document.createElement("input"); inp.type = "number"; inp.step = "any"; inp.placeholder = placeholder;
+      const raw = get(this.a, path);
+      inp.value = raw == null ? "" : String(+(raw * scale).toFixed(3));
+      inp.oninput = () => {
+        const v = parseFloat(inp.value);
+        set(this.a, path, inp.value.trim() === "" || isNaN(v) ? null : v / scale);
+        clearTimeout(this.timer);
+        this.timer = window.setTimeout(() => this.solve(), 350);
+      };
+      wrap.appendChild(inp); form.appendChild(wrap);
+    };
+    sizingField("Max LTV", "debt.max_ltv", 100, "off");
+    sizingField("Min DSCR", "debt.min_dscr", 1, "off");
     this.root.appendChild(form);
     const out = document.createElement("div"); out.id = "pf-out";
     this.root.appendChild(out);
@@ -258,7 +275,8 @@ export class ProformaUI {
       `<div class="section-title">Sources & Uses</div>` +
       `<div class="portal-kv">` +
       `<div class="k">Total uses</div><div class="v">${money(su.total_uses)}</div>` +
-      `<div class="k">Senior loan (${pct(su.ltc)})</div><div class="v">${money(su.loan_amount)}</div>` +
+      `<div class="k">Senior loan (${pct(su.effective_ltc ?? su.ltc)} LTC)</div><div class="v">${money(su.loan_amount)}</div>` +
+      this.sizingRow(r) +
       `<div class="k">Interest reserve</div><div class="v">${money(su.interest_reserve)}</div>` +
       `<div class="k">Equity</div><div class="v">${money(su.equity)}</div>` +
       `<div class="k">LP / GP</div><div class="v">${money(su.lp_contribution)} / ${money(su.gp_contribution)}</div>` +
@@ -269,6 +287,20 @@ export class ProformaUI {
       `<div class="k">GP</div><div class="v">IRR ${pct(wf.gp_irr)} · ${wf.gp_equity_multiple}× · ${money(wf.gp_distributions)}</div>` +
       `</div>` +
       this.cashflowChart(r.cash_flow.equity);
+  }
+
+  /** "Loan sizing" row: which constraint bound the loan + the resulting DSCR/LTV. */
+  private sizingRow(r: ProformaResult): string {
+    const ds = r.debt_sizing;
+    if (!ds) return "";
+    const label: Record<string, string> = { ltc: "LTC", ltv: "LTV", dscr: "DSCR", debt_yield: "Debt yield" };
+    const metrics = [
+      ds.actual_dscr != null ? `DSCR ${ds.actual_dscr.toFixed(2)}×` : "",
+      ds.actual_ltv != null ? `LTV ${(ds.actual_ltv * 100).toFixed(0)}%` : "",
+      ds.actual_debt_yield != null ? `DY ${(ds.actual_debt_yield * 100).toFixed(1)}%` : "",
+    ].filter(Boolean).join(" · ");
+    const bound = ds.binding_constraint === "ltc" ? "" : ` <span class="meta">(binds)</span>`;
+    return `<div class="k">Loan sizing</div><div class="v">${label[ds.binding_constraint] ?? ds.binding_constraint}${bound} — ${metrics}</div>`;
   }
 
   /** inline SVG bar chart of equity cash flow (outflows during construction, inflows in ops). */

@@ -99,6 +99,26 @@ assert fc["irr_delta"] is not None and fc["irr_delta"] < 0                    # 
 hard = next(L for L in fc["lines"] if L["category"] == "hard")
 assert hard["forecast_at_completion"] == 9_000_000 + 15_000_000              # actual + CTC
 
+# --- debt sizing: lesser-of LTC / LTV / DSCR --------------------------------
+# base deal is LTC-bound (no caps)
+assert res["debt_sizing"]["binding_constraint"] == "ltc", res["debt_sizing"]
+base_loan = res["sources_uses"]["loan_amount"]
+
+# a tight DSCR must reduce the loan below the LTC amount and lift equity
+deal_dscr = {**deal, "debt": {**deal["debt"], "min_dscr": 1.5}}
+rd = solve(deal_dscr)
+assert rd["debt_sizing"]["binding_constraint"] == "dscr", rd["debt_sizing"]
+assert rd["sources_uses"]["loan_amount"] < base_loan
+assert rd["sources_uses"]["equity"] > res["sources_uses"]["equity"]
+assert abs(rd["debt_sizing"]["actual_dscr"] - 1.5) < 0.02          # sized right to the constraint
+assert rd["sources_uses"]["effective_ltc"] < deal["debt"]["ltc"]
+
+# a generous LTV/DSCR leaves LTC binding (loan unchanged)
+deal_loose = {**deal, "debt": {**deal["debt"], "max_ltv": 0.95, "min_dscr": 1.0}}
+rl = solve(deal_loose)
+assert rl["debt_sizing"]["binding_constraint"] == "ltc", rl["debt_sizing"]
+assert abs(rl["sources_uses"]["loan_amount"] - base_loan) < 1.0
+
 # --- Monte Carlo: probabilistic risk distribution ---------------------------
 from aec_api.proforma.monte_carlo import monte_carlo  # noqa: E402
 
