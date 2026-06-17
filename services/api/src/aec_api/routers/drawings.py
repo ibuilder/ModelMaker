@@ -32,11 +32,12 @@ def list_storeys(pid: str, db: Session = Depends(get_db)):
 
 @router.get("/projects/{pid}/drawings/plan.svg")
 def plan(pid: str, elevation: float = 0.0, cut_height: float = 1.2, title: str = "PLAN",
-         db: Session = Depends(get_db)):
+         rooms: bool = True, callouts: bool = False, db: Session = Depends(get_db)):
     from aec_data import drawings  # type: ignore
     from aec_data.ifc_loader import open_model  # type: ignore
 
-    svg = drawings.plan_svg(open_model(_source_ifc(db, pid)), elevation, cut_height, title)
+    svg = drawings.plan_svg(open_model(_source_ifc(db, pid)), elevation, cut_height, title,
+                            rooms=rooms, callouts=callouts)
     return _svg(svg)
 
 

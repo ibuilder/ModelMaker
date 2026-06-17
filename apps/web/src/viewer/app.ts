@@ -812,7 +812,9 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       const storeys = await api.drawingStoreys(projectId);
       for (const s of storeys) {
         const t = encodeURIComponent(`PLAN - ${s.name}`);
-        drawingBtn(`▦ Plan: ${s.name}`, `/projects/${projectId}/drawings/plan.svg?elevation=${s.elevation}&cut_height=1.2&title=${t}`);
+        const planQ = `elevation=${s.elevation}&cut_height=1.2&title=${t}`;
+        drawingBtn(`▦ Plan: ${s.name}`, `/projects/${projectId}/drawings/plan.svg?${planQ}`);
+        drawingBtn(`▦ Plan + callouts: ${s.name}`, `/projects/${projectId}/drawings/plan.svg?${planQ}&callouts=true`);
       }
       drawingBtn("⌗ Section A-A (X=27)", `/projects/${projectId}/drawings/section.svg?axis=x&offset=27&title=SECTION%20A-A`);
       for (const d of ["north", "south", "east", "west"]) drawingBtn(`◰ Elevation: ${d}`, `/projects/${projectId}/drawings/elevation.svg?direction=${d}`);

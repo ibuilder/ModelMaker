@@ -157,9 +157,27 @@ def grid_from_meshes(meshes, tol: float = 0.4) -> dict[str, list[tuple[float, st
     return {"x": list(zip(xlines, labels_x)), "y": list(zip(ylines, labels_y))}
 
 
+def _leader_callout(sx: float, sy: float, lx: float, ly: float, text: str, color: str = "#1769aa") -> str:
+    """A leader line from element point (sx,sy) to a boxed label at (lx,ly), with a target dot.
+    The line elbows horizontally into the label so it reads like a standard callout."""
+    anchor = "start" if lx >= sx else "end"
+    tx = lx + (4 if anchor == "start" else -4)
+    elbow = lx - (10 if anchor == "start" else -10)   # short horizontal run into the text
+    w = max(16, 7 * len(text) + 8)
+    bx = lx - (2 if anchor == "start" else w - 2)
+    return (
+        f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="2.2" fill="{color}"/>'
+        f'<polyline points="{sx:.1f},{sy:.1f} {elbow:.1f},{ly:.1f} {lx:.1f},{ly:.1f}" '
+        f'fill="none" stroke="{color}" stroke-width="0.7"/>'
+        f'<rect x="{bx:.1f}" y="{ly-9:.1f}" width="{w}" height="14" rx="2" fill="#fff" '
+        f'stroke="{color}" stroke-width="0.6"/>'
+        f'<text x="{tx:.1f}" y="{ly+2:.1f}" text-anchor="{anchor}" font-family="sans-serif" '
+        f'font-size="10" fill="{color}">{text}</text>')
+
+
 def plan_drawing_svg(meshes, elevation: float, cut_height: float, title: str,
                      grid: dict | None = None, dims: bool = True, width: int = 1200,
-                     tags: list[dict] | None = None) -> str:
+                     tags: list[dict] | None = None, callouts: list[dict] | None = None) -> str:
     polys = cut_baked(meshes, "plan", elevation + cut_height)
     grid = grid or {"x": [], "y": []}
     if not polys and not (grid["x"] or grid["y"]):
@@ -221,6 +239,21 @@ def plan_drawing_svg(meshes, elevation: float, cut_height: float, title: str,
         if tag.get("area"):
             out.append(f'<text x="{tx:.1f}" y="{tyy+13:.1f}" text-anchor="middle" '
                        f'font-family="sans-serif" font-size="10" fill="#777">{tag["area"]:.1f} m²</text>')
+
+    # element callouts (e.g. doors/windows): leader from a boxed label to the element point.
+    # labels splay radially outward from the plan centre so leaders don't cross the geometry.
+    if callouts:
+        import xml.sax.saxutils as _sx
+        cxm = ox + draw_w / 2.0; cym = oy + draw_h / 2.0
+        for co in callouts:
+            if not (mn[0] <= co["x"] <= mx[0] and mn[1] <= co["y"] <= mx[1]):
+                continue
+            sx, sy = T(co["x"], co["y"])
+            dx, dy = sx - cxm, sy - cym
+            d = (dx * dx + dy * dy) ** 0.5 or 1.0
+            L = 34.0
+            lx, ly = sx + dx / d * L, sy + dy / d * L
+            out.append(_leader_callout(sx, sy, lx, ly, _sx.escape(str(co["label"]))))
 
     # dimension strings between consecutive grid lines (mm)
     if dims:
@@ -286,13 +319,37 @@ def space_tags(model: ifcopenshell.file) -> list[dict]:
     return tags
 
 
+def element_callouts(model: ifcopenshell.file, classes=("IfcDoor", "IfcWindow")) -> list[dict]:
+    """Plan callouts for taggable elements: a label (Tag → Name → class) at the element's plan
+    centroid. Rendered with a leader line pointing from the label to the element."""
+    import ifcopenshell.geom as _geom
+
+    settings = _geom.settings()
+    out: list[dict] = []
+    for cls in classes:
+        for el in model.by_type(cls):
+            label = getattr(el, "Tag", None) or getattr(el, "Name", None) or cls.replace("Ifc", "")
+            try:
+                shape = _geom.create_shape(settings, el)
+                v = np.asarray(shape.geometry.verts, dtype=float).reshape(-1, 3)
+                out.append({"label": str(label), "x": float(v[:, 0].mean()),
+                            "y": float(v[:, 1].mean()), "kind": cls})
+            except Exception:
+                continue
+    return out
+
+
 def plan_svg(model: ifcopenshell.file, elevation: float, cut_height: float = 1.2,
              title: str = "PLAN", grid: bool = True, dims: bool = True,
-             rooms: bool = True) -> str:
+             rooms: bool = True, callouts: bool | list[str] = False) -> str:
     meshes = bake(model)
     g = grid_from_meshes(meshes) if grid else {"x": [], "y": []}
     tags = space_tags(model) if rooms else []
-    return plan_drawing_svg(meshes, elevation, cut_height, title, g, dims, tags=tags)
+    co = None
+    if callouts:
+        classes = callouts if isinstance(callouts, list) else ["IfcDoor", "IfcWindow"]
+        co = element_callouts(model, tuple(classes))
+    return plan_drawing_svg(meshes, elevation, cut_height, title, g, dims, tags=tags, callouts=co)
 
 
 # --- elevations (orthographic outline projections) --------------------------

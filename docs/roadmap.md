@@ -63,7 +63,9 @@ signing-ready); GitHub Pages viewer demo.
 ### P2 — meaningful, larger
 - **Capacitor mobile** wrapper + touch tuning + on-site photo→BCF (per platform roadmap).
 - **Email notifications / digests** to complement the in-app SSE badge.
-- **Drawing leaders/callouts** — extend room tags with leader lines + element callouts.
+- ✅ **DONE** — **Drawing leaders/callouts.** `element_callouts()` tags doors/windows (Tag→Name)
+  with leader lines + boxed labels on plans; `plan.svg?callouts=true` + a "Plan + callouts"
+  button. Verified: 27 callouts extracted from the sample house.
 - **SSO / OIDC** integration for enterprise identity (current auth is self-contained).
 - **Observability** — structured logs + metrics endpoint; tested backup/restore runbook.
 
