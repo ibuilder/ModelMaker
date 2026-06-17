@@ -165,3 +165,32 @@ def reset_password(username: str, password: str = Body(..., embed=True),
     u.password_hash = auth.hash_password(password)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/auth/users/{username}/reset-token", status_code=201)
+def issue_reset_token(username: str, db: Session = Depends(get_db),
+                      _: User = Depends(require_admin_user)):
+    """Admin issues a single-use, 1-hour reset token for a user to set their own password
+    (no email infra needed — hand the token to the user). The token can't be used as a
+    bearer token and is invalidated once the password changes."""
+    u = db.get(User, username)
+    if not u:
+        raise HTTPException(404, "no such user")
+    return {"username": username, "reset_token": auth.create_reset_token(username, u.password_hash),
+            "expires_in": 3600}
+
+
+@router.post("/auth/reset")
+def reset_with_token(token: str = Body(..., embed=True), new: str = Body(..., embed=True),
+                     db: Session = Depends(get_db)):
+    """Unauthenticated: set a new password using a reset token (the token is the credential)."""
+    if len(new) < 8:
+        raise HTTPException(400, "password must be at least 8 characters")
+    # the token carries the subject; verify it against that account's current password hash
+    sub = auth.token_subject(token)
+    u = db.get(User, sub) if sub else None
+    if not u or not auth.verify_reset_token(token, u.password_hash):
+        raise HTTPException(403, "invalid or expired reset token")
+    u.password_hash = auth.hash_password(new)
+    db.commit()
+    return {"ok": True, "username": u.username}

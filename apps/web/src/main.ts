@@ -326,8 +326,30 @@ function loginModal() {
   };
   go.onclick = () => void submit();
   p.onkeydown = (e) => { if (e.key === "Enter") void submit(); };
-  row.append(cancel, go); card.append(title, u, p, msg, row); ov.append(card);
+  const resetLink = document.createElement("a");
+  resetLink.textContent = "Have a reset token?"; resetLink.href = "#";
+  resetLink.style.cssText = "font-size:12px;color:var(--muted);align-self:flex-start";
+  resetLink.onclick = (e) => { e.preventDefault(); ov.remove(); resetModal(); };
+  row.append(cancel, go); card.append(title, u, p, msg, row, resetLink); ov.append(card);
   document.body.appendChild(ov); u.focus();
+}
+
+/** Set a new password using an admin-issued one-time reset token (no email infra). */
+function resetModal() {
+  const { ov, card, msg } = modalShell("Reset password with token");
+  const tk = document.createElement("input"); tk.placeholder = "reset token"; tk.className = "portal-filter";
+  const np = document.createElement("input"); np.type = "password"; np.placeholder = "new password (min 8)"; np.className = "portal-filter";
+  msg.style.color = "#e2554a";
+  const row = document.createElement("div"); row.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
+  const cancel = document.createElement("button"); cancel.className = "tool-btn"; cancel.textContent = "Cancel"; cancel.onclick = () => ov.remove();
+  const go = document.createElement("button"); go.className = "file-btn"; go.textContent = "Set password";
+  go.onclick = async () => {
+    if (!tk.value.trim()) { msg.textContent = "paste your reset token"; return; }
+    if (np.value.length < 8) { msg.textContent = "new password must be at least 8 characters"; return; }
+    try { await api.resetWithToken(tk.value.trim(), np.value); ov.remove(); toast("Password set — please sign in", "info"); loginModal(); }
+    catch { msg.textContent = "invalid or expired reset token"; }
+  };
+  row.append(cancel, go); card.append(tk, np, msg, row); tk.focus();
 }
 
 async function buildAuthControl() {
@@ -435,7 +457,13 @@ function adminModal() {
         await api.resetUserPassword(u.username, np);
         toast(`Password reset for ${u.username}`, "info");
       });
-      row.append(nm, tags, spacer, roleBtn, activeBtn, pwBtn);
+      const linkBtn = act("Reset link", async () => {
+        const { reset_token } = await api.issueResetToken(u.username);
+        // hand the one-time token to the user (no email infra); they set their own password
+        await navigator.clipboard?.writeText(reset_token).catch(() => {});
+        prompt(`One-time reset token for ${u.username} (copied; expires in 1h). They paste it at Sign in → "Have a reset token?":`, reset_token);
+      });
+      row.append(nm, tags, spacer, roleBtn, activeBtn, pwBtn, linkBtn);
       list.append(row);
     }
   };

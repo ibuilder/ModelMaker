@@ -82,6 +82,21 @@ with TestClient(app) as c:
     assert c.post("/auth/login", json={"username": "bob", "password": "resetbobpass"}).status_code == 200
     c.cookies.clear()
 
+    # --- admin-issued reset token (self-service password set, no email) --------
+    tok = c.post("/auth/users/bob/reset-token", headers=BEARER(admin_tok)).json()["reset_token"]
+    # a reset token must NOT work as a bearer token (purpose-separated)
+    assert c.get("/auth/me", headers=BEARER(tok)).json()["authenticated"] is False
+    # too-short new password rejected
+    assert c.post("/auth/reset", json={"token": tok, "new": "short"}).status_code == 400
+    # consume the token → new password works
+    assert c.post("/auth/reset", json={"token": tok, "new": "brandnewpass"}).status_code == 200
+    assert c.post("/auth/login", json={"username": "bob", "password": "brandnewpass"}).status_code == 200
+    c.cookies.clear()
+    # single-use: the same token no longer validates (password hash changed)
+    assert c.post("/auth/reset", json={"token": tok, "new": "anotherpass1"}).status_code == 403
+    # a garbage token is rejected
+    assert c.post("/auth/reset", json={"token": "not.a.token", "new": "whatever8"}).status_code == 403
+
     # --- last-admin guard ------------------------------------------------------
     assert c.patch("/auth/users/admin", json={"active": False}, headers=BEARER(admin_tok)).status_code == 400
     assert c.patch("/auth/users/admin", json={"role": "user"}, headers=BEARER(admin_tok)).status_code == 400

@@ -232,6 +232,16 @@ export class ApiClient {
       `/auth/users/${encodeURIComponent(username)}/password`,
       { method: "POST", body: JSON.stringify({ password }) });
   }
+  /** Admin: mint a single-use reset token for a user to set their own password. */
+  issueResetToken(username: string) {
+    return this.json<{ username: string; reset_token: string; expires_in: number }>(
+      `/auth/users/${encodeURIComponent(username)}/reset-token`, { method: "POST" });
+  }
+  /** Unauthenticated: set a new password using a reset token (the token is the credential). */
+  resetWithToken(token: string, next: string) {
+    return this.json<{ ok: boolean; username: string }>(
+      `/auth/reset`, { method: "POST", body: JSON.stringify({ token, new: next }) });
+  }
 
   /** Absolute URL for a GET endpoint, e.g. an export download. */
   url(path: string): string {
