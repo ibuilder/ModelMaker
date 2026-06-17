@@ -83,6 +83,11 @@ signing-ready); GitHub Pages viewer demo.
   MCP to run end-to-end.
 - **RVT→IFC** via Autodesk APS — skeleton only; needs a paid APS account (behind a cost flag).
 
+## Product improvement plan (audit)
+A full-codebase performance/UX/competitive audit + prioritized roadmap lives in
+[improvement-plan.md](improvement-plan.md) (2026-06-17). First item executed: proforma Monte
+Carlo made on-demand.
+
 ## Execution order
 ~~P0 (web test harness)~~ ✅ → ~~P1 (debt sizing → password reset → audit viewer → federation
 UI)~~ ✅ → **P2 next** → P3. Each item is independently shippable; P3 items are gated on
