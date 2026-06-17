@@ -44,14 +44,14 @@ signing-ready); GitHub Pages viewer demo.
 ## Gaps (prioritized)
 
 ### P0 — foundational
-- **Frontend has zero automated tests.** The web app is typechecked (`tsc`) but has no unit/
-  component/e2e tests; all behavioral coverage is Python-side. Add a runner (Vitest) + tests
-  for pure logic (capability ranking, base-path resolution, client URL building, model-id
-  mapping) and wire into CI. _Highest leverage: unblocks confident frontend change._
+- ✅ **DONE** — **Frontend automated tests.** Vitest + happy-dom harness wired into CI
+  (`apps/web/vitest.config.ts`); first suites cover the selection-set helpers and the API
+  client (token/auth/persistence). Grow coverage as logic is extracted from DOM code.
 
 ### P1 — high-value, self-contained
-- **Proforma debt sizing.** Debt is sized by LTC only; add the standard **lesser-of LTC / LTV
-  / DSCR (or debt yield)** constraint so the loan responds to value and coverage, not just cost.
+- ✅ **DONE** — **Proforma debt sizing.** Loan is now the **lesser-of LTC / LTV / DSCR / debt
+  yield** (optional caps on the Debt input); `debt_sizing` reports the binding constraint +
+  actual DSCR/LTV/DY, surfaced in the proforma UI.
 - **Forgot-password / password-reset flow** (email or admin-issued one-time token) — today only
   an admin can reset another user's password; there's no self-recovery.
 - **Audit-log viewer UI.** The server records an audit trail; expose an admin read-only view
