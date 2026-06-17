@@ -64,16 +64,46 @@ jobs:
       - name: Install web dependencies
         run: npm ci
 
+      # Windows Authenticode: if a code-signing cert is configured, import the PFX and point
+      # tauri.conf at its thumbprint so `tauri build` signs the .exe/.msi. No secret → unsigned.
+      - name: Configure Windows signing
+        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != ''
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          $pfx = "$env:RUNNER_TEMP\cert.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $pw = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+          $conf = "apps/web/src-tauri/tauri.conf.json"
+          $json = Get-Content $conf -Raw | ConvertFrom-Json
+          if (-not $json.bundle.windows) {
+            $json.bundle | Add-Member -NotePropertyName windows -NotePropertyValue ([pscustomobject]@{}) -Force
+          }
+          $json.bundle.windows | Add-Member -NotePropertyName certificateThumbprint -NotePropertyValue $cert.Thumbprint -Force
+          $json | ConvertTo-Json -Depth 32 | Set-Content $conf -Encoding utf8
+          "Signing with thumbprint $($cert.Thumbprint)"
+
       - id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS signing + notarization — tauri-action imports the cert and notarizes when these
+          # are present; all are no-ops when the secrets are empty (build stays unsigned).
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/web
           # release only on a tag push; a manual run leaves tagName empty → build, no release
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: "AEC BIM Platform __VERSION__"
-          releaseBody: "Desktop builds (unsigned). Download the installer for your platform below."
+          releaseBody: "Download the installer for your platform below."
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

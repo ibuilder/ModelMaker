@@ -92,6 +92,22 @@ and front the web service with their TLS.
 > + MinIO). Pages can serve the marketing page (`docs/index.html`) and, with extra setup, a
 > viewer-only build; the full app needs a Docker host as above.
 
+## Desktop installers (Tauri) & code signing
+`.github/workflows/desktop.yml` builds Windows/macOS/Linux installers. Push a tag (`v0.1.0`)
+for a draft Release; run it manually (Actions → Desktop release → Run workflow) for artifact-only
+smoke builds. Without the secrets below, builds are **unsigned** (Gatekeeper / SmartScreen warn
+on first launch) — everything still works; add the secrets to sign + notarize.
+
+| Platform | Repo secrets | Notes |
+|---|---|---|
+| macOS | `APPLE_CERTIFICATE` (base64 of a Developer ID `.p12`), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY` (e.g. `Developer ID Application: Name (TEAMID)`), `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), `APPLE_TEAM_ID` | `tauri-action` imports the cert and notarizes automatically when all are set. |
+| Windows | `WINDOWS_CERTIFICATE` (base64 of an Authenticode `.pfx`), `WINDOWS_CERTIFICATE_PASSWORD` | The workflow imports the PFX and writes its thumbprint into `tauri.conf.json` before building. For an EV/HSM or Azure Trusted Signing cert, replace that step with the vendor's `signtool` flow. |
+| Linux | — | `.deb`/`.AppImage` are not signed; distribute over HTTPS / via checksums. |
+
+Generate `APPLE_CERTIFICATE` / `WINDOWS_CERTIFICATE` with `base64 -w0 cert.p12` (Linux) or
+`[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx"))` (PowerShell), and add them under
+Settings → Secrets and variables → Actions.
+
 ## Offline / jobsite
 web-ifc WASM + the Fragments worker are bundled into the web image; tiles serve from your own
 MinIO. No external CDN — the viewer runs fully offline.
