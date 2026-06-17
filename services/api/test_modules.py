@@ -131,6 +131,25 @@ with TestClient(app) as c:
     rfi2 = c.get(f"/projects/{pid}/modules/rfi/{rfi2['id']}", headers=H("gc")).json()
     assert rfi2["data_refs"].get("drawing", {}).get("id") == dwg["id"], rfi2.get("data_refs")
 
+    # ---- revisions (engine feature; revisable modules only) -------------------
+    rev = c.post(f"/projects/{pid}/modules/rfi/{rid}/revise", headers=H("gc"))
+    assert rev.status_code == 201, rev.text
+    rev = rev.json()
+    assert rev["ref"] == "RFI-001.1" and rev["data"]["revision"] == 1, rev["ref"]
+    assert rev["workflow_state"] == "draft"                       # re-opened at the initial state
+    assert rev["revision"]["revises"]["ref"] == "RFI-001", rev["revision"]
+    src = c.get(f"/projects/{pid}/modules/rfi/{rid}", headers=H("gc")).json()
+    assert src["revision"]["superseded_by"]["ref"] == "RFI-001.1", src["revision"]
+    # the superseded original can't be revised again; the revision chains to .2
+    assert c.post(f"/projects/{pid}/modules/rfi/{rid}/revise", headers=H("gc")).status_code == 409
+    rev2 = c.post(f"/projects/{pid}/modules/rfi/{rev['id']}/revise", headers=H("gc")).json()
+    assert rev2["ref"] == "RFI-001.2" and rev2["data"]["revision"] == 2, rev2["ref"]
+    # non-revisable modules reject (the flag is checked before record lookup)
+    assert c.post(f"/projects/{pid}/modules/daily_report/none/revise", headers=H("gc")).status_code == 400
+    # the catalog advertises which modules are revisable
+    cat = {m["key"]: m for m in c.get("/modules").json()}
+    assert cat["rfi"]["revisable"] is True and cat["daily_report"]["revisable"] is False
+
     # ---- AI Draft RFI (template fallback when no ANTHROPIC_API_KEY) -----------
     d = c.post(f"/projects/{pid}/ai/draft-rfi", headers=H("gc"), json={
         "element": {"ifc_class": "IfcBeam", "name": "B-12", "storey": "Level 3"},

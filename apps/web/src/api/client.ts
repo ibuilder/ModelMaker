@@ -78,6 +78,7 @@ export interface ModuleDef {
   workflow: { initial: string; states: string[]; transitions: WorkflowTransition[] };
   relations?: { label: string; module: string }[];
   list_columns?: string[];
+  revisable?: boolean;
 }
 export interface WorkflowTransition { from: string; to: string; action: string; party: string[] }
 export interface RecordBrief {
@@ -90,6 +91,7 @@ export interface ModuleRecord {
   links: { module: string; id: string; ref: string }[];
   data: Record<string, unknown>;
   data_refs?: Record<string, RecordBrief>;   // resolved reference fields
+  revision?: { number: number; revises: RecordBrief | null; superseded_by: RecordBrief | null };
   attachments?: RecordAttachmentMeta[];
   activity?: { ts: string; actor: string; party: string; action: string; detail: unknown }[];
   comments?: { author: string | null; text: string; created_at: string }[];
@@ -463,6 +465,10 @@ export class ApiClient {
     if (opts.state) p.set("state", opts.state);
     const qs = p.toString();
     return this.json<ModuleRecord[]>(`/projects/${pid}/modules/${key}${qs ? `?${qs}` : ""}`);
+  }
+  /** Create a tracked revision of a record (revisable modules); re-opens the workflow. */
+  reviseRecord(pid: string, key: string, rid: string) {
+    return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/revise`, { method: "POST" });
   }
   assignRecord(pid: string, key: string, rid: string, assignee: string | null) {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/assign`, {

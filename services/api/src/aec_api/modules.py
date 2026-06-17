@@ -159,6 +159,41 @@ def create_record(db: Session, key: str, project_id: str, body: dict, actor: str
     return get_record(db, key, project_id, rid)
 
 
+def revise(db: Session, key: str, project_id: str, rid: str, actor: str, party: str | None) -> dict:
+    """Create a tracked revision of a record (e.g. reissue a closed RFI). The revision copies
+    the source's data, carries a `<ref>.N` ref, re-opens the workflow, and links back via
+    data.revises; the source is marked data.superseded_by. Revision metadata lives in the data
+    JSON (no schema migration). Only for modules with `revisable: true`."""
+    mod = get_module(key)
+    if not mod.get("revisable"):
+        raise HTTPException(400, f"{key} records are not revisable")
+    t = TABLES[key]
+    src = get_record(db, key, project_id, rid)          # 404 if missing
+    if (src.get("data") or {}).get("superseded_by"):
+        raise HTTPException(409, "record already revised")
+    base = src["ref"].split(".")[0]
+    rev_n = int((src.get("data") or {}).get("revision") or 0) + 1
+    roll = {f["name"] for f in rollup_fields(mod)}
+    data = {k: v for k, v in (src.get("data") or {}).items()
+            if k not in roll and k not in ("revises", "superseded_by", "revision")}
+    data["revision"] = rev_n
+    data["revises"] = rid
+    new_id = str(uuid.uuid4())
+    db.execute(insert(t).values(
+        id=new_id, project_id=project_id, ref=f"{base}.{rev_n}", title=src.get("title"),
+        workflow_state=mod.get("workflow", {}).get("initial", "open"),
+        party_owner=party, assignee=src.get("assignee"), created_by=actor,
+        created_at=_now(), modified_at=_now(), anchor=src.get("anchor"),
+        element_guids=src.get("element_guids"), links=[], data=data))
+    superseded = dict(src.get("data") or {}); superseded["superseded_by"] = new_id
+    db.execute(update(t).where(t.c.id == rid, t.c.project_id == project_id)
+               .values(data=superseded, modified_at=_now()))
+    _log(db, project_id, key, new_id, actor, party, "revise", {"revises": src["ref"], "revision": rev_n})
+    _log(db, project_id, key, rid, actor, party, "superseded", {"by": f"{base}.{rev_n}"})
+    db.commit()
+    return get_record(db, key, project_id, new_id)
+
+
 def list_records(db: Session, key: str, project_id: str, state: str | None = None,
                  q: str | None = None, limit: int = 200, offset: int = 0) -> list[dict]:
     t = TABLES[key]
@@ -206,6 +241,13 @@ def get_record(db: Session, key: str, project_id: str, rid: str) -> dict:
             if b:
                 refs[f["name"]] = b
     rec["data_refs"] = refs
+    # revision chain (revisable modules): prior/next revision briefs + this record's number
+    if data.get("revision") or data.get("revises") or data.get("superseded_by"):
+        rec["revision"] = {
+            "number": data.get("revision", 0),
+            "revises": _brief(db, key, project_id, data["revises"]) if data.get("revises") else None,
+            "superseded_by": _brief(db, key, project_id, data["superseded_by"]) if data.get("superseded_by") else None,
+        }
     # computed rollup fields: aggregate a numeric field across incoming related records
     rolls = rollup_fields(mod)
     if rolls:

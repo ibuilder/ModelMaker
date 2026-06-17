@@ -83,5 +83,6 @@
   "list_columns": [
     "rom",
     "trades"
-  ]
+  ],
+  "revisable": true
 }

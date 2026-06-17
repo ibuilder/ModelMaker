@@ -129,5 +129,6 @@
     "discipline",
     "due_date",
     "cost_impact"
-  ]
+  ],
+  "revisable": true
 }

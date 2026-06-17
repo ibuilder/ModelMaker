@@ -1,4 +1,4 @@
-import type { ApiClient, ModuleDef, ModuleRecord } from "../api/client";
+import type { ApiClient, ModuleDef, ModuleRecord, RecordBrief } from "../api/client";
 
 /**
  * GC portal UI — one config-driven engine renders every module's list / form / record pages
@@ -424,6 +424,21 @@ export class PortalUI {
     const head = document.createElement("div");
     head.innerHTML = `<div class="portal-rec-title">${r.title ?? r.ref}</div>` +
       `<div class="meta">status <span class="badge">${r.workflow_state}</span> · ${r.party_owner ?? ""}</div>`;
+    // revision chain: this record's number + links to prior / superseding revision
+    if (r.revision && (r.revision.number || r.revision.revises || r.revision.superseded_by)) {
+      const rev = document.createElement("div"); rev.className = "meta";
+      rev.append(`Revision ${r.revision.number}`);
+      const link = (label: string, b: RecordBrief | null) => {
+        if (!b) return;
+        rev.append(` · ${label} `);
+        const a = document.createElement("a"); a.href = "#"; a.className = "ref-link"; a.textContent = b.ref;
+        a.onclick = (e) => { e.preventDefault(); this.openByBrief(b.module, b.id); };
+        rev.append(a);
+      };
+      link("supersedes", r.revision.revises);
+      link("superseded by", r.revision.superseded_by);
+      head.appendChild(rev);
+    }
     this.root.appendChild(head);
 
     const tools = document.createElement("div"); tools.style.cssText = "display:flex;gap:6px;margin:4px 0;flex-wrap:wrap";
@@ -441,6 +456,19 @@ export class PortalUI {
     pdfBtn.className = "tool-btn"; pdfBtn.textContent = "↓ PDF";
     pdfBtn.onclick = () => window.open(this.host.api.url(`/projects/${pid}/modules/${m.key}/${rid}/pdf`), "_blank");
     tools.append(editBtn, delBtn, pdfBtn);
+    if (m.revisable) {
+      const reviseBtn = document.createElement("button");
+      reviseBtn.className = "tool-btn"; reviseBtn.dataset.cap = "review";
+      const superseded = !!r.revision?.superseded_by;
+      reviseBtn.textContent = "⎘ Revise"; reviseBtn.disabled = superseded;
+      reviseBtn.title = superseded ? "Already revised" : "Create a tracked revision (re-opens the workflow)";
+      reviseBtn.onclick = async () => {
+        if (!confirm(`Create a revision of ${r.ref}? It re-opens the workflow as a new record (${r.ref}.${(r.revision?.number ?? 0) + 1}).`)) return;
+        try { const nv = await this.host.api.reviseRecord(pid, m.key, rid); this.host.setStatus(`created ${nv.ref}`); this.openRecord(m, nv.id); }
+        catch (e) { this.host.setStatus(`revise failed: ${(e as Error).message}`); }
+      };
+      tools.append(reviseBtn);
+    }
     this.root.appendChild(tools);
 
     // fields (reference fields render as clickable links to the target record)

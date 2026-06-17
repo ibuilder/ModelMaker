@@ -85,6 +85,17 @@ All config-driven (module.json) — the form picker, related panel, and rollups 
 no engine/UI changes. Verified: `test_modules` asserts the meeting↞action, cor↠subcontract, and
 rfi→drawing resolutions.
 
+## Revisions (engine feature, P2 — Procore parity)
+Built **generically in the engine** (not RFI-only), opt-in per module via `"revisable": true` —
+matching how board/relations/rollups work. `POST /modules/{key}/{rid}/revise` copies the source,
+mints a `<ref>.N` ref, re-opens the workflow, links via `data.revises`, and marks the source
+`data.superseded_by` (metadata in the data JSON — no migration). `get_record` exposes the
+`revision` chain (number + prior/next briefs); the catalog advertises `revisable`. Enabled on the
+document-type modules that are genuinely reissued: **rfi, submittal, drawing, transmittal, cor,
+proposal, change_event, design_review** — off for logs/daily/timesheet/inspection/cost entries.
+Web: a "⎘ Revise" button + revision-chain links in the record detail. Verified: `test_modules`
+asserts RFI-001→RFI-001.1→.2, supersede-block (409), non-revisable reject (400), catalog flag.
+
 ## Next up
-RFI revisions (P2 — revise a closed RFI with a tracked revision chain, Procore parity). Then
-the P2 program (real-time presence, doc/version mgmt, mobile field capture, report builder).
+The P2 program: real-time presence + shared viewpoints, document/version management, mobile
+field capture, report builder, list/tree virtualization.

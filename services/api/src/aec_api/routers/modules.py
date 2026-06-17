@@ -43,7 +43,7 @@ def _digest_body(project_name: str, user: str, items: list[dict]) -> tuple[str, 
 def list_modules():
     """Module catalog (drives dynamic UI). Returns each module.json."""
     return [
-        {"key": m["key"], "name": m["name"], "section": m.get("section"),
+        {"key": m["key"], "name": m["name"], "section": m.get("section"), "revisable": m.get("revisable", False),
          "icon": m.get("icon"), "pinnable": m.get("pinnable", False),
          "fields": m.get("fields", []), "workflow": m.get("workflow", {}),
          "relations": m.get("relations", []), "list_columns": m.get("list_columns")}
@@ -251,6 +251,13 @@ def related_records(pid: str, key: str, rid: str, db: Session = Depends(get_db),
                     _: str = Depends(require_role("viewer"))):
     """Outgoing references + incoming records that point at this one."""
     return mod_engine.related_records(db, key, pid, rid)
+
+
+@router.post("/projects/{pid}/modules/{key}/{rid}/revise", status_code=201)
+def revise_record(pid: str, key: str, rid: str, db: Session = Depends(get_db),
+                  user: str = Depends(require_role("reviewer"))):
+    """Create a tracked revision of a record (revisable modules only); re-opens the workflow."""
+    return mod_engine.revise(db, key, pid, rid, user, _party(pid, db, user))
 
 
 @router.post("/projects/{pid}/modules/{key}/{rid}/transition")
