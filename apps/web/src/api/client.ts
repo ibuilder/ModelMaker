@@ -210,6 +210,10 @@ export class ApiClient {
   }
 
   // --- auth ---------------------------------------------------------------
+  /** Enabled SSO providers (Google/Microsoft/Procore) for the login UI. */
+  authProviders() {
+    return this.json<{ providers: { id: string; label: string }[] }>("/auth/providers");
+  }
   login(username: string, password: string) {
     return this.json<{ token: string; username: string; role: string }>(
       "/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });

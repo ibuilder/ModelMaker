@@ -125,5 +125,28 @@ with TestClient(app) as c:
     assert c.patch("/auth/users/bob", json={"role": "admin"}, headers=BEARER(admin_tok)).status_code == 200
     assert c.patch("/auth/users/admin", json={"role": "user"}, headers=BEARER(admin_tok)).status_code == 200
 
+    # --- SSO / OAuth (Google/Microsoft/Procore) --------------------------------
+    from aec_api import auth as _auth, oauth  # noqa: E402
+    assert c.get("/auth/providers").json()["providers"] == []          # none configured
+    assert c.get("/auth/oauth/google/login", follow_redirects=False).status_code == 404
+    os.environ["AEC_OAUTH_GOOGLE_CLIENT_ID"] = "cid"
+    os.environ["AEC_OAUTH_GOOGLE_CLIENT_SECRET"] = "secret"
+    assert {"id": "google", "label": "Google"} in c.get("/auth/providers").json()["providers"]
+    lg = c.get("/auth/oauth/google/login", follow_redirects=False)
+    assert lg.status_code == 307 and "accounts.google.com" in lg.headers["location"], lg.headers.get("location")
+    # bad state is rejected
+    assert c.get("/auth/oauth/google/callback", params={"code": "x", "state": "bad"},
+                 follow_redirects=False).status_code == 400
+    # stub the provider exchange + drive the callback → account created, session minted
+    oauth.exchange_code = lambda p, code, ru: {"access_token": "tok"}
+    oauth.fetch_userinfo = lambda p, t: {"email": "Sso.User@Example.com"}
+    cb = c.get("/auth/oauth/google/callback",
+               params={"code": "abc", "state": _auth.create_oauth_state("google")}, follow_redirects=False)
+    assert cb.status_code == 303 and cb.cookies.get("aec_token"), cb.status_code
+    who = c.get("/auth/me").json()                                     # cookie carries identity
+    assert who["username"] == "sso.user@example.com" and who["authenticated"], who
+    assert who["role"] == "user"                                       # not bootstrap (users exist)
+    c.cookies.clear()
+
     print("AUTH OK — token+cookie identity, admin user mgmt, self password change, "
-          "deactivation revokes tokens, last-admin guard, reset token, audit, email/mailer")
+          "deactivation revokes tokens, last-admin guard, reset token, audit, email/mailer, SSO")

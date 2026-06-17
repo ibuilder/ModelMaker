@@ -3,13 +3,15 @@ RBAC layer accepts as identity (see rbac.current_user). The first registered use
 as admin; after that, registering others requires an admin token."""
 from __future__ import annotations
 
+import os
 from datetime import datetime
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Response
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from .. import audit, auth
+from .. import audit, auth, oauth
 from ..db import get_db
 from ..models import AuditLog, User
 from ..rbac import current_user
@@ -81,6 +83,63 @@ def login(response: Response, username: str = Body(..., embed=True),
 def logout(response: Response):
     response.delete_cookie("aec_token", path="/")
     return {"ok": True}
+
+
+# --- OAuth / SSO (Google, Microsoft, Procore) ---------------------------------
+@router.get("/auth/providers")
+def auth_providers():
+    """Enabled SSO providers (those with client id + secret configured) — drives the login UI."""
+    return {"providers": oauth.enabled_providers()}
+
+
+def _cookie(response: Response, token: str) -> None:
+    response.set_cookie("aec_token", token, httponly=True, samesite="lax",
+                        max_age=7 * 24 * 3600, path="/")
+
+
+@router.get("/auth/oauth/{provider}/login")
+def oauth_login(provider: str, request: Request):
+    """Redirect to the provider's consent screen."""
+    if not oauth.is_enabled(provider):
+        raise HTTPException(404, f"{provider} sign-in is not configured")
+    redirect_uri = str(request.url_for("oauth_callback", provider=provider))
+    state = auth.create_oauth_state(provider)
+    return RedirectResponse(oauth.authorize_url(provider, redirect_uri, state), status_code=307)
+
+
+@router.get("/auth/oauth/{provider}/callback", name="oauth_callback")
+def oauth_callback(provider: str, request: Request, code: str | None = None,
+                   state: str | None = None, db: Session = Depends(get_db)):
+    """Exchange the code, map the verified email to an account, mint the session, and return
+    to the app. First SSO account bootstraps as admin (same rule as /auth/register)."""
+    if not oauth.is_enabled(provider):
+        raise HTTPException(404, f"{provider} sign-in is not configured")
+    if not code or auth.verify_oauth_state(state or "") != provider:
+        raise HTTPException(400, "invalid oauth callback (missing code or bad state)")
+    redirect_uri = str(request.url_for("oauth_callback", provider=provider))
+    try:
+        email = oauth.email_from_login(provider, code, redirect_uri)
+    except Exception:
+        raise HTTPException(502, "oauth provider exchange failed")
+    if not email:
+        raise HTTPException(403, "provider did not return a verified email")
+
+    u = db.get(User, email)
+    if u is None:
+        bootstrap = db.query(User).count() == 0
+        u = User(username=email, password_hash="oauth!" + provider,  # unusable for password login
+                 role="admin" if bootstrap else "user", email=email)
+        db.add(u)
+    elif not u.email:
+        u.email = email
+    if u.active is False:
+        raise HTTPException(403, "account is deactivated")
+    audit.record(db, action="auth.sso_login", actor=email, method="GET",
+                 path=f"/auth/oauth/{provider}/callback", detail={"provider": provider})
+    db.commit()
+    resp = RedirectResponse(os.environ.get("AEC_APP_URL", "/"), status_code=303)
+    _cookie(resp, auth.create_token(email))
+    return resp
 
 
 @router.get("/auth/me")

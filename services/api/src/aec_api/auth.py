@@ -81,6 +81,31 @@ def create_reset_token(sub: str, pw_hash: str, ttl: int = _RESET_TTL) -> str:
     return f"{payload}.{sig}"
 
 
+_STATE_TTL = 600   # OAuth CSRF state is short-lived (10 min)
+
+
+def create_oauth_state(provider: str) -> str:
+    payload = _b64(json.dumps({"sub": provider, "exp": int(time.time()) + _STATE_TTL,
+                               "purpose": "oauth"}).encode())
+    sig = _b64(hmac.new(_SECRET, payload.encode(), hashlib.sha256).digest())
+    return f"{payload}.{sig}"
+
+
+def verify_oauth_state(token: str) -> str | None:
+    """Return the provider id if the state is a valid, unexpired oauth state, else None."""
+    try:
+        payload_b64, sig_b64 = token.split(".")
+        expected = _b64(hmac.new(_SECRET, payload_b64.encode(), hashlib.sha256).digest())
+        if not hmac.compare_digest(sig_b64, expected):
+            return None
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64 + "=="))
+        if payload.get("purpose") != "oauth" or payload.get("exp", 0) < time.time():
+            return None
+        return payload.get("sub")
+    except Exception:
+        return None
+
+
 def token_subject(token: str) -> str | None:
     """The 'sub' claim WITHOUT verifying the signature — only to look up the account so its
     current password hash can be checked by verify_reset_token. Never trust this for auth."""

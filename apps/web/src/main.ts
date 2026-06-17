@@ -331,6 +331,20 @@ function loginModal() {
   resetLink.style.cssText = "font-size:12px;color:var(--muted);align-self:flex-start";
   resetLink.onclick = (e) => { e.preventDefault(); ov.remove(); resetModal(); };
   row.append(cancel, go); card.append(title, u, p, msg, row, resetLink); ov.append(card);
+  // SSO buttons (only the providers configured on the server), shown above the password form
+  void api.authProviders().then(({ providers }) => {
+    if (!providers.length) return;
+    const wrap = document.createElement("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:6px";
+    for (const pv of providers) {
+      const b = document.createElement("button"); b.className = "file-btn";
+      b.textContent = `Continue with ${pv.label}`;
+      b.onclick = () => { window.location.href = api.url(`/auth/oauth/${pv.id}/login`); };
+      wrap.appendChild(b);
+    }
+    const div = document.createElement("div"); div.className = "meta"; div.textContent = "— or sign in with a password —";
+    div.style.cssText = "text-align:center;margin:4px 0";
+    card.insertBefore(div, u); card.insertBefore(wrap, div);
+  }).catch(() => {});
   document.body.appendChild(ov); u.focus();
 }
 
