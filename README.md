@@ -83,9 +83,12 @@ A development-finance engine for the owner/developer side (the **Finance** works
 - **4-zone UI** (top chrome + Model/Construction/Finance workspaces + left icon rail + bottom
   settings bar) with a **lazy-loaded 3D viewer** — the ~6 MB three/@thatopen bundle loads only
   when the Model workspace opens, so portal/finance users get a ~16 KB-gzip first load.
-- **Module relations** — `reference` fields + reverse lookups + numeric **rollups** wire 9
-  domain chains (RFI→ChangeEvent→PCO→COR, inspection→NCR, bidding, daily/field, closeout, …),
-  plus a **kanban board**, **cross-module search**, **bulk actions**, **saved views**, and
+- **Module relations** — `reference` fields + reverse lookups + numeric **rollups** wire the
+  domain chains across the portal (RFI/Submittal→Drawing, RFI→ChangeEvent→PCO→COR→Subcontract,
+  budget/SOV/timesheet→CostCode cost-coding, Meeting→ActionItems, Inspection→NCR/Deficiency,
+  bidding, daily/field, closeout, …) — 44 references + 16 rollups, all config-driven so the
+  form record-picker, "related" panel, and rollups come for free. Plus a **kanban board**,
+  **cross-module search**, **bulk actions**, **inline list editing**, **saved views**, and
   real-time **SSE notifications** — all engine-level, so every module gets them.
 - **Background conversion** — IFC convert/reindex runs off-thread; clients poll a publish status.
 - **In-viewer modeling** — 18-tool authoring toolbar (walls/slabs/columns/beams/roofs,
