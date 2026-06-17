@@ -68,7 +68,7 @@ signing-ready); GitHub Pages viewer demo.
 - ✅ **DONE** — **Drawing leaders/callouts.** `element_callouts()` tags doors/windows (Tag→Name)
   with leader lines + boxed labels on plans; `plan.svg?callouts=true` + a "Plan + callouts"
   button. Verified: 27 callouts extracted from the sample house.
-- **SSO / OIDC** integration for enterprise identity (current auth is self-contained).
+- ✅ **DONE** — **SSO / OIDC.** OAuth login for **Google, Microsoft (Entra), Procore** (`oauth.py`); enable per provider via `AEC_OAUTH_<P>_CLIENT_ID/_SECRET`. First SSO user bootstraps admin; SSO identities join the same RBAC layer.
 - ✅ **DONE** (metrics + logs) — **Observability.** `/metrics` (Prometheus text: request
   counts/latencies by route template, in-flight, uptime) + structured JSON access logs
   (`aec.access`).

@@ -81,7 +81,7 @@ author → reload). Verified at the data layer on `basichouse.ifc`.
 - Measure (already shipped: ↔ distance, ▱ area).
 
 ### Recommended additional tools (industry parity — Bonsai/Revit/Navisworks)
-- **Type/family picker** (wall types, slab assemblies) backed by a server-side type library.
+- ✅ **DONE** — **Type/family picker** backed by `GET /projects/{pid}/types` (IfcTypeProduct catalog) + positioned `place_type`; a "❏ Place family" viewer tool places instances with mapped geometry. Verified live (columns 203→204 round-trip).
 - **Align / array / mirror** transforms.
 - **Quantities live readout** (the energy/MEP + quantity engine already exists; surface inline).
 - **Clash re-run on edit** (mesh clash engine exists — trigger after an authoring write).
