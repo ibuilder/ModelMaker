@@ -151,8 +151,15 @@ export class PortalUI {
   // --- record list (sortable / filterable data table + bulk actions) ---------
   private sort: Record<string, { col: string; dir: 1 | -1 } | undefined> = {};
 
+  /** Immediate loading placeholder so a click gives feedback before the fetch returns. */
+  private skeleton(label: string) {
+    this.root.innerHTML = `<div class="section-title">${label}</div>`
+      + `<div>${'<div class="skel-row"></div>'.repeat(6)}</div>`;
+  }
+
   private async openModule(m: ModuleDef, filter: { q?: string; state?: string } = {}) {
     const pid = this.host.projectId()!;
+    this.skeleton(`Loading ${m.name}…`);
     const records = await this.host.api.moduleRecordsFiltered(pid, m.key, filter);
     this.root.innerHTML = "";
     this.root.appendChild(this.bar(m.name, () => this.renderHome()));
@@ -617,6 +624,7 @@ export class PortalUI {
   // --- kanban / "scrum" board: columns by workflow state, drag to transition --
   private async renderBoard(m: ModuleDef) {
     const pid = this.host.projectId()!;
+    this.skeleton(`Loading ${m.name} board…`);
     const data = await this.host.api.moduleBoard(pid, m.key);
     this.root.innerHTML = "";
     this.root.appendChild(this.bar(`${m.name} — board`, () => this.openModule(m)));

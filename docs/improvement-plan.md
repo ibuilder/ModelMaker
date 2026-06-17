@@ -52,7 +52,7 @@ We match or lead on: open/IFC-native, offline viewer, in-browser authoring round
 - **P0 (now, safe, high value):** ✅ MC on-demand · ✅ inline list edit (assignee + status) ·
   viewer empty-states (deferred — the 404/409 are benign + already handled; not worth extra probes).
 - **P1:** ✅ work-queue query optimization (SQL-filtered my_work + party_allowed hardening) ·
-  ✅ AI Draft RFI (Claude when keyed, template fallback) · loading/skeleton states · RFI revisions.
+  ✅ AI Draft RFI (Claude when keyed, template fallback) · ✅ loading/skeleton states · RFI revisions.
 - **P2:** real-time presence + shared viewpoints · document/version management · mobile field
   capture · report builder · list/tree virtualization.
 - **P3 (external-gated):** SSO/OIDC (IdP) · Capacitor build (Android SDK/Xcode) · APS RVT→IFC
@@ -69,5 +69,5 @@ We match or lead on: open/IFC-native, offline viewer, in-browser authoring round
   headline competitive gap (Procore Draft-RFI parity).
 
 ## Next up
-Loading/skeleton states (P1 UX), RFI revisions (P2). Then the P2 program (real-time presence,
-doc/version mgmt, mobile, reports).
+RFI revisions (P2 — revise a closed RFI with a tracked revision chain, Procore parity). Then
+the P2 program (real-time presence, doc/version mgmt, mobile field capture, report builder).
