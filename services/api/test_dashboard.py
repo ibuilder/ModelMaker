@@ -35,6 +35,11 @@ with TestClient(app) as c:
     d = c.get(f"/projects/{pid}/dashboard", headers=H("gc")).json()
     assert d["kpis"]["open_rfis"] == 1 and d["kpis"]["pending_change_orders"] == 1
 
+    # project status report (PDF aggregating the dashboard)
+    rep = c.get(f"/projects/{pid}/report.pdf", headers=H("gc"))
+    assert rep.status_code == 200 and rep.headers["content-type"] == "application/pdf", rep.status_code
+    assert rep.content[:5] == b"%PDF-" and len(rep.content) > 1500, len(rep.content)
+
     print("DASHBOARD OK")
     print(f"  GC={sorted(items('GC'))}  Consultant={sorted(items('Consultant'))}  Owner={sorted(items('Owner'))}")
     print(f"  kpis: {{k:v for non-zero}} = {dict((k, v) for k, v in d['kpis'].items() if v)}")

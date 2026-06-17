@@ -96,6 +96,12 @@ proposal, change_event, design_review** — off for logs/daily/timesheet/inspect
 Web: a "⎘ Revise" button + revision-chain links in the record detail. Verified: `test_modules`
 asserts RFI-001→RFI-001.1→.2, supersede-block (409), non-revisable reject (400), catalog flag.
 
+## Report builder (P2) — done
+`GET /projects/{pid}/report.pdf` (`report.py`) renders a one-document **project status report**
+(KPIs, cost snapshot, open items by module, ball-in-court) from the live dashboard aggregation,
+with reportlab + pagination. A "↓ Status report (PDF)" button sits on the construction dashboard.
+Verified: `test_dashboard` asserts a valid `%PDF-` response.
+
 ## Next up
 The P2 program: real-time presence + shared viewpoints, document/version management, mobile
-field capture, report builder, list/tree virtualization.
+field capture, list/tree virtualization.

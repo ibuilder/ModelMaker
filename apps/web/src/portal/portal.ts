@@ -76,7 +76,13 @@ export class PortalUI {
     try {
       const d = await this.host.api.dashboard(pid);
       const head = document.createElement("div");
-      head.className = "section-title"; head.textContent = `Dashboard — ${d.party}`;
+      head.className = "section-title"; head.style.cssText = "display:flex;justify-content:space-between;align-items:center";
+      head.append(`Dashboard — ${d.party}`);
+      const rpt = document.createElement("button");
+      rpt.className = "tool-btn"; rpt.textContent = "↓ Status report (PDF)";
+      rpt.title = "Project status report — KPIs, cost, open items, ball-in-court";
+      rpt.onclick = () => window.open(this.host.api.url(`/projects/${pid}/report.pdf`), "_blank");
+      head.append(rpt);
       this.root.appendChild(head);
 
       // KPI cards
