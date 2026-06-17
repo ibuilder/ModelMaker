@@ -362,3 +362,5 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
 
 /* data-connection status dot */
 .conn-dot { width: 9px; height: 9px; border-radius: 50%; background: #9aa0a6; flex: none; }
+
+.dwg-pin.linked { background: #33d17a; }   /* markup promoted to an RFI */

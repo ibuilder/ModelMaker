@@ -223,6 +223,21 @@ class AppSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
 
+class DrawingMarkup(Base):
+    """A pin/redline note on a 2D sheet (plan/elevation/section). Stored in the sheet's intrinsic
+    coordinate space (x,y) so it pans/zooms with the drawing. Can be promoted to a Topic (RFI)."""
+    __tablename__ = "drawing_markups"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    sheet_id: Mapped[str] = mapped_column(String, index=True)   # e.g. "plan:02 - Floor"
+    x: Mapped[float] = mapped_column(Float, default=0.0)
+    y: Mapped[float] = mapped_column(Float, default=0.0)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    author: Mapped[str | None] = mapped_column(String, nullable=True)
+    topic_id: Mapped[str | None] = mapped_column(String, nullable=True)   # set when promoted to an RFI
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class Connection(Base):
     """An admin-registered data-source connection (postgres / supabase / procore). Secrets in
     `config` (DSN password, access token) are masked on read. See connectors."""

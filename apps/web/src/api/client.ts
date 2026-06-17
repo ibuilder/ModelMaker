@@ -20,6 +20,12 @@ export interface IntegrationKey {
 }
 export interface IntegrationGroup { group: string; keys: IntegrationKey[] }
 
+/** A markup pin on a 2D sheet (intrinsic sheet coords); topic_id set once promoted to an RFI. */
+export interface DrawingMarkupItem {
+  id: string; sheet_id: string; x: number; y: number; note: string | null;
+  author: string | null; topic_id: string | null; created_at: string;
+}
+
 /** A registered data-source connection (local DB / Postgres / Supabase / Procore). */
 export interface ConnectionItem {
   id: string; name: string; type: string; builtin?: boolean;
@@ -487,6 +493,21 @@ export class ApiClient {
   notifications(pid: string) {
     return this.json<NotifItem[]>(`/projects/${pid}/notifications`);
   }
+  // --- drawing markup (2D sheet pins; promotable to RFIs) ----------------
+  drawingMarkup(pid: string, sheet: string) {
+    return this.json<DrawingMarkupItem[]>(`/projects/${pid}/drawings/markup?sheet=${encodeURIComponent(sheet)}`);
+  }
+  addDrawingMarkup(pid: string, sheet_id: string, x: number, y: number, note: string) {
+    return this.json<DrawingMarkupItem>(`/projects/${pid}/drawings/markup`, { method: "POST", body: JSON.stringify({ sheet_id, x, y, note }) });
+  }
+  deleteDrawingMarkup(pid: string, id: string) {
+    return this.json<{ ok: boolean }>(`/projects/${pid}/drawings/markup/${id}`, { method: "DELETE" });
+  }
+  promoteDrawingMarkup(pid: string, id: string) {
+    return this.json<{ markup: DrawingMarkupItem; topic: { id: string; type: string; title: string; status: string } }>(
+      `/projects/${pid}/drawings/markup/${id}/promote`, { method: "POST" });
+  }
+
   /** Admin: send each member with open items a work-queue digest email. */
   sendDigest(pid: string) {
     return this.json<{ smtp_configured: boolean; results: Record<string, string[]>; skipped_no_email: string[] }>(

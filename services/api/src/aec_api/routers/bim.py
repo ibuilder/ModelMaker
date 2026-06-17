@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from .. import audit, bcf_io, rbac, storage
 from ..db import get_db
-from ..models import Attachment, Comment, Project, ProjectMember, Topic, Viewpoint
+from ..models import Attachment, Comment, DrawingMarkup, Project, ProjectMember, Topic, Viewpoint
 from ..rbac import current_user, require_role
 from ..serving import range_response
 from ..schemas import (
@@ -66,6 +66,71 @@ def presence_roster(pid: str, user: str = Depends(current_user)):
     """Other users currently viewing this project (heartbeat within the TTL)."""
     from .. import presence
     return {"active": presence.active(pid, exclude=user)}
+
+
+# --- drawing markup (2D sheet pins/redlines; promotable to RFIs) --------------
+class MarkupIn(BaseModel):
+    sheet_id: str
+    x: float
+    y: float
+    note: str | None = None
+
+
+def _markup_out(m: DrawingMarkup) -> dict:
+    return {"id": m.id, "sheet_id": m.sheet_id, "x": m.x, "y": m.y, "note": m.note,
+            "author": m.author, "topic_id": m.topic_id, "created_at": m.created_at}
+
+
+@router.get("/projects/{pid}/drawings/markup")
+def list_markup(pid: str, sheet: str | None = None, db: Session = Depends(get_db),
+                _: str = Depends(require_role("viewer"))):
+    """Markup pins for a project, optionally filtered to one sheet."""
+    q = db.query(DrawingMarkup).filter(DrawingMarkup.project_id == pid)
+    if sheet:
+        q = q.filter(DrawingMarkup.sheet_id == sheet)
+    return [_markup_out(m) for m in q.order_by(DrawingMarkup.created_at).all()]
+
+
+@router.post("/projects/{pid}/drawings/markup", status_code=201)
+def add_markup(pid: str, body: MarkupIn, db: Session = Depends(get_db),
+               actor: str = Depends(require_role("reviewer"))):
+    m = DrawingMarkup(project_id=pid, sheet_id=body.sheet_id, x=body.x, y=body.y,
+                      note=body.note, author=actor)
+    db.add(m)
+    db.commit()
+    return _markup_out(m)
+
+
+@router.delete("/projects/{pid}/drawings/markup/{mid}")
+def delete_markup(pid: str, mid: str, db: Session = Depends(get_db),
+                  _: str = Depends(require_role("reviewer"))):
+    m = db.get(DrawingMarkup, mid)
+    if not m or m.project_id != pid:
+        raise HTTPException(404, "no such markup")
+    db.delete(m)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/projects/{pid}/drawings/markup/{mid}/promote", status_code=201)
+def promote_markup(pid: str, mid: str, db: Session = Depends(get_db),
+                   actor: str = Depends(require_role("reviewer"))):
+    """Promote a markup pin to an RFI Topic (Fieldlens/PlanGrid: a located issue on the sheet)."""
+    m = db.get(DrawingMarkup, mid)
+    if not m or m.project_id != pid:
+        raise HTTPException(404, "no such markup")
+    if m.topic_id:
+        raise HTTPException(409, "markup already linked to an RFI")
+    t = Topic(project_id=pid, type="rfi", status="open", author=actor,
+              title=(m.note or "Drawing RFI")[:80],
+              description=f"Raised from a drawing markup on sheet '{m.sheet_id}'.\n\n{m.note or ''}")
+    db.add(t)
+    db.flush()
+    m.topic_id = t.id
+    audit.record(db, action="markup.promote", actor=actor, method="POST", topic_id=t.id,
+                 path=f"/projects/{pid}/drawings/markup/{mid}/promote", detail={"sheet": m.sheet_id})
+    db.commit()
+    return {"markup": _markup_out(m), "topic": {"id": t.id, "type": t.type, "title": t.title, "status": t.status}}
 
 
 @router.get("/projects/{pid}/members")

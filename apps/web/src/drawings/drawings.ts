@@ -1,4 +1,4 @@
-import type { ApiClient } from "../api/client";
+import type { ApiClient, DrawingMarkupItem } from "../api/client";
 
 /** 2D Drawings Set — a sheet-set browser for the server-generated plans / elevations / sections
  *  (cf. PlanGrid plan room + Bluebeam markup + Fieldlens field pins). Left: a sheet register;
@@ -18,8 +18,6 @@ interface Sheet {
   pdf?: string;               // optional PDF download
 }
 
-interface Pin { x: number; y: number; note: string }
-
 const DIRS = ["north", "south", "east", "west"] as const;
 
 export class DrawingsUI {
@@ -31,6 +29,7 @@ export class DrawingsUI {
   private current?: Sheet;
   private callouts = false;
   private markupOn = false;
+  private markup: DrawingMarkupItem[] = [];
 
   constructor(host: HTMLElement, private host_: DrawingsHost) { this.root = host; }
 
@@ -124,7 +123,7 @@ export class DrawingsUI {
       const svg = this.svgHost.querySelector("svg");
       if (svg) { svg.removeAttribute("width"); svg.removeAttribute("height"); svg.style.display = "block"; }
       this.fit();
-      this.renderPins();
+      await this.loadPins();
       this.host_.setStatus(`drawing: ${sheet.label}`);
     } catch (e) {
       this.svgHost.innerHTML = `<div class="meta" style="padding:20px;color:#e2554a">couldn't render ${sheet.label} (${(e as Error).message}) — needs a published model / source IFC.</div>`;
@@ -188,39 +187,54 @@ export class DrawingsUI {
     vp.addEventListener("pointermove", (e) => { if (!dragging) return; this.tx = e.clientX - sx; this.ty = e.clientY - sy; moved = true; this.apply(); });
     vp.addEventListener("pointerup", () => { dragging = false; vp.classList.remove("grabbing"); });
     vp.addEventListener("wheel", (e) => { e.preventDefault(); const r = vp.getBoundingClientRect(); this.zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
-    // markup: click on the stage drops a pin (in content coords)
-    vp.addEventListener("click", (e) => {
-      if (!this.markupOn || moved || !this.current) return;
+    // markup: click on the stage drops a server-persisted pin (in content coords)
+    vp.addEventListener("click", async (e) => {
+      const pid = this.host_.projectId();
+      if (!this.markupOn || moved || !this.current || !pid) return;
       const r = vp.getBoundingClientRect();
       const x = (e.clientX - r.left - this.tx) / this.scale;
       const y = (e.clientY - r.top - this.ty) / this.scale;
       const note = prompt("Markup note:"); if (note == null) return;
-      const pins = this.pins(); pins.push({ x, y, note }); this.savePins(pins); this.renderPins();
+      try { await this.host_.api.addDrawingMarkup(pid, this.current.id, x, y, note); await this.loadPins(); }
+      catch { this.host_.setStatus("markup needs reviewer access"); }
     });
   }
 
-  // --- markup pins (client-side, persisted per project+sheet) ----------------
-  private markupKey() { return `aec-markup:${this.host_.projectId()}:${this.current?.id}`; }
-  private pins(): Pin[] { try { return JSON.parse(localStorage.getItem(this.markupKey()) || "[]"); } catch { return []; } }
-  private savePins(p: Pin[]) { localStorage.setItem(this.markupKey(), JSON.stringify(p)); }
+  // --- markup pins (server-persisted; promotable to RFIs) --------------------
+  private async loadPins() {
+    const pid = this.host_.projectId();
+    if (!pid || !this.current) { this.markup = []; this.renderPins(); return; }
+    try { this.markup = await this.host_.api.drawingMarkup(pid, this.current.id); } catch { this.markup = []; }
+    this.renderPins();
+  }
 
   private renderPins() {
     this.pinLayer.innerHTML = "";
-    const pins = this.pins();
-    pins.forEach((p, i) => {
-      const el = document.createElement("div"); el.className = "dwg-pin"; el.textContent = String(i + 1);
-      el.style.left = `${p.x}px`; el.style.top = `${p.y}px`; el.title = p.note;
-      el.onclick = (e) => {
+    const pid = this.host_.projectId();
+    this.markup.forEach((p, i) => {
+      const el = document.createElement("div"); el.className = "dwg-pin" + (p.topic_id ? " linked" : "");
+      el.textContent = String(i + 1);
+      el.style.left = `${p.x}px`; el.style.top = `${p.y}px`;
+      el.title = (p.note || "") + (p.topic_id ? "  · linked to RFI" : "");
+      el.onclick = async (e) => {
         e.stopPropagation();
-        const next = prompt(`Markup #${i + 1} (blank to delete):`, p.note);
-        if (next == null) return;
-        const cur = this.pins();
-        if (!next.trim()) cur.splice(i, 1); else cur[i] = { ...cur[i], note: next };
-        this.savePins(cur); this.renderPins();
+        if (!pid) return;
+        const linked = p.topic_id ? " (already an RFI)" : "";
+        const choice = prompt(`Markup #${i + 1}: "${p.note || ""}"${linked}\n\nType:  rfi = raise an RFI,  del = delete`, "");
+        if (choice == null) return;
+        try {
+          if (choice.trim().toLowerCase() === "rfi" && !p.topic_id) {
+            const r = await this.host_.api.promoteDrawingMarkup(pid, p.id);
+            this.host_.setStatus(`RFI raised: ${r.topic.title}`);
+          } else if (choice.trim().toLowerCase() === "del") {
+            await this.host_.api.deleteDrawingMarkup(pid, p.id);
+          }
+          await this.loadPins();
+        } catch { this.host_.setStatus("markup action failed (needs reviewer)"); }
       };
       this.pinLayer.appendChild(el);
     });
     const t = this.root.querySelector<HTMLElement>("#dwg-toolbar .dwg-name");
-    if (t && pins.length) t.textContent = `${this.current!.label}  ·  ${pins.length} markup${pins.length > 1 ? "s" : ""}`;
+    if (t && this.markup.length) t.textContent = `${this.current!.label}  ·  ${this.markup.length} markup${this.markup.length > 1 ? "s" : ""}`;
   }
 }

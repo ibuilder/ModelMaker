@@ -58,4 +58,17 @@ with TestClient(app) as c:
     assert "bob" not in [m["user"] for m in c.get(f"/projects/{pid}/members", headers=H("alice")).json()]
     assert c.delete(f"/projects/{pid}/members/alice", headers=H("alice")).status_code == 400  # last admin
 
-    print("RBAC OK — admin/reviewer/editor/viewer enforced; default-deny for non-members; /me role; member removal")
+    # drawing markup → RFI (a located issue pinned on a 2D sheet; reviewer-gated)
+    mk = c.post(f"/projects/{pid}/drawings/markup",
+                json={"sheet_id": "plan:L1", "x": 10.0, "y": 20.0, "note": "spalling at column"}, headers=H("alice")).json()
+    assert mk["sheet_id"] == "plan:L1" and mk["topic_id"] is None, mk
+    got = c.get(f"/projects/{pid}/drawings/markup", params={"sheet": "plan:L1"}, headers=H("alice")).json()
+    assert len(got) == 1 and got[0]["id"] == mk["id"]
+    pr = c.post(f"/projects/{pid}/drawings/markup/{mk['id']}/promote", headers=H("alice")).json()
+    assert pr["topic"]["type"] == "rfi" and pr["markup"]["topic_id"] == pr["topic"]["id"], pr
+    assert c.post(f"/projects/{pid}/drawings/markup/{mk['id']}/promote", headers=H("alice")).status_code == 409  # re-promote
+    assert c.post(f"/projects/{pid}/drawings/markup",
+                  json={"sheet_id": "plan:L1", "x": 1, "y": 1, "note": "x"}, headers=H("dan")).status_code == 403  # non-member
+    assert c.delete(f"/projects/{pid}/drawings/markup/{mk['id']}", headers=H("alice")).json()["ok"]
+
+    print("RBAC OK - admin/reviewer/editor/viewer enforced; default-deny for non-members; /me role; member removal; markup->RFI")
