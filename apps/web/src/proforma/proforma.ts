@@ -182,13 +182,29 @@ export class ProformaUI {
     this.renderResult(r);
     this.setStatus(`equity IRR ${pct(r.returns.equity_irr)} · EM ${r.returns.equity_multiple}`);
     void this.renderSensitivity();
-    void this.renderMonteCarlo();
+    this.renderMonteCarloPrompt();   // on-demand: a 1000-solve run shouldn't fire on every edit
+  }
+
+  /** Cheap placeholder with a Run button — Monte Carlo (~1000 solves) runs only when asked,
+   *  so editing assumptions stays snappy (solve + sensitivity are the live-updating views). */
+  private renderMonteCarloPrompt() {
+    const host = document.getElementById("pf-mc");
+    if (!host) return;
+    host.innerHTML = `<div class="section-title">Monte Carlo — Equity IRR risk</div>`
+      + `<div class="meta">Probabilistic downside on exit cap × hard cost × rent.</div>`;
+    const btn = document.createElement("button");
+    btn.className = "tool-btn"; btn.textContent = "▶ Run risk simulation (1000 draws)";
+    btn.style.cssText = "display:block;margin:6px 0;width:100%;text-align:left";
+    btn.onclick = () => void this.renderMonteCarlo();
+    host.appendChild(btn);
   }
 
   /** Monte Carlo risk: sample exit cap, hard cost, and rent; show the equity-IRR distribution. */
   private async renderMonteCarlo() {
     const host = document.getElementById("pf-mc");
     if (!host) return;
+    host.innerHTML = `<div class="section-title">Monte Carlo — Equity IRR risk</div>`
+      + `<div class="meta">running 1000 draws…</div>`;
     const cap = get(this.a, "exit.exit_cap") as number;
     const hard = get(this.a, "cost_lines.1.amount") as number;
     const rent = get(this.a, "operations.potential_rent_annual") as number;
@@ -207,9 +223,9 @@ export class ProformaUI {
         metrics: ["returns.equity_irr"],
         targets: { "returns.equity_irr": target },
       });
-    } catch { return; }
+    } catch { this.renderMonteCarloPrompt(); return; }
     const m = mc.metrics["returns.equity_irr"];
-    if (!m || !m.n) return;
+    if (!m || !m.n) { this.renderMonteCarloPrompt(); return; }
     const hmax = Math.max(...m.histogram.counts, 1);
     const bars = m.histogram.counts.map((c, i) => {
       const lo = m.histogram.edges[i];
