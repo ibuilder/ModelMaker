@@ -69,6 +69,8 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
 
   const viewer = createViewer(container);
   const loader = new ModelLoader(viewer);
+  // keep the federation list in sync whenever a model registers (fires after load completes)
+  loader.fragments.list.onItemSet.add(() => refreshFederation());
   const sets = new SelectionSets(viewer.components);
   const measure = new MeasureTool(viewer.components, viewer.world);
   const section = new SectionTool(viewer.components, viewer.world);
@@ -81,7 +83,13 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   let lastPoint: THREE.Vector3 | null = null;
   let selectedGuid: string | null = null;
   let modelCount = 0;
-  const nextId = () => `model-${++modelCount}`;
+  // track a human label per loaded model so the federation panel can list disciplines
+  const modelLabels = new Map<string, string>();
+  const nextId = (label?: string) => {
+    const id = `model-${++modelCount}`;
+    if (label) modelLabels.set(id, label);
+    return id;
+  };
 
   const SELECT_MAT = (): import("@thatopen/fragments").MaterialDefinition => ({
     color: new THREE.Color("#33d17a"), opacity: 1, transparent: false,
@@ -165,7 +173,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     const file = input.files?.[0];
     if (!file) return;
     await withLoading(container, `${verb} ${file.name}`, async () => {
-      await load(new Uint8Array(await file.arrayBuffer()), nextId());
+      await load(new Uint8Array(await file.arrayBuffer()), nextId(file.name));
       await fitToModels();
       notify(`loaded ${file.name}`, "success");
     });
@@ -175,7 +183,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     await withLoading(container, `loading ${label}`, async () => {
       const res = await fetch(import.meta.env.BASE_URL + file.replace(/^\//, ""));   // respect the deploy base
       if (!res.ok) throw new Error(`${label} not found`);
-      await loader.loadFragments(await res.arrayBuffer(), nextId());
+      await loader.loadFragments(await res.arrayBuffer(), nextId(label));
       await fitToModels();
       notify(`loaded ${label}`, "success");
     });
@@ -188,7 +196,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       const fd = new FormData(); fd.append("file", file);
       const res = await fetch(api.url("/convert"), { method: "POST", body: fd, headers: api.authHeaders() });
       if (!res.ok) { const msg = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(msg.detail || "conversion unavailable"); }
-      await loader.loadFragments(await res.arrayBuffer(), nextId());
+      await loader.loadFragments(await res.arrayBuffer(), nextId(file.name));
       await fitToModels();
       notify(`converted + loaded ${file.name}`, "success");
     });
@@ -210,13 +218,13 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     const bytes = await readFile(path);
     const name = path.split(/[\\/]/).pop() || "model";
     await withLoading(container, `loading ${name}`, async () => {
-      if (kind === "frag") await loader.loadFragments(bytes, nextId());
-      else if (kind === "ifc") await loader.loadIfc(bytes, nextId());
+      if (kind === "frag") await loader.loadFragments(bytes, nextId(name));
+      else if (kind === "ifc") await loader.loadIfc(bytes, nextId(name));
       else {
         const fd = new FormData(); fd.append("file", new Blob([bytes as BlobPart]), name);
         const res = await fetch(api.url("/convert"), { method: "POST", body: fd, headers: api.authHeaders() });
         if (!res.ok) { const m = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(m.detail || "conversion unavailable"); }
-        await loader.loadFragments(await res.arrayBuffer(), nextId());
+        await loader.loadFragments(await res.arrayBuffer(), nextId(name));
       }
       await fitToModels();
       notify(`loaded ${name}`, "success");
@@ -476,7 +484,11 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       const res = await fetch(api.url(`/projects/${projectId}/model.frag`), { headers: api.authHeaders() });
       if (!res.ok) return false;
       await loader.disposeAll();
-      await loader.loadFragments(await res.arrayBuffer(), `project-${projectId}`);
+      modelLabels.clear();
+      const id = `project-${projectId}`;
+      modelLabels.set(id, ctx.projectName || "project");
+      await loader.loadFragments(await res.arrayBuffer(), id);
+      refreshFederation();
       await fitToModels();
       return true;
     } catch { return false; }
@@ -576,12 +588,43 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     });
   }
 
+  /** Federation list: every loaded model with a visibility toggle + remove. Repopulates the
+   *  #fed-models container (if the Tools panel is built); models load additively via Open ▾. */
+  function refreshFederation() {
+    const host = document.getElementById("fed-models");
+    if (!host) return;
+    host.innerHTML = "";
+    const ids = [...loader.fragments.list.keys()];
+    if (!ids.length) { host.innerHTML = `<div class="meta">no models loaded — use Open ▾</div>`; return; }
+    for (const id of ids) {
+      const model = loader.fragments.list.get(id) as { object: { visible: boolean } } | undefined;
+      if (!model) continue;
+      const row = document.createElement("div"); row.className = "layer-row";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = model.object.visible !== false;
+      cb.title = "Toggle visibility";
+      cb.onchange = () => { model.object.visible = cb.checked; void loader.fragments.core.update(true); };
+      const name = document.createElement("span"); name.className = "name"; name.textContent = modelLabels.get(id) || id;
+      const rm = document.createElement("button"); rm.className = "tool-btn"; rm.textContent = "✕"; rm.title = "Remove model";
+      rm.onclick = async () => {
+        await loader.fragments.core.disposeModel(id); modelLabels.delete(id);
+        await loader.fragments.core.update(true); refreshFederation();
+      };
+      row.append(cb, name, rm); host.appendChild(row);
+    }
+  }
+
   function buildToolsPanel() {
     const panel = $("panel-tools");
     panel.innerHTML = "";
 
+    const fed = document.createElement("div");
+    fed.innerHTML = `<div class="section-title">Models (federation)</div>`;
+    const fedList = document.createElement("div"); fedList.id = "fed-models";
+    fed.appendChild(fedList); panel.appendChild(fed);
+    refreshFederation();
+
     const o = document.createElement("div");
-    o.innerHTML = `<div class="section-title">Working origin (E / N / Z)</div>`;
+    o.innerHTML = `<div class="section-title" style="margin-top:14px">Working origin (E / N / Z)</div>`;
     const inputs: Record<string, HTMLInputElement> = {};
     const cur = origin.getOrigin();
     for (const k of ["e", "n", "z"] as const) {
@@ -871,8 +914,9 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       const frags = ctx.projectName ? fragsForProject(ctx.projectName) : [["/school_str.frag", "school-STR"], ["/school_arq.frag", "school-ARQ"]];
       for (const [file, id] of frags) {
         const res = await fetch(import.meta.env.BASE_URL + file.replace(/^\//, ""));
-        if (res.ok) await loader.loadFragments(await res.arrayBuffer(), id);
+        if (res.ok) { await loader.loadFragments(await res.arrayBuffer(), id); modelLabels.set(id, id); }
       }
+      refreshFederation();
       await fitToModels();
     });
     if (projectId) {
