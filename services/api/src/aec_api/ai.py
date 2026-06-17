@@ -7,13 +7,12 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Any
+
+from . import settings_store
 
 _log = logging.getLogger("aec.ai")
 
-# default to the most capable model; a scoped drafting task runs fine at low effort
-_MODEL = os.environ.get("AEC_AI_MODEL", "claude-opus-4-8")
 _PRIORITIES = ("low", "normal", "high", "urgent")
 
 _RFI_SCHEMA = {
@@ -38,7 +37,7 @@ _SYSTEM = (
 
 
 def ai_enabled() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY"))
+    return bool(settings_store.get("ANTHROPIC_API_KEY"))
 
 
 def _element_summary(element: dict[str, Any]) -> str:
@@ -80,12 +79,13 @@ def draft_rfi(element: dict[str, Any], note: str | None = None) -> dict[str, Any
     try:
         from anthropic import Anthropic  # lazy: only needed when a key is configured
 
-        client = Anthropic()
+        client = Anthropic(api_key=settings_store.get("ANTHROPIC_API_KEY"))
+        model = settings_store.get("AEC_AI_MODEL", "claude-opus-4-8")
         user = "Element:\n" + _element_summary(element)
         if note and note.strip():
             user += f"\n\nEngineer's note: {note.strip()}"
         resp = client.messages.create(
-            model=_MODEL,
+            model=model,
             max_tokens=1024,
             system=_SYSTEM,
             messages=[{"role": "user", "content": user}],

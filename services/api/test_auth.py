@@ -118,6 +118,25 @@ with TestClient(app) as c:
     m = mailer.build_message("x@example.com", "Subj", "text body", "<p>html</p>")
     assert m["To"] == "x@example.com" and m["Subject"] == "Subj" and m.is_multipart()
 
+    # --- admin: integration settings (API keys; secrets write-only) ------------
+    from aec_api import ai, settings_store  # noqa: E402
+    assert c.get("/settings/integrations", headers=BEARER(bob_tok)).status_code == 403   # non-admin
+    groups = c.get("/settings/integrations", headers=BEARER(admin_tok)).json()["groups"]
+    flat = {k["key"]: k for grp in groups for k in grp["keys"]}
+    assert flat["ANTHROPIC_API_KEY"]["secret"] and "value" not in flat["ANTHROPIC_API_KEY"]   # secret hidden
+    assert flat["AEC_AI_MODEL"]["secret"] is False and "value" in flat["AEC_AI_MODEL"]        # non-secret shown
+    assert flat["ANTHROPIC_API_KEY"]["configured"] is False and ai.ai_enabled() is False
+    # set the key via the admin API → AI enables; the secret is never echoed back
+    r = c.put("/settings/integrations", headers=BEARER(admin_tok),
+              json={"values": {"ANTHROPIC_API_KEY": "sk-test-123"}}).json()
+    flat2 = {k["key"]: k for grp in r["groups"] for k in grp["keys"]}
+    assert flat2["ANTHROPIC_API_KEY"]["configured"] is True and "value" not in flat2["ANTHROPIC_API_KEY"]
+    assert ai.ai_enabled() is True and settings_store.get("ANTHROPIC_API_KEY") == "sk-test-123"
+    assert c.put("/settings/integrations", headers=BEARER(admin_tok),
+                 json={"values": {"BOGUS": "x"}}).status_code == 400                          # unknown key
+    c.put("/settings/integrations", headers=BEARER(admin_tok), json={"values": {"ANTHROPIC_API_KEY": ""}})
+    assert ai.ai_enabled() is False                                                           # cleared
+
     # --- last-admin guard ------------------------------------------------------
     assert c.patch("/auth/users/admin", json={"active": False}, headers=BEARER(admin_tok)).status_code == 400
     assert c.patch("/auth/users/admin", json={"role": "user"}, headers=BEARER(admin_tok)).status_code == 400

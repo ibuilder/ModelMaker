@@ -212,3 +212,12 @@ class AuditLog(Base):
     path: Mapped[str | None] = mapped_column(String, nullable=True)
     topic_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
+class AppSetting(Base):
+    """Admin-configured server settings (integration keys for AI / email / SSO). A value here
+    overrides the matching env var. Secrets are write-only over the API. See settings_store."""
+    __tablename__ = "app_settings"
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

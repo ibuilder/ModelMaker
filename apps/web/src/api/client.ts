@@ -14,6 +14,12 @@ export interface ElementProps {
 /** Project-scoped capability role, least→most privileged. */
 export type ProjectRole = "viewer" | "reviewer" | "editor" | "admin";
 
+/** One admin integration setting (AI/email/SSO). Secret values are never sent to the client. */
+export interface IntegrationKey {
+  key: string; label: string; secret: boolean; configured: boolean; value?: string;
+}
+export interface IntegrationGroup { group: string; keys: IntegrationKey[] }
+
 /** A user's membership of one project: capability role + optional workflow party + company. */
 export interface ProjectMember {
   user: string;
@@ -213,6 +219,14 @@ export class ApiClient {
   /** Enabled SSO providers (Google/Microsoft/Procore) for the login UI. */
   authProviders() {
     return this.json<{ providers: { id: string; label: string }[] }>("/auth/providers");
+  }
+  /** Admin: integration settings (AI / email / SSO). Secret values are never returned. */
+  integrations() {
+    return this.json<{ groups: IntegrationGroup[] }>("/settings/integrations");
+  }
+  saveIntegrations(values: Record<string, string>) {
+    return this.json<{ groups: IntegrationGroup[] }>(
+      "/settings/integrations", { method: "PUT", body: JSON.stringify({ values }) });
   }
   login(username: string, password: string) {
     return this.json<{ token: string; username: string; role: string }>(

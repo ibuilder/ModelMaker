@@ -52,3 +52,7 @@ def init_db() -> None:
     modules.load_registry()
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
+    # load admin-configured integration settings into the in-process cache
+    from . import settings_store
+    with SessionLocal() as _s:
+        settings_store.load(_s)

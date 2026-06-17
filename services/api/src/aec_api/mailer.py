@@ -11,19 +11,20 @@ Env:
 from __future__ import annotations
 
 import logging
-import os
 import smtplib
 from email.message import EmailMessage
+
+from . import settings_store
 
 _log = logging.getLogger("aec.mail")
 
 
 def smtp_configured() -> bool:
-    return bool(os.environ.get("AEC_SMTP_HOST"))
+    return bool(settings_store.get("AEC_SMTP_HOST"))
 
 
 def _from_addr() -> str:
-    return os.environ.get("AEC_SMTP_FROM") or f"no-reply@{os.environ.get('AEC_SMTP_HOST', 'localhost')}"
+    return settings_store.get("AEC_SMTP_FROM") or f"no-reply@{settings_store.get('AEC_SMTP_HOST', 'localhost')}"
 
 
 def build_message(to: str, subject: str, body_text: str, body_html: str | None = None) -> EmailMessage:
@@ -45,13 +46,13 @@ def send_email(to: str, subject: str, body_text: str, body_html: str | None = No
     if not smtp_configured():
         _log.info("email disabled (no AEC_SMTP_HOST) — would send %r to %s", subject, to)
         return "disabled"
-    host = os.environ["AEC_SMTP_HOST"]
-    port = int(os.environ.get("AEC_SMTP_PORT", "587"))
+    host = settings_store.get("AEC_SMTP_HOST")
+    port = int(settings_store.get("AEC_SMTP_PORT", "587"))
     try:
         with smtplib.SMTP(host, port, timeout=15) as s:
-            if os.environ.get("AEC_SMTP_TLS", "1") == "1":
+            if settings_store.get("AEC_SMTP_TLS", "1") == "1":
                 s.starttls()
-            user, pw = os.environ.get("AEC_SMTP_USER"), os.environ.get("AEC_SMTP_PASSWORD")
+            user, pw = settings_store.get("AEC_SMTP_USER"), settings_store.get("AEC_SMTP_PASSWORD")
             if user and pw:
                 s.login(user, pw)
             s.send_message(msg)

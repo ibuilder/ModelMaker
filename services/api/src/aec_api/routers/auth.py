@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from .. import audit, auth, oauth
+from .. import audit, auth, oauth, settings_store
 from ..db import get_db
 from ..models import AuditLog, User
 from ..rbac import current_user
@@ -249,6 +249,30 @@ def issue_reset_token(username: str, db: Session = Depends(get_db),
         raise HTTPException(404, "no such user")
     return {"username": username, "reset_token": auth.create_reset_token(username, u.password_hash),
             "expires_in": 3600}
+
+
+# --- admin: integration settings (AI / email / SSO keys) ----------------------
+@router.get("/settings/integrations")
+def get_integrations(_: User = Depends(require_admin_user)):
+    """Integration config for the Settings panel. Secret values are never returned — only
+    whether each is configured."""
+    return {"groups": settings_store.public_catalog()}
+
+
+@router.put("/settings/integrations")
+def put_integrations(values: dict = Body(..., embed=True), db: Session = Depends(get_db),
+                     admin: User = Depends(require_admin_user)):
+    """Set/clear integration settings. A value here overrides the matching env var; an empty
+    string clears it. Keys are validated against the catalog; secret values are not echoed back."""
+    unknown = [k for k in values if k not in settings_store.ALL_KEYS]
+    if unknown:
+        raise HTTPException(400, f"unknown setting(s): {unknown}")
+    for k, v in values.items():
+        settings_store.set_value(db, k, None if v is None else str(v))
+    audit.record(db, action="settings.update", actor=admin.username, method="PUT",
+                 path="/settings/integrations", detail={"keys": sorted(values)})  # keys only — no secrets
+    db.commit()
+    return {"groups": settings_store.public_catalog()}
 
 
 @router.get("/audit")

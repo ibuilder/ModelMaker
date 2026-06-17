@@ -11,14 +11,15 @@ normal aec_token (so SSO users join the same identity/RBAC layer as password acc
 from __future__ import annotations
 
 import json
-import os
 import urllib.parse
 import urllib.request
 from typing import Any, Callable
 
+from . import settings_store
+
 
 def _ms_tenant() -> str:
-    return os.environ.get("AEC_OAUTH_MICROSOFT_TENANT", "common")
+    return settings_store.get("AEC_OAUTH_MICROSOFT_TENANT", "common")
 
 
 # email extractors normalize each provider's userinfo shape to an address
@@ -63,7 +64,7 @@ PROVIDERS: dict[str, dict[str, Any]] = {
 
 
 def _env(provider: str, key: str) -> str | None:
-    return os.environ.get(f"AEC_OAUTH_{provider.upper()}_{key}")
+    return settings_store.get(f"AEC_OAUTH_{provider.upper()}_{key}")
 
 
 def client_id(provider: str) -> str | None:

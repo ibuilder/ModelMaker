@@ -399,6 +399,7 @@ function accountMenu(anchor: HTMLElement, role: string | null) {
   if (role === "admin") menu.append(item("Manage users…", adminModal));
   if (role === "admin") menu.append(item("Audit log…", auditModal));
   if (isProjectAdmin && projectId) menu.append(item("Project members…", () => membersModal(projectId!)));
+  menu.append(item("Settings…", settingsModal));
   menu.append(item("Change password…", passwordModal));
   menu.append(item("Sign out", async () => { await api.logout(); api.setToken(""); location.reload(); }));
   document.body.appendChild(menu);
@@ -509,6 +510,68 @@ function adminModal() {
 
   card.append(list, document.createElement("hr"), form, msg);
   void render();
+}
+
+/** Settings panel: keyboard shortcuts (everyone) + integration API keys (admins only). */
+function settingsModal() {
+  const { ov, card, msg } = modalShell("Settings", 560);
+  msg.style.color = "#e2554a";
+
+  // keyboard shortcuts (amenity)
+  const sc = document.createElement("div");
+  sc.innerHTML = `<div class="section-title">Keyboard shortcuts</div>`;
+  const scList = document.createElement("div"); scList.className = "meta"; scList.style.lineHeight = "1.9";
+  scList.innerHTML = (SHORTCUTS + " · \\ panel").split("·").map((s) => `<code>${s.trim()}</code>`).join("&nbsp; ");
+  sc.appendChild(scList); card.appendChild(sc);
+
+  // integrations + API keys (admin) — loaded on demand; 403 for non-admins is handled gracefully
+  const intWrap = document.createElement("div");
+  intWrap.innerHTML = `<div class="section-title" style="margin-top:12px">Integrations &amp; API keys</div>`;
+  const body = document.createElement("div"); body.className = "meta"; body.textContent = "loading…";
+  intWrap.appendChild(body); card.appendChild(intWrap); card.appendChild(msg);
+
+  void api.integrations().then(({ groups }) => {
+    body.textContent = "";
+    const inputs: Record<string, HTMLInputElement> = {};
+    const clears: Record<string, HTMLInputElement> = {};
+    for (const g of groups) {
+      const h = document.createElement("div"); h.textContent = g.group;
+      h.style.cssText = "font-weight:600;margin:10px 0 2px;color:var(--text);font-size:12px";
+      body.appendChild(h);
+      for (const k of g.keys) {
+        const row = document.createElement("div"); row.style.cssText = "display:flex;align-items:center;gap:8px;margin:3px 0";
+        const lab = document.createElement("label"); lab.textContent = k.label; lab.style.cssText = "min-width:120px;font-size:12px";
+        const inp = document.createElement("input"); inp.className = "portal-filter"; inp.style.flex = "1"; inputs[k.key] = inp;
+        if (k.secret) { inp.type = "password"; inp.placeholder = k.configured ? "configured — leave blank to keep" : "not set"; }
+        else { inp.type = "text"; inp.value = k.value ?? ""; }
+        row.append(lab, inp);
+        if (k.secret && k.configured) {
+          const cb = document.createElement("input"); cb.type = "checkbox"; cb.title = "clear this key"; clears[k.key] = cb;
+          const cl = document.createElement("span"); cl.className = "meta"; cl.textContent = "clear"; cl.style.fontSize = "11px";
+          row.append(cb, cl);
+        }
+        body.appendChild(row);
+      }
+    }
+    const save = document.createElement("button"); save.className = "file-btn"; save.textContent = "Save"; save.style.marginTop = "10px";
+    save.onclick = async () => {
+      msg.textContent = "";
+      const values: Record<string, string> = {};
+      for (const [key, inp] of Object.entries(inputs)) {
+        if (inp.type === "password") {
+          if (inp.value.trim()) values[key] = inp.value.trim();
+          else if (clears[key]?.checked) values[key] = "";
+        } else values[key] = inp.value;
+      }
+      try { await api.saveIntegrations(values); ov.remove(); toast("Integration settings saved", "info"); }
+      catch { msg.textContent = "could not save settings"; }
+    };
+    body.appendChild(save);
+    const note = document.createElement("div"); note.className = "meta";
+    note.style.cssText = "margin-top:8px;font-size:11px";
+    note.textContent = "Keys override the matching env var. Secrets are write-only — never shown back.";
+    body.appendChild(note);
+  }).catch(() => { body.textContent = "Sign in as an admin to configure API keys (AI, email, SSO)."; });
 }
 
 /** Project-member management (project admins): grant/change role + party, set company, remove.
@@ -682,7 +745,13 @@ async function startup() {
   }
   if (projectId) connectNotifications();
   void applyCapabilities();
-  if (!demo) void buildAuthControl();   // no accounts without a backend
+  if (!demo) {
+    const gear = document.createElement("button");
+    gear.className = "tool-btn"; gear.style.marginLeft = "6px"; gear.textContent = "⚙"; gear.title = "Settings";
+    gear.onclick = settingsModal;
+    toolbar.insertBefore(gear, statusEl);
+    void buildAuthControl();             // no accounts without a backend
+  }
 }
 
 function initNav() {
