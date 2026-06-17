@@ -35,7 +35,7 @@ def _other_active_admins(db: Session, exclude: str) -> int:
 
 def _public(u: User) -> dict:
     return {"username": u.username, "role": u.role, "active": u.active is not False,
-            "created_at": u.created_at}
+            "email": u.email, "created_at": u.created_at}
 
 
 @router.post("/auth/register", status_code=201)
@@ -110,6 +110,7 @@ def change_password(current: str = Body(..., embed=True), new: str = Body(..., e
 class UserPatch(BaseModel):
     role: str | None = None
     active: bool | None = None
+    email: str | None = None
 
 
 @router.get("/auth/users")
@@ -119,8 +120,8 @@ def list_users(db: Session = Depends(get_db), _: User = Depends(require_admin_us
 
 @router.post("/auth/users", status_code=201)
 def create_user(username: str = Body(..., embed=True), password: str = Body(..., embed=True),
-                role: str = Body("user", embed=True), db: Session = Depends(get_db),
-                admin: User = Depends(require_admin_user)):
+                role: str = Body("user", embed=True), email: str | None = Body(None, embed=True),
+                db: Session = Depends(get_db), admin: User = Depends(require_admin_user)):
     """Admin-created account (the open path after bootstrap; /auth/register stays for the
     very first user)."""
     if role not in ("admin", "user"):
@@ -129,7 +130,7 @@ def create_user(username: str = Body(..., embed=True), password: str = Body(...,
         raise HTTPException(400, "password must be at least 8 characters")
     if db.get(User, username):
         raise HTTPException(409, "username already taken")
-    db.add(User(username=username, password_hash=auth.hash_password(password), role=role))
+    db.add(User(username=username, password_hash=auth.hash_password(password), role=role, email=email))
     audit.record(db, action="user.create", actor=admin.username, method="POST",
                  path="/auth/users", detail={"username": username, "role": role})
     db.commit()
@@ -153,6 +154,8 @@ def update_user(username: str, body: UserPatch, db: Session = Depends(get_db),
         u.role = body.role
     if body.active is not None:
         u.active = body.active
+    if body.email is not None:
+        u.email = body.email or None
     audit.record(db, action="user.update", actor=admin.username, method="PATCH",
                  path=f"/auth/users/{username}",
                  detail={"username": username, "role": body.role, "active": body.active})

@@ -62,7 +62,9 @@ signing-ready); GitHub Pages viewer demo.
 
 ### P2 — meaningful, larger
 - **Capacitor mobile** wrapper + touch tuning + on-site photo→BCF (per platform roadmap).
-- **Email notifications / digests** to complement the in-app SSE badge.
+- ✅ **DONE** — **Email notifications / digests.** Stdlib `mailer` (SMTP via `AEC_SMTP_*`,
+  no-op-but-logged when unconfigured); `User.email`; per-member work-queue digests with
+  preview + send endpoints (admin); admin UI sets emails. Complements the in-app SSE badge.
 - ✅ **DONE** — **Drawing leaders/callouts.** `element_callouts()` tags doors/windows (Tag→Name)
   with leader lines + boxed labels on plans; `plan.svg?callouts=true` + a "Plan + callouts"
   button. Verified: 27 callouts extracted from the sample house.

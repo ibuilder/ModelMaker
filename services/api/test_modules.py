@@ -107,6 +107,23 @@ with TestClient(app) as c:
     pdf = c.get(f"/projects/{pid}/modules/cor/{cor['id']}/pdf", headers=H("gc")).content
     assert pdf[:5] == b"%PDF-" and len(pdf) > 1000, len(pdf)
 
+    # ---- email digests: per-member work-queue summaries ----------------------
+    # register gc as an account (first user → admin) and give it an email
+    assert c.post("/auth/register", json={"username": "gc", "password": "gcpassword"}).status_code == 201
+    assert c.patch("/auth/users/gc", json={"email": "gc@example.com"}, headers=H("gc")).json()["email"] == "gc@example.com"
+    # preview: gc has open items (GC party is ball-in-court on the chain); SMTP off in tests
+    pv = c.get(f"/projects/{pid}/notifications/digest/preview", headers=H("gc")).json()
+    assert pv["smtp_configured"] is False
+    gc_dig = next((r for r in pv["recipients"] if r["user"] == "gc"), None)
+    assert gc_dig and gc_dig["count"] > 0 and "open item" in gc_dig["text"], pv
+    # send: gc has an email → attempted (status 'disabled', no SMTP); members w/o email skipped
+    res = c.post(f"/projects/{pid}/notifications/digest", headers=H("gc")).json()
+    assert res["smtp_configured"] is False
+    assert "gc" in res["results"].get("disabled", []), res     # has email → attempted (disabled, no SMTP)
+    assert "gc" not in res["skipped_no_email"], res
+    # non-admin can't trigger a digest
+    assert c.post(f"/projects/{pid}/notifications/digest", headers=H("sub")).status_code == 403
+
     print("GC MODULES OK")
     print(f"  modules loaded: {len(mods)}  |  project={pid}")
     print(f"  RFI lifecycle gated (sub blocked from answering: 403)")

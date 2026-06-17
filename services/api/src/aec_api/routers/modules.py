@@ -9,10 +9,11 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, File, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
+from .. import mailer
 from .. import modules as mod_engine
 from .. import rbac
 from ..db import get_db
-from ..models import Project
+from ..models import Project, ProjectMember, User
 from ..rbac import current_user, require_role
 
 router = APIRouter()
@@ -20,6 +21,21 @@ router = APIRouter()
 
 def _party(pid: str, db: Session, user: str) -> str | None:
     return rbac.party_role_for(db, pid, user)
+
+
+def _digest_body(project_name: str, user: str, items: list[dict]) -> tuple[str, str]:
+    """Plain-text + HTML body for a user's work-queue digest."""
+    lines = [f"{it['icon']} [{it['module_name']}] {it['ref']} — {it['title']}"
+             f"  ({it['state']}, {it['reason']})" for it in items]
+    text = (f"Hi {user},\n\nYou have {len(items)} open item(s) on {project_name}:\n\n"
+            + "\n".join(lines) + "\n\n— AEC BIM Platform")
+    rows = "".join(
+        f"<li><b>{it['ref']}</b> — {it['title']} "
+        f"<span style='color:#777'>({it['module_name']} · {it['state']} · {it['reason']})</span></li>"
+        for it in items)
+    html = (f"<p>Hi {user},</p><p>You have <b>{len(items)}</b> open item(s) on "
+            f"<b>{project_name}</b>:</p><ul>{rows}</ul><p style='color:#999'>— AEC BIM Platform</p>")
+    return text, html
 
 
 @router.get("/modules")
@@ -44,6 +60,48 @@ def my_work(pid: str, db: Session = Depends(get_db), user: str = Depends(current
 def notifications(pid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
     """Recent activity relevant to the caller (assigned / ball-in-court), newest first."""
     return mod_engine.notifications(db, pid, user, _party(pid, db, user))
+
+
+def _build_digests(db: Session, pid: str) -> list[dict]:
+    """Per-member work-queue digests for everyone on the project who has open items."""
+    project = db.get(Project, pid)
+    pname = project.name if project else pid
+    out = []
+    for mem in db.query(ProjectMember).filter(ProjectMember.project_id == pid).all():
+        items = mod_engine.my_work(db, pid, mem.user, mem.party_role)
+        if not items:
+            continue
+        u = db.get(User, mem.user)
+        text, html = _digest_body(pname, mem.user, items)
+        out.append({"user": mem.user, "email": (u.email if u else None), "count": len(items),
+                    "subject": f"[{pname}] {len(items)} open item(s) need your attention",
+                    "text": text, "html": html})
+    return out
+
+
+@router.get("/projects/{pid}/notifications/digest/preview")
+def digest_preview(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("admin"))):
+    """Preview the per-member digests (no send) — also reports whether SMTP is configured."""
+    digests = _build_digests(db, pid)
+    return {"smtp_configured": mailer.smtp_configured(),
+            "recipients": [{"user": d["user"], "email": d["email"], "count": d["count"],
+                            "subject": d["subject"], "text": d["text"]} for d in digests]}
+
+
+@router.post("/projects/{pid}/notifications/digest")
+def send_digest(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("admin"))):
+    """Send each member with open items a work-queue digest email. No-op-but-logged per
+    recipient when SMTP is unconfigured (status 'disabled'); members without an email are
+    skipped. Returns a per-recipient result summary."""
+    results: dict[str, list[str]] = {}
+    skipped: list[str] = []
+    for d in _build_digests(db, pid):
+        if not d["email"]:
+            skipped.append(d["user"])
+            continue
+        status = mailer.send_email(d["email"], d["subject"], d["text"], d["html"])
+        results.setdefault(status, []).append(d["user"])
+    return {"smtp_configured": mailer.smtp_configured(), "results": results, "skipped_no_email": skipped}
 
 
 @router.get("/projects/{pid}/notifications/stream")

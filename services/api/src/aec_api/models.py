@@ -82,6 +82,7 @@ class User(Base):
     # nullable so the additive schema sync can add it to existing tables; NULL = legacy-active.
     # Deactivated accounts can't log in and their existing tokens stop authenticating.
     active: Mapped[bool | None] = mapped_column(Boolean, default=True)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)   # for digest emails
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

@@ -39,6 +39,7 @@ export interface AccountUser {
   username: string;
   role: "admin" | "user";
   active: boolean;
+  email: string | null;
   created_at: string;
 }
 
@@ -237,11 +238,11 @@ export class ApiClient {
     for (const [k, v] of Object.entries(params)) if (v) qs.set(k, String(v));
     return this.json<AuditEntry[]>(`/audit${qs.toString() ? `?${qs}` : ""}`);
   }
-  createUser(username: string, password: string, role: "admin" | "user" = "user") {
+  createUser(username: string, password: string, role: "admin" | "user" = "user", email?: string) {
     return this.json<AccountUser>(
-      "/auth/users", { method: "POST", body: JSON.stringify({ username, password, role }) });
+      "/auth/users", { method: "POST", body: JSON.stringify({ username, password, role, email }) });
   }
-  updateUser(username: string, patch: { role?: "admin" | "user"; active?: boolean }) {
+  updateUser(username: string, patch: { role?: "admin" | "user"; active?: boolean; email?: string }) {
     return this.json<AccountUser>(
       `/auth/users/${encodeURIComponent(username)}`, { method: "PATCH", body: JSON.stringify(patch) });
   }
@@ -422,6 +423,11 @@ export class ApiClient {
   }
   notifications(pid: string) {
     return this.json<NotifItem[]>(`/projects/${pid}/notifications`);
+  }
+  /** Admin: send each member with open items a work-queue digest email. */
+  sendDigest(pid: string) {
+    return this.json<{ smtp_configured: boolean; results: Record<string, string[]>; skipped_no_email: string[] }>(
+      `/projects/${pid}/notifications/digest`, { method: "POST" });
   }
   listViews(pid: string, key: string) {
     return this.json<SavedViewDef[]>(`/projects/${pid}/modules/${key}/views`);

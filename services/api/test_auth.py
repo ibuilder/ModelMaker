@@ -109,6 +109,15 @@ with TestClient(app) as c:
     assert any(a["detail"].get("username") == "bob" for a in create_rows)
     assert c.get("/audit", params={"since": "not-a-date"}, headers=BEARER(admin_tok)).status_code == 400
 
+    # --- email field + mailer (no-op when SMTP unconfigured) -------------------
+    assert c.patch("/auth/users/bob", json={"email": "bob@example.com"},
+                   headers=BEARER(admin_tok)).json()["email"] == "bob@example.com"
+    from aec_api import mailer  # noqa: E402
+    assert mailer.smtp_configured() is False                         # no AEC_SMTP_HOST in tests
+    assert mailer.send_email("x@example.com", "Hi", "body") == "disabled"   # no-op, doesn't raise
+    m = mailer.build_message("x@example.com", "Subj", "text body", "<p>html</p>")
+    assert m["To"] == "x@example.com" and m["Subject"] == "Subj" and m.is_multipart()
+
     # --- last-admin guard ------------------------------------------------------
     assert c.patch("/auth/users/admin", json={"active": False}, headers=BEARER(admin_tok)).status_code == 400
     assert c.patch("/auth/users/admin", json={"role": "user"}, headers=BEARER(admin_tok)).status_code == 400
@@ -117,4 +126,4 @@ with TestClient(app) as c:
     assert c.patch("/auth/users/admin", json={"role": "user"}, headers=BEARER(admin_tok)).status_code == 200
 
     print("AUTH OK — token+cookie identity, admin user mgmt, self password change, "
-          "deactivation revokes tokens, last-admin guard")
+          "deactivation revokes tokens, last-admin guard, reset token, audit, email/mailer")

@@ -439,7 +439,7 @@ function adminModal() {
       row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px";
       const nm = document.createElement("span"); nm.textContent = u.username; nm.style.cssText = "font-weight:600;min-width:90px";
       const tags = document.createElement("span"); tags.className = "meta";
-      tags.textContent = `${u.role}${u.active ? "" : " · deactivated"}`;
+      tags.textContent = `${u.role}${u.active ? "" : " · deactivated"}${u.email ? " · " + u.email : ""}`;
       tags.style.color = u.active ? "var(--muted)" : "#e2554a";
       const spacer = document.createElement("span"); spacer.style.flex = "1";
       const act = (label: string, fn: () => Promise<unknown>) => {
@@ -464,7 +464,13 @@ function adminModal() {
         await navigator.clipboard?.writeText(reset_token).catch(() => {});
         prompt(`One-time reset token for ${u.username} (copied; expires in 1h). They paste it at Sign in → "Have a reset token?":`, reset_token);
       });
-      row.append(nm, tags, spacer, roleBtn, activeBtn, pwBtn, linkBtn);
+      const emailBtn = act("Email", async () => {
+        const e = prompt(`Email for ${u.username} (blank to clear):`, u.email || "");
+        if (e === null) return;
+        await api.updateUser(u.username, { email: e.trim() });
+        toast(`Email updated for ${u.username}`, "info");
+      });
+      row.append(nm, tags, spacer, roleBtn, activeBtn, pwBtn, linkBtn, emailBtn);
       list.append(row);
     }
   };
@@ -473,6 +479,7 @@ function adminModal() {
   const form = document.createElement("div"); form.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center";
   const nu = document.createElement("input"); nu.placeholder = "new username"; nu.className = "portal-filter"; nu.style.flex = "1";
   const np = document.createElement("input"); np.type = "password"; np.placeholder = "password (min 8)"; np.className = "portal-filter"; np.style.flex = "1";
+  const ne = document.createElement("input"); ne.type = "email"; ne.placeholder = "email (for digests, optional)"; ne.className = "portal-filter"; ne.style.flex = "1";
   const nr = document.createElement("select"); nr.className = "portal-filter";
   nr.innerHTML = '<option value="user">user</option><option value="admin">admin</option>';
   const add = document.createElement("button"); add.className = "file-btn"; add.textContent = "Add";
@@ -480,11 +487,11 @@ function adminModal() {
     msg.textContent = "";
     if (!nu.value.trim() || np.value.length < 8) { msg.textContent = "username + password (min 8) required"; return; }
     try {
-      await api.createUser(nu.value.trim(), np.value, nr.value as "admin" | "user");
-      nu.value = ""; np.value = ""; await render();
+      await api.createUser(nu.value.trim(), np.value, nr.value as "admin" | "user", ne.value.trim() || undefined);
+      nu.value = ""; np.value = ""; ne.value = ""; await render();
     } catch { msg.textContent = "could not create user (name may be taken)"; }
   };
-  form.append(nu, np, nr, add);
+  form.append(nu, np, ne, nr, add);
 
   card.append(list, document.createElement("hr"), form, msg);
   void render();
