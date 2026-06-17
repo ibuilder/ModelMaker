@@ -39,6 +39,14 @@ Project-scoped roles, least→most: **viewer < reviewer < editor < admin** (`rba
 The project creator becomes admin. Caller identified by `X-User` (swap for your IdP/JWT in
 prod). Off by default (`AEC_RBAC` unset) so local dev stays open. Verified: `test_rbac.py`.
 
+**Accounts & identity** (independent of `AEC_RBAC`): the built-in auth issues signed bearer
+tokens + an httpOnly cookie (`auth.py`). The first `/auth/register` bootstraps a global **admin**;
+after that, admins manage accounts via `/auth/users` (create / list / set role / activate /
+deactivate / reset password) — surfaced in the web app under the account menu → *Manage users*.
+Users change their own password at `/auth/password` (account menu → *Change password*).
+Deactivating an account blocks new logins **and** invalidates its existing tokens immediately;
+the last active admin can't be removed. Verified: `test_auth.py`.
+
 ## Object storage & streaming
 `storage.py` has Local and S3 (boto3) backends behind one interface incl. byte-range reads.
 `.frag` tiles and attachments are served with **HTTP range requests** (`serving.py`): `206

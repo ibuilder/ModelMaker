@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -79,6 +79,9 @@ class User(Base):
     username: Mapped[str] = mapped_column(String, primary_key=True)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, default="user")   # admin | user
+    # nullable so the additive schema sync can add it to existing tables; NULL = legacy-active.
+    # Deactivated accounts can't log in and their existing tokens stop authenticating.
+    active: Mapped[bool | None] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

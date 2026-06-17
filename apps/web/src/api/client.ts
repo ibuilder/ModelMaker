@@ -11,6 +11,14 @@ export interface ElementProps {
   qtos: Record<string, Record<string, unknown>>;
 }
 
+/** A global account (identity). Per-project authorization lives in project members. */
+export interface AccountUser {
+  username: string;
+  role: "admin" | "user";
+  active: boolean;
+  created_at: string;
+}
+
 export interface Topic {
   id: string;
   guid: string;
@@ -175,6 +183,29 @@ export class ApiClient {
   }
   logout() {
     return this.json<{ ok: boolean }>("/auth/logout", { method: "POST" }).catch(() => ({ ok: false }));
+  }
+  /** Change your own password (requires the current one). */
+  changePassword(current: string, next: string) {
+    return this.json<{ ok: boolean }>(
+      "/auth/password", { method: "POST", body: JSON.stringify({ current, new: next }) });
+  }
+
+  // --- admin: user management --------------------------------------------
+  listUsers() {
+    return this.json<AccountUser[]>("/auth/users");
+  }
+  createUser(username: string, password: string, role: "admin" | "user" = "user") {
+    return this.json<AccountUser>(
+      "/auth/users", { method: "POST", body: JSON.stringify({ username, password, role }) });
+  }
+  updateUser(username: string, patch: { role?: "admin" | "user"; active?: boolean }) {
+    return this.json<AccountUser>(
+      `/auth/users/${encodeURIComponent(username)}`, { method: "PATCH", body: JSON.stringify(patch) });
+  }
+  resetUserPassword(username: string, password: string) {
+    return this.json<{ ok: boolean }>(
+      `/auth/users/${encodeURIComponent(username)}/password`,
+      { method: "POST", body: JSON.stringify({ password }) });
   }
 
   /** Absolute URL for a GET endpoint, e.g. an export download. */

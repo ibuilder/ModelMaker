@@ -334,16 +334,130 @@ async function buildAuthControl() {
   const el = document.createElement("button");
   el.className = "tool-btn"; el.style.marginLeft = "6px";
   if (api.authed) {
-    let name = "account";
-    try { const m = await api.me(); if (m.authenticated) name = m.username; else api.setToken(""); }
+    let name = "account", role: string | null = null;
+    try { const m = await api.me(); if (m.authenticated) { name = m.username; role = m.role; } else api.setToken(""); }
     catch { /* keep token; offline */ }
-    el.textContent = `${name} ⏻`; el.title = "Sign out";
-    el.onclick = async () => { await api.logout(); api.setToken(""); location.reload(); };
+    el.textContent = `${name} ▾`; el.title = "Account";
+    el.onclick = () => accountMenu(el, role);
   } else {
     el.textContent = "Sign in"; el.title = "Sign in";
     el.onclick = loginModal;
   }
   toolbar.insertBefore(el, statusEl);
+}
+
+/** Small dropdown anchored to the account button: self-service + (for admins) user management. */
+function accountMenu(anchor: HTMLElement, role: string | null) {
+  document.querySelector(".acct-menu")?.remove();
+  const menu = document.createElement("div");
+  menu.className = "acct-menu";
+  const r = anchor.getBoundingClientRect();
+  menu.style.cssText = `position:fixed;top:${r.bottom + 4}px;right:${window.innerWidth - r.right}px;z-index:200;`
+    + "background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px;display:flex;flex-direction:column;min-width:160px";
+  const item = (label: string, fn: () => void) => {
+    const b = document.createElement("button");
+    b.className = "tool-btn"; b.textContent = label; b.style.cssText = "justify-content:flex-start;width:100%;text-align:left";
+    b.onclick = () => { menu.remove(); fn(); };
+    return b;
+  };
+  if (role === "admin") menu.append(item("Manage users…", adminModal));
+  menu.append(item("Change password…", passwordModal));
+  menu.append(item("Sign out", async () => { await api.logout(); api.setToken(""); location.reload(); }));
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener("pointerdown", function off(e) {
+    if (!menu.contains(e.target as Node)) { menu.remove(); document.removeEventListener("pointerdown", off); }
+  }), 0);
+}
+
+/** Generic modal shell matching the sign-in dialog. */
+function modalShell(titleText: string, minWidth = 280) {
+  const ov = document.createElement("div");
+  ov.style.cssText = "position:fixed;inset:0;z-index:201;background:#000a;display:flex;align-items:center;justify-content:center";
+  const card = document.createElement("div");
+  card.style.cssText = `background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:${minWidth}px;max-height:80vh;overflow:auto;display:flex;flex-direction:column;gap:10px`;
+  const title = document.createElement("strong"); title.textContent = titleText; title.style.fontSize = "15px";
+  const msg = document.createElement("div"); msg.className = "meta";
+  card.append(title); ov.append(card);
+  ov.addEventListener("pointerdown", (e) => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  return { ov, card, msg };
+}
+
+/** Self-service password change (available to any signed-in user). */
+function passwordModal() {
+  const { ov, card, msg } = modalShell("Change password");
+  const cur = document.createElement("input"); cur.type = "password"; cur.placeholder = "current password"; cur.className = "portal-filter";
+  const nw = document.createElement("input"); nw.type = "password"; nw.placeholder = "new password (min 8)"; nw.className = "portal-filter";
+  msg.style.color = "#e2554a";
+  const row = document.createElement("div"); row.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
+  const cancel = document.createElement("button"); cancel.className = "tool-btn"; cancel.textContent = "Cancel"; cancel.onclick = () => ov.remove();
+  const go = document.createElement("button"); go.className = "file-btn"; go.textContent = "Update";
+  go.onclick = async () => {
+    if (nw.value.length < 8) { msg.textContent = "new password must be at least 8 characters"; return; }
+    try { await api.changePassword(cur.value, nw.value); ov.remove(); toast("Password updated", "info"); }
+    catch { msg.textContent = "current password is incorrect"; }
+  };
+  row.append(cancel, go); card.append(cur, nw, msg, row); cur.focus();
+}
+
+/** Admin user management: create accounts, toggle role/active, reset passwords. */
+function adminModal() {
+  const { card, msg } = modalShell("Manage users", 460);
+  const list = document.createElement("div"); list.style.cssText = "display:flex;flex-direction:column;gap:6px";
+  msg.style.color = "#e2554a";
+
+  const render = async () => {
+    list.textContent = "";
+    let users: import("./api/client").AccountUser[] = [];
+    try { users = await api.listUsers(); } catch { msg.textContent = "could not load users"; return; }
+    for (const u of users) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px";
+      const nm = document.createElement("span"); nm.textContent = u.username; nm.style.cssText = "font-weight:600;min-width:90px";
+      const tags = document.createElement("span"); tags.className = "meta";
+      tags.textContent = `${u.role}${u.active ? "" : " · deactivated"}`;
+      tags.style.color = u.active ? "var(--muted)" : "#e2554a";
+      const spacer = document.createElement("span"); spacer.style.flex = "1";
+      const act = (label: string, fn: () => Promise<unknown>) => {
+        const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = label;
+        b.onclick = async () => { try { await fn(); await render(); } catch { msg.textContent = `action failed for ${u.username}`; } };
+        return b;
+      };
+      const roleBtn = act(u.role === "admin" ? "Make user" : "Make admin",
+        () => api.updateUser(u.username, { role: u.role === "admin" ? "user" : "admin" }));
+      const activeBtn = act(u.active ? "Deactivate" : "Reactivate",
+        () => api.updateUser(u.username, { active: !u.active }));
+      const pwBtn = act("Reset password", async () => {
+        const np = prompt(`New password for ${u.username} (min 8):`);
+        if (np == null) return;
+        if (np.length < 8) { msg.textContent = "password must be at least 8 characters"; return; }
+        await api.resetUserPassword(u.username, np);
+        toast(`Password reset for ${u.username}`, "info");
+      });
+      row.append(nm, tags, spacer, roleBtn, activeBtn, pwBtn);
+      list.append(row);
+    }
+  };
+
+  // create-user form
+  const form = document.createElement("div"); form.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center";
+  const nu = document.createElement("input"); nu.placeholder = "new username"; nu.className = "portal-filter"; nu.style.flex = "1";
+  const np = document.createElement("input"); np.type = "password"; np.placeholder = "password (min 8)"; np.className = "portal-filter"; np.style.flex = "1";
+  const nr = document.createElement("select"); nr.className = "portal-filter";
+  nr.innerHTML = '<option value="user">user</option><option value="admin">admin</option>';
+  const add = document.createElement("button"); add.className = "file-btn"; add.textContent = "Add";
+  add.onclick = async () => {
+    msg.textContent = "";
+    if (!nu.value.trim() || np.value.length < 8) { msg.textContent = "username + password (min 8) required"; return; }
+    try {
+      await api.createUser(nu.value.trim(), np.value, nr.value as "admin" | "user");
+      nu.value = ""; np.value = ""; await render();
+    } catch { msg.textContent = "could not create user (name may be taken)"; }
+  };
+  form.append(nu, np, nr, add);
+
+  card.append(list, document.createElement("hr"), form, msg);
+  void render();
 }
 
 // live notification badge on the Construction workspace tab (SSE)

@@ -24,12 +24,24 @@ RBAC_ON = os.environ.get("AEC_RBAC") == "1"
 API_KEY = os.environ.get("AEC_API_KEY")
 
 
+def _resolve_active(db: Session, sub: str) -> str:
+    """A token/cookie resolved to user `sub`; reject if the account was deactivated so that
+    revoking access takes effect immediately, not only after the 7-day token expiry."""
+    from .models import User
+    u = db.get(User, sub)
+    if u is not None and u.active is False:
+        raise HTTPException(status_code=401, detail="account deactivated")
+    return sub
+
+
 def current_user(x_user: str | None = Header(default=None),
                  authorization: str | None = Header(default=None),
-                 aec_token: str | None = Cookie(default=None)) -> str:
+                 aec_token: str | None = Cookie(default=None),
+                 db: Session = Depends(get_db)) -> str:
     """Identify the caller: a signed bearer token (real auth) → its user; the AEC_API_KEY
     bearer → 'api-key' (admin); the aec_token cookie (for SSE / direct-download links that
-    can't set an Authorization header); otherwise the dev X-User header. They coexist."""
+    can't set an Authorization header); otherwise the dev X-User header. They coexist.
+    Token/cookie identities are checked against the account's active flag."""
     if authorization and authorization.startswith("Bearer "):
         token = authorization[len("Bearer "):]
         if API_KEY and token == API_KEY:
@@ -37,12 +49,12 @@ def current_user(x_user: str | None = Header(default=None),
         from . import auth
         sub = auth.verify_token(token)
         if sub:
-            return sub
+            return _resolve_active(db, sub)
     if aec_token:
         from . import auth
         sub = auth.verify_token(aec_token)
         if sub:
-            return sub
+            return _resolve_active(db, sub)
     return x_user or "dev"
 
 
