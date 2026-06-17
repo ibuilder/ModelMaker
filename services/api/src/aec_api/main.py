@@ -12,8 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import metrics
 from .db import init_db
-from .routers import (analysis, auth, authoring, bim, convert, cost, dashboard, drawings,
-                      exports, modules, proforma, properties, schedule)
+from .routers import (analysis, auth, authoring, bim, connections, convert, cost, dashboard,
+                      drawings, exports, modules, proforma, properties, schedule)
 
 _access_log = logging.getLogger("aec.access")
 
@@ -51,6 +51,7 @@ app.include_router(dashboard.router, tags=["dashboard"])
 app.include_router(proforma.router, tags=["proforma"])
 app.include_router(convert.router, tags=["convert"])
 app.include_router(auth.router, tags=["auth"])
+app.include_router(connections.router, tags=["connections"])
 
 
 @app.middleware("http")

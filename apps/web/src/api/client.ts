@@ -20,6 +20,13 @@ export interface IntegrationKey {
 }
 export interface IntegrationGroup { group: string; keys: IntegrationKey[] }
 
+/** A registered data-source connection (local DB / Postgres / Supabase / Procore). */
+export interface ConnectionItem {
+  id: string; name: string; type: string; builtin?: boolean;
+  config: Record<string, unknown>;
+  status?: { ok: boolean; detail: string };
+}
+
 /** A user's membership of one project: capability role + optional workflow party + company. */
 export interface ProjectMember {
   user: string;
@@ -227,6 +234,27 @@ export class ApiClient {
   saveIntegrations(values: Record<string, string>) {
     return this.json<{ groups: IntegrationGroup[] }>(
       "/settings/integrations", { method: "PUT", body: JSON.stringify({ values }) });
+  }
+
+  // --- data-source connections (admin) -----------------------------------
+  connections() {
+    return this.json<{ types: string[]; connections: ConnectionItem[] }>("/connections");
+  }
+  createConnection(name: string, type: string, config: Record<string, unknown>) {
+    return this.json<ConnectionItem>("/connections", { method: "POST", body: JSON.stringify({ name, type, config }) });
+  }
+  updateConnection(id: string, name: string, type: string, config: Record<string, unknown>) {
+    return this.json<ConnectionItem>(`/connections/${id}`, { method: "PUT", body: JSON.stringify({ name, type, config }) });
+  }
+  deleteConnection(id: string) {
+    return this.json<{ ok: boolean }>(`/connections/${id}`, { method: "DELETE" });
+  }
+  testConnectionConfig(type: string, config: Record<string, unknown>) {
+    return this.json<{ ok: boolean; detail: string }>("/connections/test", { method: "POST", body: JSON.stringify({ type, config }) });
+  }
+  testConnection(id: string) {
+    return this.json<{ status: { ok: boolean; detail: string }; info: Record<string, unknown> }>(
+      `/connections/${id}/test`, { method: "POST" });
   }
   login(username: string, password: string) {
     return this.json<{ token: string; username: string; role: string }>(

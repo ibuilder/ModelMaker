@@ -221,3 +221,14 @@ class AppSetting(Base):
     key: Mapped[str] = mapped_column(String, primary_key=True)
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class Connection(Base):
+    """An admin-registered data-source connection (postgres / supabase / procore). Secrets in
+    `config` (DSN password, access token) are masked on read. See connectors."""
+    __tablename__ = "connections"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    type: Mapped[str] = mapped_column(String, nullable=False)        # postgres | supabase | procore
+    config: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # {dsn} or {access_token}
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

@@ -404,6 +404,7 @@ function accountMenu(anchor: HTMLElement, role: string | null) {
   };
   if (role === "admin") menu.append(item("Manage users…", adminModal));
   if (role === "admin") menu.append(item("Audit log…", auditModal));
+  if (role === "admin") menu.append(item("Data connections…", connectionsModal));
   if (isProjectAdmin && projectId) menu.append(item("Project members…", () => membersModal(projectId!)));
   menu.append(item("Settings…", settingsModal));
   menu.append(item("Change password…", passwordModal));
@@ -580,6 +581,73 @@ function settingsModal() {
   }).catch(() => { body.textContent = "Sign in as an admin to configure API keys (AI, email, SSO)."; });
 }
 
+/** Data-source connections (admin): the local app DB + external Postgres/Supabase/Procore. */
+function connectionsModal() {
+  const { card, msg } = modalShell("Data connections", 560);
+  msg.style.color = "#e2554a";
+  const list = document.createElement("div"); list.style.cssText = "display:flex;flex-direction:column;gap:8px";
+  card.appendChild(list);
+
+  const TYPE_FIELDS: Record<string, { key: string; label: string; secret?: boolean; placeholder?: string }[]> = {
+    postgres: [{ key: "dsn", label: "Connection string", secret: true, placeholder: "postgresql://user:pass@host:5432/db" }],
+    supabase: [{ key: "dsn", label: "Supabase DB URL", secret: true, placeholder: "postgresql://postgres:pass@db.xxx.supabase.co:5432/postgres" }],
+    procore: [{ key: "access_token", label: "Access token", secret: true, placeholder: "Procore OAuth access token" }],
+  };
+
+  const render = async () => {
+    list.textContent = "";
+    let data: { types: string[]; connections: import("./api/client").ConnectionItem[] };
+    try { data = await api.connections(); } catch { msg.textContent = "sign in as an admin to manage connections"; return; }
+    for (const cx of data.connections) {
+      const row = document.createElement("div");
+      row.style.cssText = "border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap";
+      const dot = document.createElement("span"); dot.className = "conn-dot";
+      const badge = (ok?: boolean) => { dot.style.background = ok === undefined ? "#9aa0a6" : ok ? "#33d17a" : "#e2554a"; };
+      badge(cx.status?.ok);
+      const nm = document.createElement("span"); nm.innerHTML = `<b>${cx.name}</b> <span class="meta">${cx.type}${cx.builtin ? " · built-in" : ""}</span>`;
+      const detail = document.createElement("span"); detail.className = "meta"; detail.style.cssText = "flex:1;min-width:140px;font-size:11px";
+      detail.textContent = cx.status?.detail ?? (cx.builtin ? "" : "not tested");
+      const act = (label: string, fn: () => Promise<unknown>) => { const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = label; b.onclick = async () => { try { await fn(); } catch { msg.textContent = `action failed`; } }; return b; };
+      row.append(dot, nm, detail);
+      if (!cx.builtin) {
+        row.append(
+          act("Test", async () => { detail.textContent = "testing…"; const r = await api.testConnection(cx.id); badge(r.status.ok); detail.textContent = r.status.detail + (r.info.project_count ? ` · ${r.info.project_count} projects` : ""); }),
+          act("Delete", async () => { if (confirm(`Delete connection “${cx.name}”?`)) { await api.deleteConnection(cx.id); await render(); } }));
+      }
+      list.appendChild(row);
+    }
+    // --- add form ---
+    const form = document.createElement("div"); form.style.cssText = "border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:6px";
+    form.innerHTML = `<div class="meta" style="font-weight:600;color:var(--text);margin-bottom:6px">Add connection</div>`;
+    const nu = document.createElement("input"); nu.placeholder = "name"; nu.className = "portal-filter"; nu.style.cssText = "width:100%;margin-bottom:6px";
+    const ty = document.createElement("select"); ty.className = "portal-filter"; ty.style.cssText = "width:100%;margin-bottom:6px";
+    for (const t of ["postgres", "supabase", "procore"]) { const o = document.createElement("option"); o.value = o.textContent = t; ty.appendChild(o); }
+    const fields = document.createElement("div");
+    const inputs: Record<string, HTMLInputElement> = {};
+    const renderFields = () => {
+      fields.textContent = ""; for (const k of Object.keys(inputs)) delete inputs[k];
+      for (const f of TYPE_FIELDS[ty.value] || []) {
+        const inp = document.createElement("input"); inp.className = "portal-filter"; inp.style.cssText = "width:100%;margin-bottom:6px";
+        inp.placeholder = f.placeholder || f.label; if (f.secret) inp.type = "password";
+        inputs[f.key] = inp; fields.appendChild(inp);
+      }
+    };
+    ty.onchange = renderFields; renderFields();
+    const cfg = () => Object.fromEntries(Object.entries(inputs).map(([k, i]) => [k, i.value]));
+    const bar = document.createElement("div"); bar.style.cssText = "display:flex;gap:6px";
+    const testBtn = document.createElement("button"); testBtn.className = "tool-btn"; testBtn.textContent = "Test";
+    const testOut = document.createElement("span"); testOut.className = "meta"; testOut.style.fontSize = "11px";
+    testBtn.onclick = async () => { testOut.textContent = "testing…"; try { const r = await api.testConnectionConfig(ty.value, cfg()); testOut.style.color = r.ok ? "#33d17a" : "#e2554a"; testOut.textContent = r.detail; } catch { testOut.textContent = "test failed"; } };
+    const saveBtn = document.createElement("button"); saveBtn.className = "file-btn"; saveBtn.textContent = "Add";
+    saveBtn.onclick = async () => { msg.textContent = ""; if (!nu.value.trim()) { msg.textContent = "name required"; return; } try { await api.createConnection(nu.value.trim(), ty.value, cfg()); nu.value = ""; renderFields(); await render(); } catch { msg.textContent = "could not add connection"; } };
+    bar.append(testBtn, saveBtn, testOut);
+    form.append(nu, ty, fields, bar);
+    list.appendChild(form);
+  };
+  card.appendChild(msg);
+  void render();
+}
+
 /** Project-member management (project admins): grant/change role + party, set company, remove.
  * Complements the global "Manage users" panel — that creates accounts; this assigns them to a
  * project with a capability role (viewer/reviewer/editor/admin) and a workflow party. */
@@ -752,6 +820,10 @@ async function startup() {
   if (projectId) connectNotifications();
   void applyCapabilities();
   if (!demo) {
+    const conn = document.createElement("button");
+    conn.className = "tool-btn"; conn.style.marginLeft = "6px"; conn.textContent = "🗄"; conn.title = "Data connections";
+    conn.onclick = connectionsModal;
+    toolbar.insertBefore(conn, statusEl);
     const gear = document.createElement("button");
     gear.className = "tool-btn"; gear.style.marginLeft = "6px"; gear.textContent = "⚙"; gear.title = "Settings";
     gear.onclick = settingsModal;
