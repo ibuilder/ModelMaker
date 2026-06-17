@@ -97,6 +97,18 @@ with TestClient(app) as c:
     # a garbage token is rejected
     assert c.post("/auth/reset", json={"token": "not.a.token", "new": "whatever8"}).status_code == 403
 
+    # --- audit log: admin actions are recorded + readable ----------------------
+    assert c.get("/audit", headers=BEARER(bob_tok)).status_code == 403   # non-admin can't read
+    audit = c.get("/audit", headers=BEARER(admin_tok)).json()
+    actions = {a["action"] for a in audit}
+    assert {"user.create", "user.update", "user.password_reset"} <= actions, actions
+    # newest-first ordering + actor recorded
+    assert all(a["actor"] == "admin" for a in audit if a["action"].startswith("user."))
+    create_rows = c.get("/audit", params={"action": "user.create"}, headers=BEARER(admin_tok)).json()
+    assert create_rows and all(a["action"] == "user.create" for a in create_rows)
+    assert any(a["detail"].get("username") == "bob" for a in create_rows)
+    assert c.get("/audit", params={"since": "not-a-date"}, headers=BEARER(admin_tok)).status_code == 400
+
     # --- last-admin guard ------------------------------------------------------
     assert c.patch("/auth/users/admin", json={"active": False}, headers=BEARER(admin_tok)).status_code == 400
     assert c.patch("/auth/users/admin", json={"role": "user"}, headers=BEARER(admin_tok)).status_code == 400

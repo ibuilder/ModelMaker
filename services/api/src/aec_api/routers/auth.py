@@ -3,13 +3,15 @@ RBAC layer accepts as identity (see rbac.current_user). The first registered use
 as admin; after that, registering others requires an admin token."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Response
+from datetime import datetime
+
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from .. import auth
+from .. import audit, auth
 from ..db import get_db
-from ..models import User
+from ..models import AuditLog, User
 from ..rbac import current_user
 
 router = APIRouter()
@@ -118,7 +120,7 @@ def list_users(db: Session = Depends(get_db), _: User = Depends(require_admin_us
 @router.post("/auth/users", status_code=201)
 def create_user(username: str = Body(..., embed=True), password: str = Body(..., embed=True),
                 role: str = Body("user", embed=True), db: Session = Depends(get_db),
-                _: User = Depends(require_admin_user)):
+                admin: User = Depends(require_admin_user)):
     """Admin-created account (the open path after bootstrap; /auth/register stays for the
     very first user)."""
     if role not in ("admin", "user"):
@@ -128,6 +130,8 @@ def create_user(username: str = Body(..., embed=True), password: str = Body(...,
     if db.get(User, username):
         raise HTTPException(409, "username already taken")
     db.add(User(username=username, password_hash=auth.hash_password(password), role=role))
+    audit.record(db, action="user.create", actor=admin.username, method="POST",
+                 path="/auth/users", detail={"username": username, "role": role})
     db.commit()
     return _public(db.get(User, username))
 
@@ -149,13 +153,16 @@ def update_user(username: str, body: UserPatch, db: Session = Depends(get_db),
         u.role = body.role
     if body.active is not None:
         u.active = body.active
+    audit.record(db, action="user.update", actor=admin.username, method="PATCH",
+                 path=f"/auth/users/{username}",
+                 detail={"username": username, "role": body.role, "active": body.active})
     db.commit()
     return _public(u)
 
 
 @router.post("/auth/users/{username}/password")
 def reset_password(username: str, password: str = Body(..., embed=True),
-                   db: Session = Depends(get_db), _: User = Depends(require_admin_user)):
+                   db: Session = Depends(get_db), admin: User = Depends(require_admin_user)):
     """Admin reset of another user's password."""
     u = db.get(User, username)
     if not u:
@@ -163,6 +170,8 @@ def reset_password(username: str, password: str = Body(..., embed=True),
     if len(password) < 8:
         raise HTTPException(400, "password must be at least 8 characters")
     u.password_hash = auth.hash_password(password)
+    audit.record(db, action="user.password_reset", actor=admin.username, method="POST",
+                 path=f"/auth/users/{username}/password", detail={"username": username})
     db.commit()
     return {"ok": True}
 
@@ -178,6 +187,28 @@ def issue_reset_token(username: str, db: Session = Depends(get_db),
         raise HTTPException(404, "no such user")
     return {"username": username, "reset_token": auth.create_reset_token(username, u.password_hash),
             "expires_in": 3600}
+
+
+@router.get("/audit")
+def audit_log(action: str | None = Query(None), actor: str | None = Query(None),
+              since: str | None = Query(None), limit: int = Query(100, ge=1, le=500),
+              offset: int = Query(0, ge=0), db: Session = Depends(get_db),
+              _: User = Depends(require_admin_user)):
+    """Admin read of the audit trail, newest first. Filter by action/actor substring and a
+    `since` ISO timestamp."""
+    q = db.query(AuditLog).order_by(AuditLog.ts.desc())
+    if action:
+        q = q.filter(AuditLog.action.contains(action))
+    if actor:
+        q = q.filter(AuditLog.actor.contains(actor))
+    if since:
+        try:
+            q = q.filter(AuditLog.ts >= datetime.fromisoformat(since))
+        except ValueError:
+            raise HTTPException(400, "since must be an ISO timestamp")
+    rows = q.offset(offset).limit(limit).all()
+    return [{"id": r.id, "ts": r.ts, "actor": r.actor, "action": r.action, "method": r.method,
+             "path": r.path, "topic_id": r.topic_id, "detail": r.detail} for r in rows]
 
 
 @router.post("/auth/reset")

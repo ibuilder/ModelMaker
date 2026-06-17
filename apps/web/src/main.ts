@@ -383,6 +383,7 @@ function accountMenu(anchor: HTMLElement, role: string | null) {
     return b;
   };
   if (role === "admin") menu.append(item("Manage users…", adminModal));
+  if (role === "admin") menu.append(item("Audit log…", auditModal));
   if (isProjectAdmin && projectId) menu.append(item("Project members…", () => membersModal(projectId!)));
   menu.append(item("Change password…", passwordModal));
   menu.append(item("Sign out", async () => { await api.logout(); api.setToken(""); location.reload(); }));
@@ -552,6 +553,41 @@ function membersModal(pid: string) {
   const hint = document.createElement("div"); hint.className = "meta";
   hint.textContent = "Role = capability (viewer→admin). Party = workflow side (GC, Owner, …). The account must already exist (Manage users).";
   card.append(list, document.createElement("hr"), form, hint, msg);
+  void render();
+}
+
+/** Read-only audit-trail viewer (global admins): filter by action/actor/since, newest first. */
+function auditModal() {
+  const { card, msg } = modalShell("Audit log", 620);
+  msg.style.color = "#e2554a";
+  const filters = document.createElement("div"); filters.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center";
+  const fAction = document.createElement("input"); fAction.placeholder = "action contains…"; fAction.className = "portal-filter";
+  const fActor = document.createElement("input"); fActor.placeholder = "actor contains…"; fActor.className = "portal-filter";
+  const fSince = document.createElement("input"); fSince.type = "date"; fSince.className = "portal-filter"; fSince.title = "since (date)";
+  const apply = document.createElement("button"); apply.className = "tool-btn"; apply.textContent = "Filter";
+  filters.append(fAction, fActor, fSince, apply);
+  const table = document.createElement("div"); table.style.cssText = "max-height:55vh;overflow:auto;margin-top:8px";
+
+  const render = async () => {
+    table.innerHTML = '<div class="meta">loading…</div>'; msg.textContent = "";
+    let rows: import("./api/client").AuditEntry[] = [];
+    try {
+      rows = await api.auditLog({ action: fAction.value.trim() || undefined, actor: fActor.value.trim() || undefined,
+        since: fSince.value || undefined, limit: 200 });
+    } catch { table.innerHTML = ""; msg.textContent = "could not load audit log (admin only)"; return; }
+    if (!rows.length) { table.innerHTML = '<div class="meta">no matching entries</div>'; return; }
+    const cell = (s: string) => `<td style="padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap">${s}</td>`;
+    const esc = (s: string) => s.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;"));
+    table.innerHTML = `<table class="sens-table" style="width:100%;font-size:12px"><tr>` +
+      `<th style="text-align:left">When</th><th style="text-align:left">Actor</th><th style="text-align:left">Action</th><th style="text-align:left">Detail</th></tr>` +
+      rows.map((r) => `<tr>` +
+        cell(new Date(r.ts).toLocaleString()) + cell(esc(r.actor ?? "—")) + cell(esc(r.action)) +
+        `<td style="padding:4px 8px;border-bottom:1px solid var(--line);color:var(--muted)">${esc(r.detail ? JSON.stringify(r.detail) : (r.path ?? ""))}</td>` +
+        `</tr>`).join("") + `</table>`;
+  };
+  apply.onclick = () => void render();
+  fAction.onkeydown = fActor.onkeydown = (e) => { if (e.key === "Enter") void render(); };
+  card.append(filters, table, msg);
   void render();
 }
 

@@ -22,6 +22,18 @@ export interface ProjectMember {
   company: string | null;
 }
 
+/** One row of the server audit trail (admin-readable). */
+export interface AuditEntry {
+  id: string;
+  ts: string;
+  actor: string | null;
+  action: string;
+  method: string | null;
+  path: string | null;
+  topic_id: string | null;
+  detail: Record<string, unknown> | null;
+}
+
 /** A global account (identity). Per-project authorization lives in project members. */
 export interface AccountUser {
   username: string;
@@ -218,6 +230,12 @@ export class ApiClient {
   // --- admin: user management --------------------------------------------
   listUsers() {
     return this.json<AccountUser[]>("/auth/users");
+  }
+  /** Admin: read the audit trail (newest first), optionally filtered. */
+  auditLog(params: { action?: string; actor?: string; since?: string; limit?: number } = {}) {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v) qs.set(k, String(v));
+    return this.json<AuditEntry[]>(`/audit${qs.toString() ? `?${qs}` : ""}`);
   }
   createUser(username: string, password: string, role: "admin" | "user" = "user") {
     return this.json<AccountUser>(
