@@ -15,6 +15,8 @@ const coiInject: Plugin = {
 
 export default defineConfig({
   base: BASE,
+  // expose the Pages/demo flag to the client (no backend → skip API probes)
+  define: { "import.meta.env.VITE_PAGES": JSON.stringify(PAGES) },
   plugins: PAGES ? [coiInject] : [
     VitePWA({
       registerType: "autoUpdate",

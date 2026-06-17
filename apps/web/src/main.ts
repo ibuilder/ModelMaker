@@ -650,7 +650,9 @@ window.addEventListener("keydown", (e) => {
 
 // ---- startup ----------------------------------------------------------------
 async function startup() {
-  connected = await api.health();
+  // viewer-only Pages/demo build has no backend — skip API probes (avoids /api/* 404s)
+  const demo = !!import.meta.env.VITE_PAGES;
+  connected = demo ? false : await api.health();
   let projects: { id: string; name: string }[] = [];
   if (connected) {
     projects = await api.projects();
@@ -661,11 +663,12 @@ async function startup() {
     setStatus(projectId ? `connected • ${projectName}` : "connected • no project");
     if (projects.length) buildProjectPicker(projects);
   } else {
-    setStatus("offline — open a .frag to view (API not reachable)");
+    setStatus(demo ? "demo — pick a sample from Open ▾ to view"
+                   : "offline — open a .frag to view (API not reachable)");
   }
   if (projectId) connectNotifications();
   void applyCapabilities();
-  void buildAuthControl();
+  if (!demo) void buildAuthControl();   // no accounts without a backend
 }
 
 function initNav() {
