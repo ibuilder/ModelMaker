@@ -1,4 +1,4 @@
-import * as OBC from "@thatopen/components";
+import type * as OBC from "@thatopen/components";
 
 /** ModelIdMap = Record<modelId, Set<localId>>. Small helpers for building selection sets
  *  that the Hider / Highlighter / Classifier consume. */

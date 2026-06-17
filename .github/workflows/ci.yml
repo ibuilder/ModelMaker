@@ -31,7 +31,7 @@ jobs:
         run: python services/api/run_tests.py
 
   web-build:
-    name: Web typecheck + build
+    name: Web typecheck + test + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +45,9 @@ jobs:
       # this is an npm workspace (root lock); install at the root, then build the web workspace
       - name: Install
         run: npm ci
+
+      - name: Unit tests (Vitest)
+        run: npm run test --workspace apps/web
 
       - name: Typecheck + build
         run: npm run build --workspace apps/web
