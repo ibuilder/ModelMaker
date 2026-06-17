@@ -73,7 +73,10 @@ real structural + architectural discipline frags loaded together. `POST /project
 - ~~Room tags~~ ✅ done — `space_tags()` labels each `IfcSpace` with name + net floor area at
   its centroid on plans (`rooms=True`). Verified on an authored 2-room model (Office 20 m²,
   Meeting 12 m²); applies to any model carrying `IfcSpace`.
-- **Leaders/callouts**: extend room tags with leader lines + element callouts.
+- ~~Leaders/callouts~~ ✅ done — `element_callouts()` tags taggable elements (doors/windows by
+  default, Tag→Name) at their plan centroid; `plan_drawing_svg` draws a leader line from a boxed
+  label that splays radially outward from the plan centre. `plan.svg?callouts=true` + a "Plan +
+  callouts" button. Verified: 27 door/window callouts on the sample house.
 - ~~Grid on section/elevation sheet cells~~ ✅ done — composed-sheet cells are all annotated:
   plans (grid + dims), sections (grid + level datums), elevations (grid + levels + HLR).
 - **Federation UI**: a discipline picker to load several `.frag` and toggle by model.

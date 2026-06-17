@@ -71,8 +71,10 @@ A development-finance engine for the owner/developer side (the **Finance** works
 - **Sources & uses** with construction-loan **interest-reserve circularity** solved to a fixed point.
 - **S-curve cost draws**, **XIRR / NPV / equity multiple / yield-on-cost**, and a **JV waterfall**
   (pref + promote tiers, American/European, clawback) with nested IRR-hurdle solving.
-- **Sensitivity** two-variable data tables; **actuals/draws bridge** that re-forecasts IRR and
-  generates AIA G702/G703 pay apps from the *same* cost tree the deal was underwritten on.
+- **Debt sizing** to the lesser of LTC / LTV / DSCR / debt-yield; **sensitivity** two-variable
+  data tables and **Monte Carlo** risk (P5–P95, P[IRR ≥ target], histogram).
+- **Actuals/draws bridge** that re-forecasts IRR and generates AIA G702/G703 pay apps from the
+  *same* cost tree the deal was underwritten on.
 - **Multi-deal portfolio** roll-up (true XIRR across combined cash flows) and **LP-shared**
   read-only scenario access.
 
@@ -100,7 +102,24 @@ A development-finance engine for the owner/developer side (the **Finance** works
   direct-download links (which can't set a header) authenticate same-origin via the `/api`
   proxy; `/auth/logout` clears it. *(Dev cross-origin `:5173→:8000` uses the header path;
   the cookie applies to the deployed same-origin stack.)*
-- **CI gate** — `services/api/run_tests.py` runs all suites; GitHub Actions runs it + the web build.
+- **Identity & RBAC management** — admin user management (create / list / set role / activate /
+  deactivate / reset password) with a last-active-admin guard; **self-service password reset**
+  via an admin-issued single-use token (no email infra); deactivation invalidates existing
+  tokens immediately. The web UI **gates per project role** — authoring tools, the authoring
+  panel, "+ RFI", and the portal "+ New" hide above the caller's role (the API still enforces).
+- **Risk + debt sizing (Proforma)** — **Monte Carlo** simulation (sample drivers → P5–P95,
+  P[IRR ≥ target], histogram) alongside the deterministic sensitivity table, and debt sized to
+  the lesser of **LTC / LTV / DSCR / debt-yield** constraints.
+- **Drawings** — element **callouts with leader lines** on plans (doors/windows by default),
+  complementing room tags (`plan.svg?callouts=true`).
+- **Ops & observability** — `/metrics` (Prometheus: request counts/latencies by route template,
+  in-flight, uptime) + structured JSON access logs; **email digests** of per-member work queues
+  (stdlib SMTP, no-op-but-logged when unconfigured); a **backup/restore runbook** + scripts
+  (`scripts/backup.sh` / `restore.sh`: pg_dump + MinIO/IFC volumes).
+- **Desktop release CI** — tag-driven GitHub Actions builds signed Win/macOS/Linux Tauri
+  installers (`.github/workflows/desktop.yml`); a viewer-only **GitHub Pages** demo deploys from
+  `pages.yml`.
+- **CI gate** — `services/api/run_tests.py` runs all suites (8/8); GitHub Actions runs it + the web build.
 
 ## Gallery
 
