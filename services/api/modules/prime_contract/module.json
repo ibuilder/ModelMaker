@@ -36,6 +36,14 @@
       "source_module": "owner_invoice",
       "source_field": "amount",
       "op": "sum"
+    },
+    {
+      "name": "sov_value",
+      "label": "SOV value ($)",
+      "type": "rollup",
+      "source_module": "sov",
+      "source_field": "scheduled_value",
+      "op": "sum"
     }
   ],
   "workflow": {

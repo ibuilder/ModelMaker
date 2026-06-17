@@ -51,6 +51,12 @@
       "label": "Transmittal",
       "type": "reference",
       "module": "transmittal"
+    },
+    {
+      "name": "drawing",
+      "label": "Drawing / detail",
+      "type": "reference",
+      "module": "drawing"
     }
   ],
   "workflow": {

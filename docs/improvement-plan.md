@@ -68,6 +68,23 @@ We match or lead on: open/IFC-native, offline viewer, in-browser authoring round
   otherwise. Wired into "+ RFI from selection" (prefills subject + question). Closes the
   headline competitive gap (Procore Draft-RFI parity).
 
+## Module relationships (data-model wiring)
+Audited all 68 modules' relation graph and tied the necessary missing links (refs 31→44,
+rollups 10→16):
+- **Cost coding consistency** — `budget`/`sov`/`timesheet` `cost_code` made a *reference* to the
+  `cost_code` module (matching `commitment`/`direct_cost`); `cost_code` now rolls up
+  budget + committed + direct + labor hours per code.
+- **Change order → contract** — `cor → subcontract`; `subcontract` rolls up linked CO value.
+- **Contract → SOV** — `sov → prime_contract`; `prime_contract` rolls up SOV value.
+- **Meetings → action items** — `action_item → meeting`; `meeting` rolls up the action count.
+- **Engineering** — `rfi → drawing`, `submittal → drawing`.
+- **Field** — `delivery → commitment (PO)`, `incident → daily_report`, `equipment_log → equipment_rate`.
+- **Closeout** — `warranty → asset_register`, `commissioning → asset_register`; `asset_register`
+  rolls up warranty count.
+All config-driven (module.json) — the form picker, related panel, and rollups pick them up with
+no engine/UI changes. Verified: `test_modules` asserts the meeting↞action, cor↠subcontract, and
+rfi→drawing resolutions.
+
 ## Next up
 RFI revisions (P2 — revise a closed RFI with a tracked revision chain, Procore parity). Then
 the P2 program (real-time presence, doc/version mgmt, mobile field capture, report builder).

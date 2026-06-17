@@ -10,8 +10,8 @@
     {
       "name": "cost_code",
       "label": "Cost Code",
-      "type": "text",
-      "required": true
+      "type": "reference",
+      "module": "cost_code"
     },
     {
       "name": "description",

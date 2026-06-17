@@ -64,6 +64,12 @@
         "Possible",
         "Yes"
       ]
+    },
+    {
+      "name": "drawing",
+      "label": "Drawing",
+      "type": "reference",
+      "module": "drawing"
     }
   ],
   "workflow": {

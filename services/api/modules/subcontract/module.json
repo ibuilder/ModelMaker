@@ -28,6 +28,14 @@
       "label": "Awarded from bid",
       "type": "reference",
       "module": "bid_submission"
+    },
+    {
+      "name": "change_orders",
+      "label": "Change orders ($)",
+      "type": "rollup",
+      "source_module": "cor",
+      "source_field": "amount",
+      "op": "sum"
     }
   ],
   "workflow": {

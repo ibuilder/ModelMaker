@@ -22,6 +22,12 @@
       "name": "supplier",
       "label": "Supplier",
       "type": "text"
+    },
+    {
+      "name": "commitment",
+      "label": "Purchase order",
+      "type": "reference",
+      "module": "commitment"
     }
   ],
   "workflow": {

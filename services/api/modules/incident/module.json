@@ -34,6 +34,12 @@
       "label": "Related JHA",
       "type": "reference",
       "module": "jha"
+    },
+    {
+      "name": "daily_report",
+      "label": "Daily report",
+      "type": "reference",
+      "module": "daily_report"
     }
   ],
   "workflow": {

@@ -22,6 +22,12 @@
       "name": "due_date",
       "label": "Due",
       "type": "date"
+    },
+    {
+      "name": "meeting",
+      "label": "From meeting",
+      "type": "reference",
+      "module": "meeting"
     }
   ],
   "workflow": {

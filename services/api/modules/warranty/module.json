@@ -28,6 +28,12 @@
       "label": "Backed by submittal",
       "type": "reference",
       "module": "submittal"
+    },
+    {
+      "name": "asset",
+      "label": "Asset",
+      "type": "reference",
+      "module": "asset_register"
     }
   ],
   "workflow": {

@@ -22,6 +22,14 @@
       "name": "minutes",
       "label": "Minutes",
       "type": "textarea"
+    },
+    {
+      "name": "action_count",
+      "label": "# action items",
+      "type": "rollup",
+      "source_module": "action_item",
+      "source_field": "subject",
+      "op": "count"
     }
   ],
   "workflow": {

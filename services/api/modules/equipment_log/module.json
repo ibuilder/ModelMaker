@@ -28,6 +28,12 @@
       "label": "Daily report",
       "type": "reference",
       "module": "daily_report"
+    },
+    {
+      "name": "equipment_rate",
+      "label": "Equipment rate",
+      "type": "reference",
+      "module": "equipment_rate"
     }
   ],
   "workflow": {

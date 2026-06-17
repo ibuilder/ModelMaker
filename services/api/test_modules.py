@@ -107,6 +107,30 @@ with TestClient(app) as c:
     pdf = c.get(f"/projects/{pid}/modules/cor/{cor['id']}/pdf", headers=H("gc")).content
     assert pdf[:5] == b"%PDF-" and len(pdf) > 1000, len(pdf)
 
+    # ---- newly-wired cross-module relations -----------------------------------
+    # meetings → action items (reverse rollup count + related)
+    mtg = c.post(f"/projects/{pid}/modules/meeting", headers=H("gc"), json={"data": {"subject": "OAC #3"}}).json()
+    for s in ("Resolve curtain-wall detail", "Confirm long-lead steel"):
+        c.post(f"/projects/{pid}/modules/action_item", headers=H("gc"),
+               json={"data": {"subject": s, "meeting": mtg["id"]}})
+    mtg = c.get(f"/projects/{pid}/modules/meeting/{mtg['id']}", headers=H("gc")).json()
+    assert mtg["data"]["action_count"] == 2, mtg["data"]
+    rel = c.get(f"/projects/{pid}/modules/meeting/{mtg['id']}/related", headers=H("gc")).json()
+    assert any(r.get("module") == "action_item" for r in rel.get("incoming", [])), rel
+    # change orders → subcontract ($ rollup of linked CORs)
+    sub = c.post(f"/projects/{pid}/modules/subcontract", headers=H("gc"), json={"data": {"vendor": "ACME Steel"}}).json()
+    for amt in (12000, 8000):
+        c.post(f"/projects/{pid}/modules/cor", headers=H("gc"),
+               json={"data": {"subject": f"CO {amt}", "amount": amt, "subcontract": sub["id"]}})
+    sub = c.get(f"/projects/{pid}/modules/subcontract/{sub['id']}", headers=H("gc")).json()
+    assert sub["data"]["change_orders"] == 20000, sub["data"]
+    # rfi → drawing reference resolves to a clickable brief
+    dwg = c.post(f"/projects/{pid}/modules/drawing", headers=H("gc"), json={"data": {"number": "A-101"}}).json()
+    rfi2 = c.post(f"/projects/{pid}/modules/rfi", headers=H("gc"),
+                  json={"data": {"subject": "Detail at A-101", "question": "?", "drawing": dwg["id"]}}).json()
+    rfi2 = c.get(f"/projects/{pid}/modules/rfi/{rfi2['id']}", headers=H("gc")).json()
+    assert rfi2["data_refs"].get("drawing", {}).get("id") == dwg["id"], rfi2.get("data_refs")
+
     # ---- AI Draft RFI (template fallback when no ANTHROPIC_API_KEY) -----------
     d = c.post(f"/projects/{pid}/ai/draft-rfi", headers=H("gc"), json={
         "element": {"ifc_class": "IfcBeam", "name": "B-12", "storey": "Level 3"},

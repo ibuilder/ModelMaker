@@ -26,7 +26,8 @@
     {
       "name": "cost_code",
       "label": "Cost Code",
-      "type": "text"
+      "type": "reference",
+      "module": "cost_code"
     }
   ],
   "workflow": {

@@ -17,6 +17,12 @@
       "name": "status",
       "label": "Status",
       "type": "text"
+    },
+    {
+      "name": "asset",
+      "label": "Asset",
+      "type": "reference",
+      "module": "asset_register"
     }
   ],
   "workflow": {

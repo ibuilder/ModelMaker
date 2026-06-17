@@ -27,6 +27,14 @@
       "name": "warranty_expires",
       "label": "Warranty Expires",
       "type": "date"
+    },
+    {
+      "name": "warranty_count",
+      "label": "# warranties",
+      "type": "rollup",
+      "source_module": "warranty",
+      "source_field": "name",
+      "op": "count"
     }
   ],
   "workflow": {

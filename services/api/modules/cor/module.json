@@ -34,6 +34,12 @@
       "label": "Source PCO",
       "type": "reference",
       "module": "pco_request"
+    },
+    {
+      "name": "subcontract",
+      "label": "Subcontract",
+      "type": "reference",
+      "module": "subcontract"
     }
   ],
   "workflow": {

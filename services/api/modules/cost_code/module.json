@@ -33,6 +33,22 @@
       "source_module": "direct_cost",
       "source_field": "amount",
       "op": "sum"
+    },
+    {
+      "name": "budgeted",
+      "label": "Budget ($)",
+      "type": "rollup",
+      "source_module": "budget",
+      "source_field": "budget",
+      "op": "sum"
+    },
+    {
+      "name": "labor_hours",
+      "label": "Labor hours",
+      "type": "rollup",
+      "source_module": "timesheet",
+      "source_field": "hours",
+      "op": "sum"
     }
   ],
   "workflow": {
