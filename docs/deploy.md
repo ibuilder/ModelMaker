@@ -116,6 +116,14 @@ Generate `APPLE_CERTIFICATE` / `WINDOWS_CERTIFICATE` with `base64 -w0 cert.p12` 
 `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx"))` (PowerShell), and add them under
 Settings → Secrets and variables → Actions.
 
+## Observability
+`GET /metrics` exposes Prometheus text (request counts + latency summary by method/route
+template, in-flight gauge, uptime) — point a Prometheus scrape at it. Each request also emits
+a structured JSON access line on the `aec.access` logger (method/route/status/dur_ms) for log
+aggregation. Metrics are per-process; with multiple uvicorn workers use a multiprocess
+collector or scrape each worker. (Endpoint is unauthenticated — keep it on an internal network
+or front it with auth at the proxy.)
+
 ## Offline / jobsite
 web-ifc WASM + the Fragments worker are bundled into the web image; tiles serve from your own
 MinIO. No external CDN — the viewer runs fully offline.

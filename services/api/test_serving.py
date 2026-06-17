@@ -34,4 +34,15 @@ with TestClient(app) as c:
     # unsatisfiable
     assert c.get(f"/projects/{pid}/model.frag", headers={"Range": "bytes=999-"}).status_code == 416
 
-    print("SERVING OK — 200 full / 206 ranged / 416 unsatisfiable; Accept-Ranges set")
+    # --- observability: /metrics in Prometheus text format ---------------------
+    c.get("/health"); c.get("/health")          # generate some traffic on a stable route
+    m = c.get("/metrics")
+    assert m.status_code == 200 and m.headers["content-type"].startswith("text/plain")
+    body = m.text
+    assert "# TYPE http_requests_total counter" in body
+    assert 'http_requests_total{method="GET",route="/health",status="200"}' in body
+    assert "http_request_duration_seconds_sum" in body and "http_requests_in_flight" in body
+    # the matched route TEMPLATE is used, not the raw path (bounded label cardinality)
+    assert "/projects/{pid}/model.frag" in body and pid not in body
+
+    print("SERVING OK — 200 full / 206 ranged / 416 unsatisfiable; Accept-Ranges; /metrics exposed")

@@ -67,7 +67,9 @@ signing-ready); GitHub Pages viewer demo.
   with leader lines + boxed labels on plans; `plan.svg?callouts=true` + a "Plan + callouts"
   button. Verified: 27 callouts extracted from the sample house.
 - **SSO / OIDC** integration for enterprise identity (current auth is self-contained).
-- **Observability** — structured logs + metrics endpoint; tested backup/restore runbook.
+- ✅ **DONE** (metrics + logs) — **Observability.** `/metrics` (Prometheus text: request
+  counts/latencies by route template, in-flight, uptime) + structured JSON access logs
+  (`aec.access`). _Still open: a tested backup/restore runbook._
 
 ### P3 — external dependency / environment-gated
 - **Desktop installers** must be built once on a Rust machine / via the CI workflow to verify

@@ -1,15 +1,21 @@
 """FastAPI app entry (guide §7). Run: uvicorn aec_api.main:app --reload"""
 from __future__ import annotations
 
+import json
+import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import metrics
 from .db import init_db
 from .routers import (analysis, auth, authoring, bim, convert, cost, dashboard, drawings,
                       exports, modules, proforma, properties, schedule)
+
+_access_log = logging.getLogger("aec.access")
 
 
 @asynccontextmanager
@@ -47,6 +53,34 @@ app.include_router(convert.router, tags=["convert"])
 app.include_router(auth.router, tags=["auth"])
 
 
+@app.middleware("http")
+async def observe_requests(request: Request, call_next):
+    """Record metrics + a structured access-log line per request. Uses the matched route
+    template (not the raw path) so metric labels don't explode on ids."""
+    t0 = time.perf_counter()
+    metrics.inflight(1)
+    status = 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        return response
+    finally:
+        metrics.inflight(-1)
+        dur = time.perf_counter() - t0
+        route = getattr(request.scope.get("route"), "path", None) or "unmatched"
+        metrics.observe(request.method, route, status, dur)
+        _access_log.info(json.dumps({
+            "method": request.method, "route": route, "status": status,
+            "dur_ms": round(dur * 1000, 1),
+        }))
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/metrics")
+def prometheus_metrics() -> Response:
+    """Prometheus text exposition (request counts, latencies, in-flight, uptime)."""
+    return Response(metrics.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
