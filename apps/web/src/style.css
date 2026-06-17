@@ -332,3 +332,30 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
   padding: 2px; background: var(--code, #0f1012); border: 1px solid var(--line); border-radius: 6px; }
 .pf-hist .pf-bar { flex: 1; background: var(--accent, #4a8cff); border-radius: 1px 1px 0 0; opacity: .8; }
 .pf-hist .pf-bar:hover { opacity: 1; }
+
+/* ---- Drawings Set workspace (2D sheet browser) ---- */
+#ws-drawings.active { display: block; }
+#ws-drawings { overflow: hidden; }
+#panel-drawings.fullpanel { display: flex; padding: 0; overflow: hidden; }
+.dwg-wrap { display: flex; height: 100%; }
+.dwg-side { width: 240px; min-width: 240px; border-right: 1px solid var(--line); overflow: auto; padding: 12px; }
+.dwg-side .section-title { margin-bottom: 6px; }
+.dwg-group { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 10px 0 4px; }
+.dwg-item { display: block; width: 100%; text-align: left; padding: 6px 8px; margin: 2px 0; font-size: 12px;
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.dwg-item:hover { background: var(--panel2); }
+.dwg-item.active { border-color: var(--accent); background: #23304d; }
+.dwg-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.dwg-toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.dwg-name { font-weight: 600; font-size: 13px; }
+.dwg-viewport { flex: 1; position: relative; overflow: hidden; background: #e9ecef; cursor: grab; }
+.dwg-viewport.grabbing { cursor: grabbing; }
+.dwg-viewport.marking { cursor: crosshair; }
+.dwg-stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.dwg-svg { background: #fff; box-shadow: 0 2px 16px #0007; }
+.dwg-svg svg { display: block; }
+.dwg-pins { position: absolute; top: 0; left: 0; pointer-events: none; }
+.dwg-pin { position: absolute; transform: translate(-50%, -100%); width: 20px; height: 20px; border-radius: 50% 50% 50% 0;
+  background: var(--accent, #4a8cff); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  rotate: -45deg; border: 1px solid #fff; box-shadow: 0 1px 4px #0008; cursor: pointer; pointer-events: auto; }
+.dwg-pin { line-height: 1; }

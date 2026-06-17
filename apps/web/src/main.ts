@@ -1,4 +1,5 @@
 import "./style.css";
+import { DrawingsUI } from "./drawings/drawings";
 import { PortalUI } from "./portal/portal";
 import { ProformaUI } from "./proforma/proforma";
 import { ApiClient } from "./api/client";
@@ -107,13 +108,15 @@ for (const it of RAIL_ITEMS) {
 }
 
 const WORKSPACES: { key: string; label: string }[] = [
-  { key: "model", label: "Model" }, { key: "construction", label: "Construction" }, { key: "finance", label: "Finance" },
+  { key: "model", label: "Model" }, { key: "drawings", label: "Drawings" },
+  { key: "construction", label: "Construction" }, { key: "finance", label: "Finance" },
 ];
 let currentWs = "model";
 function setWorkspace(key: string) {
   currentWs = key;
   document.querySelectorAll(".ws-btn").forEach((b) => b.classList.toggle("active", (b as HTMLElement).dataset.ws === key));
   document.querySelectorAll(".workspace").forEach((w) => w.classList.toggle("active", w.id === `ws-${key}`));
+  if (key === "drawings") openDrawingsTab();
   if (key === "construction") openPortalTab();
   if (key === "finance") openProformaTab();
   if (key === "model") void ensureViewer().then((v) => v.onModelShown());   // lazy-load the 3D app
@@ -142,11 +145,11 @@ document.querySelectorAll<HTMLButtonElement>(".fintab").forEach((t) => {
 interface PersonaCfg { ws: string[] | null; rail: string[] | null; home: string; }
 const PERSONAS: Record<string, PersonaCfg> = {
   all:           { ws: null, rail: null, home: "model" },
-  developer:     { ws: ["finance", "model", "construction"], rail: ["issues", "tools", "tree"], home: "finance" },
-  gc:            { ws: ["construction", "model", "finance"], rail: ["tree", "layers", "issues", "tools"], home: "construction" },
-  architect:     { ws: ["model", "construction"], rail: ["tree", "layers", "issues", "tools"], home: "model" },
-  engineer:      { ws: ["model"], rail: ["tree", "layers", "tools", "issues"], home: "model" },
-  subcontractor: { ws: ["construction", "model"], rail: ["issues", "tools"], home: "construction" },
+  developer:     { ws: ["finance", "model", "drawings", "construction"], rail: ["issues", "tools", "tree"], home: "finance" },
+  gc:            { ws: ["construction", "model", "drawings", "finance"], rail: ["tree", "layers", "issues", "tools"], home: "construction" },
+  architect:     { ws: ["model", "drawings", "construction"], rail: ["tree", "layers", "issues", "tools"], home: "model" },
+  engineer:      { ws: ["model", "drawings"], rail: ["tree", "layers", "tools", "issues"], home: "model" },
+  subcontractor: { ws: ["construction", "model", "drawings"], rail: ["issues", "tools"], home: "construction" },
 };
 const personaSel = document.getElementById("persona") as HTMLSelectElement;
 function applyPersona(p: string, goHome = false) {
@@ -267,6 +270,9 @@ function openPortalTab() { if (portalReady) return; portalReady = true; void por
 const proforma = new ProformaUI($("panel-proforma"), api, setStatus, () => projectId);
 let proformaReady = false;
 function openProformaTab() { if (proformaReady) return; proformaReady = true; void proforma.init(); }
+
+const drawings = new DrawingsUI($("panel-drawings"), { api, projectId: () => projectId, setStatus });
+function openDrawingsTab() { void drawings.open(); }   // re-loads the register each open (cheap)
 
 async function openPortfolioTab() {
   const panel = $("panel-portfolio");
