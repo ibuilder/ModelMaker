@@ -77,5 +77,26 @@ with TestClient(app) as c:
     c.cookies.clear()
     assert c.get("/connections/local/tables").status_code == 403
 
+    # --- Procore → module sync (stubbed fetch; idempotent) ---------------------
+    from aec_api import connectors as _conn
+    _conn.procore_rfis = lambda token, ppid: [
+        {"id": 101, "number": "1", "subject": "Beam penetration", "questions": [{"body": "OK to core?"}]},
+        {"id": 102, "number": "2", "subject": "Slab edge", "body": "Confirm dimension?"}]
+    pc = c.post("/connections", headers=BEARER(tok),
+                json={"name": "Procore sync", "type": "procore", "config": {"access_token": "tok-xyz"}}).json()
+    proj = c.post("/projects", json={"name": "Sync Target"}).json()["id"]
+    s1 = c.post(f"/projects/{proj}/sync/procore", headers=BEARER(tok),
+                json={"connection_id": pc["id"], "procore_project_id": "9999"}).json()
+    assert s1["imported"] == 2 and s1["fetched"] == 2, s1
+    recs = c.get(f"/projects/{proj}/modules/rfi").json()
+    assert len(recs) == 2 and all(x["data"].get("procore_id") for x in recs), recs
+    assert any("core" in (x["data"].get("question") or "") for x in recs), recs    # mapped the question body
+    s2 = c.post(f"/projects/{proj}/sync/procore", headers=BEARER(tok),
+                json={"connection_id": pc["id"], "procore_project_id": "9999"}).json()
+    assert s2["imported"] == 0 and s2["skipped"] == 2, s2                            # idempotent
+    # a non-Procore connection can't be used for the Procore sync
+    assert c.post(f"/projects/{proj}/sync/procore", headers=BEARER(tok),
+                  json={"connection_id": "local", "procore_project_id": "1"}).status_code in (400, 404)
+
     print("CONNECTIONS OK — local status, masked secrets, test, CRUD, validation, "
-          "read-only browse/query (SELECT-only guard)")
+          "read-only browse/query (SELECT-only guard), Procore->rfi sync (idempotent)")

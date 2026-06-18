@@ -71,6 +71,64 @@ def _template_draft(element: dict[str, Any], note: str | None) -> dict[str, Any]
             "discipline": disc, "suggested_priority": "normal", "source": "template"}
 
 
+def _template_risks(kpis: dict[str, Any], cost: dict[str, Any] | None) -> dict[str, Any]:
+    """Deterministic rule-based risk read from the dashboard KPIs (no LLM needed)."""
+    risks: list[dict[str, str]] = []
+    over = (cost or {}).get("projected_over_under")
+    if isinstance(over, (int, float)) and over > 0:
+        risks.append({"level": "high", "text": f"Forecast is over budget by ${over:,.0f} — review pending change orders and committed costs."})
+    if kpis.get("overdue"):
+        risks.append({"level": "high", "text": f"{kpis['overdue']} item(s) are overdue and need immediate attention."})
+    if kpis.get("pending_change_orders"):
+        risks.append({"level": "medium", "text": f"{kpis['pending_change_orders']} change order(s) pending approval may impact cost/schedule."})
+    if kpis.get("open_rfis"):
+        risks.append({"level": "medium", "text": f"{kpis['open_rfis']} open RFI(s) awaiting response could delay dependent work."})
+    if kpis.get("open_safety"):
+        risks.append({"level": "high", "text": f"{kpis['open_safety']} open safety item(s) — verify resolution before proceeding."})
+    if kpis.get("open_quality"):
+        risks.append({"level": "medium", "text": f"{kpis['open_quality']} open quality item(s) (NCR/deficiency/inspection) outstanding."})
+    if kpis.get("open_punchlist"):
+        risks.append({"level": "low", "text": f"{kpis['open_punchlist']} open punchlist item(s) remain for closeout."})
+    headline = ("No material risks flagged — project metrics are within normal ranges."
+                if not risks else f"{len(risks)} risk area(s) need attention.")
+    return {"headline": headline, "risks": risks, "source": "rules"}
+
+
+def risk_summary(kpis: dict[str, Any], cost: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Project risk read for owner/PM reporting. Uses Claude when configured to write a tighter
+    narrative + prioritized risks; otherwise a deterministic rule-based summary."""
+    if not ai_enabled():
+        return _template_risks(kpis, cost)
+    try:
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=settings_store.get("ANTHROPIC_API_KEY"))
+        schema = {"type": "object", "additionalProperties": False,
+                  "required": ["headline", "risks"],
+                  "properties": {
+                      "headline": {"type": "string"},
+                      "risks": {"type": "array", "items": {
+                          "type": "object", "additionalProperties": False,
+                          "required": ["level", "text"],
+                          "properties": {"level": {"type": "string", "enum": ["low", "medium", "high"]},
+                                         "text": {"type": "string"}}}}}}
+        msg = ("Project dashboard metrics (JSON):\n" + json.dumps({"kpis": kpis, "cost": cost})
+               + "\n\nWrite a concise executive risk summary: a one-line headline and the top "
+                 "prioritized risks (level + one sentence each). Base it only on the data.")
+        resp = client.messages.create(
+            model=settings_store.get("AEC_AI_MODEL", "claude-opus-4-8"), max_tokens=1024,
+            system="You are a senior construction project controls analyst writing an owner-facing risk brief.",
+            messages=[{"role": "user", "content": msg}],
+            output_config={"format": {"type": "json_schema", "schema": schema}, "effort": "low"})
+        text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", None) == "text")
+        data = json.loads(text)
+        data["source"] = "claude"
+        return data
+    except Exception as e:           # noqa: BLE001
+        _log.warning("AI risk summary failed (%s); using rules", e)
+        return _template_risks(kpis, cost)
+
+
 def draft_rfi(element: dict[str, Any], note: str | None = None) -> dict[str, Any]:
     """Return {subject, question, discipline, suggested_priority, source}. Uses Claude when
     configured; on any error (or no key) returns a deterministic template draft."""

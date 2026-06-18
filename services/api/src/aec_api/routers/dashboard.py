@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
-from .. import dashboard, rbac, report
+from .. import ai, dashboard, mailer, oauth, rbac, report
 from ..db import get_db
 from ..models import Project
 from ..rbac import require_role
@@ -18,6 +18,21 @@ def get_dashboard(pid: str, party: str | None = None, db: Session = Depends(get_
     """Dashboard tailored to `party` (defaults to the caller's project party role)."""
     party = party or rbac.party_role_for(db, pid, user) or "GC"
     return dashboard.build(db, pid, party)
+
+
+@router.get("/capabilities")
+def capabilities():
+    """Which optional integrations are wired (for at-a-glance status badges). Not sensitive —
+    just feature flags + the configured SSO provider ids."""
+    return {"ai": ai.ai_enabled(), "email": mailer.smtp_configured(),
+            "sso": [p["id"] for p in oauth.enabled_providers()]}
+
+
+@router.get("/projects/{pid}/ai/risk-summary")
+def risk_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("reviewer"))):
+    """AI/rules risk read over the project dashboard (owner/PM reporting)."""
+    d = dashboard.build(db, pid, "GC")
+    return {**ai.risk_summary(d.get("kpis", {}), d.get("cost")), "ai_enabled": ai.ai_enabled()}
 
 
 @router.get("/projects/{pid}/report.pdf")

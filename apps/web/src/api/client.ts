@@ -272,6 +272,21 @@ export class ApiClient {
     return this.json<{ columns?: string[]; rows?: unknown[][]; row_count?: number; error?: string }>(
       `/connections/${id}/query`, { method: "POST", body: JSON.stringify({ sql, limit }) });
   }
+  /** Import a Procore project's RFIs into this project's rfi module (via a saved connection). */
+  syncProcore(pid: string, connectionId: string, procoreProjectId: string) {
+    return this.json<{ fetched: number; imported: number; skipped: number }>(
+      `/projects/${pid}/sync/procore`,
+      { method: "POST", body: JSON.stringify({ connection_id: connectionId, procore_project_id: procoreProjectId }) });
+  }
+  /** Which optional integrations are wired (AI / email / SSO) — for status badges. */
+  capabilities() {
+    return this.json<{ ai: boolean; email: boolean; sso: string[] }>("/capabilities");
+  }
+  /** AI/rules risk summary over a project's dashboard. */
+  riskSummary(pid: string) {
+    return this.json<{ headline: string; risks: { level: string; text: string }[]; source: string; ai_enabled: boolean }>(
+      `/projects/${pid}/ai/risk-summary`);
+  }
   login(username: string, password: string) {
     return this.json<{ token: string; username: string; role: string }>(
       "/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });

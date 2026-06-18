@@ -524,9 +524,27 @@ function settingsModal() {
   const { ov, card, msg } = modalShell("Settings", 560);
   msg.style.color = "#e2554a";
 
+  // capability status badges (what's wired) — visible to everyone
+  const about = document.createElement("div");
+  about.innerHTML = `<div class="section-title">Status</div>`;
+  const badges = document.createElement("div"); badges.className = "meta"; badges.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+  badges.textContent = "checking…"; about.appendChild(badges); card.appendChild(about);
+  const badge = (label: string, on: boolean) => {
+    const b = document.createElement("span");
+    b.textContent = `${on ? "●" : "○"} ${label}`;
+    b.style.cssText = `padding:2px 8px;border-radius:10px;font-size:11px;border:1px solid var(--line);`
+      + `color:${on ? "#33d17a" : "var(--muted)"}`;
+    return b;
+  };
+  void api.capabilities().then((cap) => {
+    badges.textContent = "";
+    badges.append(badge("AI assist", cap.ai), badge("Email digests", cap.email),
+      badge(`SSO${cap.sso.length ? " (" + cap.sso.join(", ") + ")" : ""}`, cap.sso.length > 0));
+  }).catch(() => { badges.textContent = ""; });
+
   // keyboard shortcuts (amenity)
   const sc = document.createElement("div");
-  sc.innerHTML = `<div class="section-title">Keyboard shortcuts</div>`;
+  sc.innerHTML = `<div class="section-title" style="margin-top:12px">Keyboard shortcuts</div>`;
   const scList = document.createElement("div"); scList.className = "meta"; scList.style.lineHeight = "1.9";
   scList.innerHTML = (SHORTCUTS + " · \\ panel").split("·").map((s) => `<code>${s.trim()}</code>`).join("&nbsp; ");
   sc.appendChild(scList); card.appendChild(sc);
@@ -611,6 +629,15 @@ function connectionsModal() {
       row.append(dot, nm, detail);
       if (["local", "postgres", "supabase"].includes(cx.type)) {
         row.append(act("Browse", async () => browseConnection(cx.id, cx.name)));
+      }
+      if (cx.type === "procore") {
+        row.append(act("Sync RFIs", async () => {
+          if (!projectId) { msg.textContent = "open a project first to import RFIs into it"; return; }
+          const pp = prompt("Procore project ID to import RFIs from:");
+          if (!pp || !pp.trim()) return;
+          const r = await api.syncProcore(projectId, cx.id, pp.trim());
+          toast(`Procore: imported ${r.imported} RFI(s) · ${r.skipped} already present`, "info");
+        }));
       }
       if (!cx.builtin) {
         row.append(

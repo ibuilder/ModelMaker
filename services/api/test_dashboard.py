@@ -40,6 +40,17 @@ with TestClient(app) as c:
     assert rep.status_code == 200 and rep.headers["content-type"] == "application/pdf", rep.status_code
     assert rep.content[:5] == b"%PDF-" and len(rep.content) > 1500, len(rep.content)
 
+    # capability flags (no integrations configured in tests)
+    cap = c.get("/capabilities").json()
+    assert cap["ai"] is False and cap["email"] is False and cap["sso"] == [], cap
+
+    # AI/rules risk summary over the dashboard (rules path when no Anthropic key)
+    risk = c.get(f"/projects/{pid}/ai/risk-summary", headers=H("gc")).json()
+    assert risk["source"] == "rules" and risk["ai_enabled"] is False
+    assert all(r["level"] in ("low", "medium", "high") for r in risk["risks"]), risk
+    texts = " ".join(r["text"].lower() for r in risk["risks"])
+    assert "rfi" in texts and "change order" in texts, risk   # 1 open RFI + 1 pending CO above
+
     print("DASHBOARD OK")
     print(f"  GC={sorted(items('GC'))}  Consultant={sorted(items('Consultant'))}  Owner={sorted(items('Owner'))}")
     print(f"  kpis: {{k:v for non-zero}} = {dict((k, v) for k, v in d['kpis'].items() if v)}")

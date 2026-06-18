@@ -6,14 +6,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, File, Request, Response, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from .. import ai
 from .. import mailer
 from .. import modules as mod_engine
 from .. import rbac
+from .. import sync as sync_engine
 from ..db import get_db
+from ..models import Connection
 from ..models import Project, ProjectMember, User
 from ..rbac import current_user, require_role
 
@@ -49,6 +51,22 @@ def list_modules():
          "relations": m.get("relations", []), "list_columns": m.get("list_columns")}
         for m in mod_engine.REGISTRY.values()
     ]
+
+
+@router.post("/projects/{pid}/sync/procore")
+def sync_procore(pid: str, connection_id: str = Body(..., embed=True),
+                 procore_project_id: str = Body(..., embed=True), db: Session = Depends(get_db),
+                 user: str = Depends(require_role("editor"))):
+    """Import a Procore project's RFIs into this project's rfi module (idempotent). Uses a saved
+    Procore connection's token. Editor+ (it writes records)."""
+    c = db.get(Connection, connection_id)
+    if not c or c.type != "procore":
+        raise HTTPException(400, "connection_id must reference a Procore connection")
+    token = (c.config or {}).get("access_token")
+    if not token:
+        raise HTTPException(400, "Procore connection has no access token")
+    return sync_engine.sync_procore_rfis(db, pid, token, str(procore_project_id), user,
+                                         _party(pid, db, user))
 
 
 @router.post("/projects/{pid}/ai/draft-rfi")

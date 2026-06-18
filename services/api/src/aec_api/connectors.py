@@ -83,6 +83,25 @@ def _procore_get(path: str, token: str) -> Any:
         return json.loads(r.read().decode())
 
 
+def map_procore_rfi(r: dict) -> dict[str, Any]:
+    """Map a Procore RFI payload to our rfi-module record data (+ external id for idempotency)."""
+    qs = r.get("questions") or []
+    body = (qs[0].get("body") if qs and isinstance(qs[0], dict) else None) or r.get("body") or ""
+    subject = r.get("subject") or (f"RFI {r.get('number')}" if r.get("number") else "Imported RFI")
+    return {"procore_id": str(r.get("id")),
+            "data": {"subject": subject, "question": body,
+                     "discipline": r.get("discipline") or "",
+                     "spec_section": r.get("specification_section") or ""}}
+
+
+def _procore_rfis(token: str, project_id: str) -> list[dict]:
+    return _procore_get(f"/rest/v1.0/projects/{project_id}/rfis", token) or []
+
+
+# overridable seam so tests can drive the sync without a live Procore
+procore_rfis = _procore_rfis
+
+
 def _test_procore(config: dict) -> dict[str, Any]:
     token = (config or {}).get("access_token")
     if not token:

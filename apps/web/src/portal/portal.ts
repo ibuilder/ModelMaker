@@ -98,6 +98,19 @@ export class PortalUI {
         kpis.appendChild(c);
       }
       this.root.appendChild(kpis);
+
+      // AI/rules risk summary (owner/PM reporting)
+      const risk = document.createElement("div"); risk.id = "dash-risk"; this.root.appendChild(risk);
+      void this.host.api.riskSummary(pid).then((rs) => {
+        const colors: Record<string, string> = { high: "#e2554a", medium: "#ffd479", low: "#6cb6ff" };
+        risk.innerHTML = `<div class="section-title" style="margin-top:10px">Risk summary`
+          + `<span class="meta" style="font-weight:400"> · ${rs.source === "claude" ? "AI" : "rules"}</span></div>`
+          + `<div class="meta" style="margin:2px 0 6px">${rs.headline}</div>`
+          + rs.risks.map((r) => `<div style="display:flex;gap:8px;align-items:baseline;margin:3px 0;font-size:12px">`
+            + `<span style="color:${colors[r.level] || "#9aa0a6"};font-weight:700;text-transform:uppercase;font-size:10px;min-width:54px">${r.level}</span>`
+            + `<span>${r.text}</span></div>`).join("");
+      }).catch(() => { risk.innerHTML = ""; });
+
       if (d.cost) {
         const cd = document.createElement("div"); cd.className = "meta";
         cd.style.margin = "6px 0";
