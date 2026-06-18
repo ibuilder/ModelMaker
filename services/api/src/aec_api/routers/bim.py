@@ -201,6 +201,26 @@ def get_project(pid: str, db: Session = Depends(get_db)):
     return _with_kind(_project(db, pid))
 
 
+@router.get("/projects/{pid}/bundle")
+def export_bundle(pid: str, db: Session = Depends(get_db)):
+    """Download the whole project as a portable .mmproj bundle (geometry + all data + blobs)."""
+    from .. import bundle as bundle_io
+    p = _project(db, pid)
+    data = bundle_io.export_bundle(db, pid)
+    safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in p.name).strip() or "project"
+    return Response(data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{safe}.mmproj"'})
+
+
+@router.post("/projects/import-bundle", response_model=ProjectOut, status_code=201)
+async def import_bundle(file: UploadFile = File(...), name: str | None = Form(None),
+                        db: Session = Depends(get_db)):
+    """Open a .mmproj bundle as a new project (fresh id) — geometry, data, and blobs restored."""
+    from .. import bundle as bundle_io
+    new_pid = bundle_io.import_bundle(db, await file.read(), new_name=name)
+    return _with_kind(_project(db, new_pid))
+
+
 @router.patch("/projects/{pid}", response_model=ProjectOut)
 def patch_project(pid: str, body: ProjectPatch, db: Session = Depends(get_db),
                   actor: str = Depends(require_role("admin"))):

@@ -64,6 +64,7 @@ window.addEventListener("blur", () => closeMenus());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
 // pre-warm the viewer when the file menus open so triggerOpen/export resolve promptly
 buildMenu("open-menu", "Open ▾", [
+  { label: "Open Project (.mmproj)…", onClick: () => void openProjectBundle() },
   { label: "Open IFC…", onClick: () => withViewer((v) => v.triggerOpen("ifc")) },
   { label: "Open Fragments (.frag)…", onClick: () => withViewer((v) => v.triggerOpen("frag")) },
   { label: "Sample models", sep: true },
@@ -76,9 +77,36 @@ buildMenu("open-menu", "Open ▾", [
   { label: "Navisworks (.nwc)…", onClick: () => withViewer((v) => v.triggerOpen("convert")) },
 ], () => void ensureViewer());
 buildMenu("save-menu", "Save ▾", [
+  { label: "Save Project (.mmproj)", onClick: () => saveProjectBundle() },
+  { label: "Geometry", sep: true },
   { label: "Export Fragments (.frag)", onClick: () => withViewer((v) => void v.exportFrag()) },
   { label: "Export source IFC (.ifc)", onClick: () => withViewer((v) => v.exportIfc()) },
 ], () => void ensureViewer());
+
+/** Save the whole project (geometry + all data + blobs) as a portable .mmproj bundle. */
+function saveProjectBundle() {
+  if (!projectId) { toast("Open a project first", "info"); return; }
+  const a = document.createElement("a");
+  a.href = api.bundleUrl(projectId); a.download = `${projectName || "project"}.mmproj`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("Saving project bundle…", "info");
+}
+
+/** Open a .mmproj bundle as a new project, then switch to it. */
+function openProjectBundle() {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".mmproj,.zip,application/zip";
+  inp.onchange = async () => {
+    const f = inp.files?.[0]; if (!f) return;
+    toast(`Opening ${f.name}…`, "info");
+    try {
+      const p = await api.importBundle(f);
+      toast(`Opened "${p.name}"`, "info");
+      window.location.search = `?project=${p.id}`;
+    } catch { toast("Couldn't open that bundle (.mmproj expected)", "error"); }
+  };
+  inp.click();
+}
 
 // ---- workspaces + left icon rail --------------------------------------------
 const appEl = document.getElementById("app")!;

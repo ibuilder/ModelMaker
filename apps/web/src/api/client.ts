@@ -401,6 +401,20 @@ export class ApiClient {
   projects() {
     return this.json<{ id: string; name: string; model_kind?: "frag" | "ifc" | null }[]>(`/projects`);
   }
+  /** Download URL for a project's portable .mmproj bundle (geometry + all data + blobs). */
+  bundleUrl(pid: string) {
+    return this.url(`/projects/${pid}/bundle`);
+  }
+  /** Open a .mmproj bundle as a new project (fresh id). */
+  async importBundle(file: File, name?: string) {
+    const fd = new FormData();
+    fd.append("file", file);
+    if (name) fd.append("name", name);
+    const res = await fetch(this.url(`/projects/import-bundle`), {
+      method: "POST", body: fd, headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`import -> ${res.status}`);
+    return res.json() as Promise<{ id: string; name: string; model_kind?: string | null }>;
+  }
   /** Heartbeat presence (optionally sharing the current camera viewpoint) → live peer roster. */
   presence(pid: string, viewpoint?: unknown) {
     return this.json<{ user: string; active: { user: string; seconds_ago: number; viewpoint: { position: Vec3; target: Vec3 } | null }[] }>(
