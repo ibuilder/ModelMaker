@@ -23,6 +23,8 @@ export class PortalUI {
   async init() {
     if (!this.host.projectId()) { this.root.textContent = "connect a project to use the portal"; return; }
     this.mods = await this.host.api.modules();
+    // re-order the module catalog's default-open sections when the persona changes
+    window.addEventListener("aec:persona", () => this.refreshCatalog());
     await this.renderHome();
   }
 
@@ -148,23 +150,97 @@ export class PortalUI {
       this.root.appendChild(allTitle);
     } catch { /* dashboard optional */ }
 
+    this.catalogEl = this.renderModuleCatalog();
+    this.root.appendChild(this.catalogEl);
+  }
+
+  // --- module catalog: favorites + collapsible, persona-aware sections + filter --
+  private catalogEl?: HTMLElement;
+
+  /** Which sections open by default per persona (the rest collapse). Undefined persona = all open. */
+  private static SECTIONS_BY_PERSONA: Record<string, string[]> = {
+    gc: ["Field", "Cost", "Change Management", "Contracts"],
+    developer: ["Cost", "Contracts", "Preconstruction", "Closeout"],
+    architect: ["Engineering", "Preconstruction", "BIM", "Closeout"],
+    engineer: ["Engineering", "Quality", "BIM"],
+    subcontractor: ["Field", "Safety", "Quality"],
+  };
+
+  private favs(): Set<string> {
+    try { return new Set(JSON.parse(localStorage.getItem("portal-favs") || "[]") as string[]); }
+    catch { return new Set(); }
+  }
+  private toggleFav(key: string) {
+    const f = this.favs(); f.has(key) ? f.delete(key) : f.add(key);
+    localStorage.setItem("portal-favs", JSON.stringify([...f]));
+    this.refreshCatalog();
+  }
+  private refreshCatalog() {
+    if (!this.catalogEl) return;
+    const next = this.renderModuleCatalog();
+    this.catalogEl.replaceWith(next); this.catalogEl = next;
+  }
+
+  private renderModuleCatalog(): HTMLElement {
+    const wrap = document.createElement("div");
+    const favs = this.favs();
+    const persona = document.body.dataset.persona || localStorage.getItem("persona") || "all";
+    const openSecs = PortalUI.SECTIONS_BY_PERSONA[persona];   // undefined => all sections open
+
+    const filter = document.createElement("input");
+    filter.type = "search"; filter.placeholder = "Filter modules…"; filter.className = "portal-filter";
+    filter.style.cssText = "width:100%;margin:2px 0 8px";
+    wrap.appendChild(filter);
+
+    const mkBtn = (m: ModuleDef) => {
+      const b = document.createElement("button"); b.className = "portal-mod"; b.dataset.modname = m.name.toLowerCase();
+      const fav = favs.has(m.key);
+      const star = document.createElement("span"); star.className = "mod-fav" + (fav ? " on" : ""); star.textContent = fav ? "★" : "☆";
+      star.title = fav ? "Unfavorite" : "Favorite";
+      star.onclick = (e) => { e.stopPropagation(); this.toggleFav(m.key); };
+      b.append(star, Object.assign(document.createElement("span"), { className: "ic", textContent: m.icon || "•" }),
+        document.createTextNode(" " + m.name));
+      b.onclick = () => this.openModule(m);
+      return b;
+    };
+
     const sections = new Map<string, ModuleDef[]>();
-    for (const m of this.mods) {
-      const s = m.section || "Other";
-      (sections.get(s) ?? sections.set(s, []).get(s)!).push(m);
+    for (const m of this.mods) { const s = m.section || "Other"; (sections.get(s) ?? sections.set(s, []).get(s)!).push(m); }
+
+    if (favs.size) {
+      const favMods = this.mods.filter((m) => favs.has(m.key));
+      wrap.appendChild(this.catalogGroup("★ Favorites", "fav", favMods.map(mkBtn), true));
     }
-    for (const [section, mods] of sections) {
-      const h = document.createElement("div");
-      h.className = "section-title"; h.textContent = section;
-      this.root.appendChild(h);
-      for (const m of mods) {
-        const b = document.createElement("button");
-        b.className = "portal-mod";
-        b.innerHTML = `<span class="ic">${m.icon || "•"}</span> ${m.name}`;
-        b.onclick = () => this.openModule(m);
-        this.root.appendChild(b);
-      }
-    }
+    for (const [section, mods] of sections)
+      wrap.appendChild(this.catalogGroup(section, `sec:${section}`, mods.map(mkBtn), !openSecs || openSecs.includes(section)));
+
+    // live filter: hide non-matching modules, hide empty groups, auto-expand groups with hits
+    filter.oninput = () => {
+      const q = filter.value.trim().toLowerCase();
+      wrap.querySelectorAll<HTMLElement>(".tool-group").forEach((g) => {
+        let any = false;
+        g.querySelectorAll<HTMLElement>(".portal-mod").forEach((btn) => {
+          const hit = !q || (btn.dataset.modname || "").includes(q);
+          btn.style.display = hit ? "" : "none"; if (hit) any = true;
+        });
+        g.style.display = any ? "" : "none";
+        if (q) g.classList.toggle("open", any);
+      });
+    };
+    return wrap;
+  }
+
+  private catalogGroup(title: string, key: string, buttons: HTMLElement[], openDefault: boolean): HTMLElement {
+    const g = document.createElement("section"); g.className = "tool-group";
+    const saved = localStorage.getItem(`portal-open:${key}`);
+    g.classList.toggle("open", saved == null ? openDefault : saved === "1");
+    const head = document.createElement("button"); head.type = "button"; head.className = "tool-group-head";
+    head.innerHTML = `<span class="chev">▸</span><span class="t">${title}</span><span class="cnt">${buttons.length}</span>`;
+    const body = document.createElement("div"); body.className = "tool-group-body";
+    for (const b of buttons) body.appendChild(b);
+    head.onclick = () => { const o = !g.classList.contains("open"); g.classList.toggle("open", o); localStorage.setItem(`portal-open:${key}`, o ? "1" : "0"); };
+    g.append(head, body);
+    return g;
   }
 
   // --- record list (sortable / filterable data table + bulk actions) ---------

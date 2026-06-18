@@ -209,6 +209,12 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 .tool-group.open .tool-group-body { display: block; }
 .tools-more { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
   margin: 12px 0 2px; padding-top: 8px; border-top: 1px dashed var(--line); opacity: .7; }
+.tool-group-head .cnt { font-size: 10px; color: var(--muted); background: var(--panel2);
+  border: 1px solid var(--line); border-radius: 9px; padding: 0 6px; min-width: 18px; text-align: center; }
+/* favorite star on module catalog buttons */
+.mod-fav { color: var(--muted); opacity: .55; margin-right: 4px; cursor: pointer; font-size: 13px; }
+.mod-fav:hover { opacity: 1; }
+.mod-fav.on { color: #ffd479; opacity: 1; }
 
 /* readable analysis results modal (ui/result.ts) */
 .result-overlay { position: fixed; inset: 0; z-index: 220; background: #000a;
