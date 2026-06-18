@@ -25,6 +25,9 @@ class ProjectOut(ProjectIn):
     model_config = ConfigDict(from_attributes=True)
     id: str
     created_at: datetime
+    # what geometry the project actually has, for the picker: "frag" (published tile, loads in
+    # the 3D viewer), "ifc" (source IFC only — drawings render, can be published), or None (empty).
+    model_kind: str | None = None
 
 
 class TopicIn(BaseModel):

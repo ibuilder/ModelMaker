@@ -300,12 +300,18 @@ async function openPortfolioTab() {
                   : `<div class="meta" style="margin-top:8px">No solved scenarios yet — build one in the Proforma tab and it rolls up here.</div>`);
 }
 
-function buildProjectPicker(projects: { id: string; name: string }[]) {
+// loadable geometry per project -> the type tag shown in the picker. RVT/DWG/NWC origin isn't
+// tracked (those need the paid Autodesk bridge and convert to IFC/frag first), so a project is
+// only ever ".frag" (published tile), ".ifc" (source IFC on disk), or has no model yet.
+const MODEL_TAG: Record<string, string> = { frag: " (.frag)", ifc: " (.ifc)" };
+function buildProjectPicker(projects: { id: string; name: string; model_kind?: string | null }[]) {
   const sel = document.createElement("select");
   sel.className = "tool-btn"; sel.title = "Project";
   for (const p of projects) {
     const o = document.createElement("option");
-    o.value = p.id; o.textContent = p.name; o.selected = p.id === projectId;
+    o.value = p.id;
+    o.textContent = p.name + (p.model_kind ? MODEL_TAG[p.model_kind] ?? "" : " (no model)");
+    o.selected = p.id === projectId;
     sel.appendChild(o);
   }
   sel.onchange = () => { window.location.search = `?project=${sel.value}`; };
@@ -989,7 +995,7 @@ async function startup() {
   // viewer-only Pages/demo build has no backend — skip API probes (avoids /api/* 404s)
   const demo = !!import.meta.env.VITE_PAGES;
   connected = demo ? false : await api.health();
-  let projects: { id: string; name: string }[] = [];
+  let projects: { id: string; name: string; model_kind?: string | null }[] = [];
   if (connected) {
     projects = await api.projects();
     const wanted = new URLSearchParams(location.search).get("project");

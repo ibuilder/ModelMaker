@@ -399,7 +399,7 @@ export class ApiClient {
   }
 
   projects() {
-    return this.json<{ id: string; name: string }[]>(`/projects`);
+    return this.json<{ id: string; name: string; model_kind?: "frag" | "ifc" | null }[]>(`/projects`);
   }
   /** Heartbeat presence (optionally sharing the current camera viewpoint) → live peer roster. */
   presence(pid: string, viewpoint?: unknown) {

@@ -174,14 +174,31 @@ def remove_member(pid: str, member: str, db: Session = Depends(get_db),
     return {"ok": True}
 
 
+def _model_kind(p: Project) -> str | None:
+    """What loadable geometry a project has — drives the picker's type tag.
+    'frag' = a published Fragments tile (opens in the 3D viewer); 'ifc' = a source IFC on disk
+    (drawings render, can be published to frag); None = no model yet."""
+    from pathlib import Path
+    if storage.exists(f"{p.id}/model.frag"):
+        return "frag"
+    if p.source_ifc and Path(p.source_ifc).exists():
+        return "ifc"
+    return None
+
+
+def _with_kind(p: Project) -> Project:
+    p.model_kind = _model_kind(p)               # set the (non-column) field ProjectOut reads
+    return p
+
+
 @router.get("/projects", response_model=list[ProjectOut])
 def list_projects(db: Session = Depends(get_db)):
-    return db.query(Project).all()
+    return [_with_kind(p) for p in db.query(Project).all()]
 
 
 @router.get("/projects/{pid}", response_model=ProjectOut)
 def get_project(pid: str, db: Session = Depends(get_db)):
-    return _project(db, pid)
+    return _with_kind(_project(db, pid))
 
 
 @router.patch("/projects/{pid}", response_model=ProjectOut)
