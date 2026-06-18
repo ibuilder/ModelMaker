@@ -11,6 +11,7 @@ Implements the patent-described system (provisional 514712205), modernised on Fa
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,7 +25,9 @@ from . import rbac
 from .db import Base
 from .models import RecordActivity, RecordComment
 
-MODULES_DIR = Path(__file__).resolve().parents[2] / "modules"
+# repo layout: services/api/modules; the frozen desktop build sets AEC_MODULES_DIR to the
+# bundled copy (PyInstaller _MEIPASS/modules) since __file__ no longer resolves there.
+MODULES_DIR = Path(os.environ.get("AEC_MODULES_DIR") or (Path(__file__).resolve().parents[2] / "modules"))
 
 REGISTRY: dict[str, dict] = {}
 TABLES: dict[str, Table] = {}

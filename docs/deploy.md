@@ -120,6 +120,25 @@ and front the web service with their TLS.
 > + MinIO). Pages can serve the marketing page (`docs/index.html`) and, with extra setup, a
 > viewer-only build; the full app needs a Docker host as above.
 
+## Free single-project desktop app (.exe)
+The whole platform runs in **one process** for a single operator — FastAPI serving both the API and
+the web SPA on `127.0.0.1:8765`, backed by **SQLite + local files** (no Docker / Postgres / MinIO),
+in **local mode** (no login — the operator owns the one site). This is the "free, Bluebeam-style"
+build; projects are saved/opened as portable `.mmproj` bundles (Open/Save menu).
+
+- **Run from source:** `python -m aec_api.desktop` (from `services/api`, with the venv) — builds the
+  web first with `npm run build:desktop` so the SPA calls the same-origin API (`.env.desktop` sets
+  `VITE_API_URL=`).
+- **Package the .exe:** `services/api/build-desktop.ps1` runs the desktop web build, then PyInstaller
+  (`desktop.spec`) into `services/api/dist_desktop/AEC-BIM/AEC-BIM.exe`. The bundle includes the SPA
+  (`web/`), the 68 module definitions (`modules/`), and ifcopenshell. Data lives under
+  `%LOCALAPPDATA%\AEC-BIM` (override with `AEC_DATA_DIR`); uninstall = delete that folder + the app.
+- **Env knobs:** `AEC_PORT` (8765), `AEC_OPEN_BROWSER` (1), `AEC_DATA_DIR`, `AEC_HOST`. The frozen
+  build resolves the bundled SPA + module catalog via `_MEIPASS` (`AEC_WEB_DIST` / `AEC_MODULES_DIR`).
+
+A native-window wrapper (Tauri, below) can host this same backend; the PyInstaller `.exe` already
+ships a complete, double-clickable app on its own (it opens the system browser).
+
 ## Desktop installers (Tauri) & code signing
 `.github/workflows/desktop.yml` builds Windows/macOS/Linux installers. Push a tag (`v0.1.0`)
 for a draft Release; run it manually (Actions → Desktop release → Run workflow) for artifact-only

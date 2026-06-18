@@ -9,6 +9,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# desktop .exe (PyInstaller) — built on demand / in CI, never committed
+dist_desktop/
+build_desktop/
+
 # python
 __pycache__/
 *.py[cod]

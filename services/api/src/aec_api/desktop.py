@@ -43,6 +43,21 @@ def web_dist() -> str | None:
     return d if d and os.path.isdir(d) else None
 
 
+def modules_dir() -> str | None:
+    """Locate the GC-portal module.json catalog: bundled beside the frozen exe (_MEIPASS/modules),
+    else the repo's services/api/modules. The frozen build needs this since modules.py's __file__
+    no longer resolves to the source tree."""
+    meipass = getattr(sys, "_MEIPASS", "")
+    candidates = []
+    if meipass:
+        candidates.append(Path(meipass) / "modules")
+    candidates.append(Path(__file__).resolve().parents[3] / "modules")   # services/api/modules
+    for c in candidates:
+        if c.is_dir():
+            return str(c)
+    return None
+
+
 def apply_local_defaults() -> dict:
     """Set the single-operator local-build env defaults (only if not already overridden)."""
     d = data_dir()
@@ -54,7 +69,10 @@ def apply_local_defaults() -> dict:
     wd = web_dist()
     if wd:
         os.environ.setdefault("AEC_WEB_DIST", wd)
-    return {"data_dir": str(d), "web_dist": wd}
+    md = modules_dir()
+    if md:
+        os.environ.setdefault("AEC_MODULES_DIR", md)
+    return {"data_dir": str(d), "web_dist": wd, "modules_dir": md}
 
 
 def main() -> None:
