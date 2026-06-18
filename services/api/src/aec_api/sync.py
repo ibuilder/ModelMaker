@@ -48,6 +48,38 @@ def sync_procore(db: Session, project_id: str, token: str, procore_project_id: s
             "imported_total": sum(r["imported"] for r in results.values())}
 
 
+# --- two-way: push local changes back to Procore -------------------------------
+_PUSHABLE_RFI = {"answered", "closed"}
+
+
+def push_procore(db: Session, project_id: str, token: str, procore_project_id: str,
+                 kinds: list[str], actor: str) -> dict[str, Any]:
+    """Push locally-resolved records back to Procore (v1: RFI status + answer). Only records
+    imported from Procore (have procore_id) are pushed; idempotent via procore_pushed_state."""
+    results: dict[str, Any] = {}
+    if "rfi" in kinds:
+        pushed = skipped = 0
+        errors: list[str] = []
+        for r in me.list_records(db, "rfi", project_id, limit=1_000_000):
+            d = r.get("data") or {}
+            ext, state = d.get("procore_id"), r["workflow_state"]
+            if not ext or state not in _PUSHABLE_RFI:
+                continue
+            if d.get("procore_pushed_state") == state:
+                skipped += 1
+                continue
+            try:
+                connectors.procore_update_rfi(token, procore_project_id, str(ext),
+                                              connectors.map_rfi_to_procore(r))
+                me.update_record(db, "rfi", project_id, r["id"], {"procore_pushed_state": state}, actor, None)
+                pushed += 1
+            except Exception as e:               # noqa: BLE001 — one bad push mustn't stop the rest
+                errors.append(str(e).splitlines()[0][:100])
+        results["rfi"] = {"pushed": pushed, "skipped": skipped, "errors": errors}
+    return {"source": "procore", "direction": "push", "results": results,
+            "pushed_total": sum(v["pushed"] for v in results.values())}
+
+
 # --- scheduled / auto-sync -----------------------------------------------------
 def _aware(dt):
     from datetime import timezone
@@ -60,9 +92,11 @@ def run_schedule(db: Session, sched, actor: str = "procore-sync") -> dict[str, A
     c = db.get(Connection, sched.connection_id)
     if not c or c.type != "procore" or not (c.config or {}).get("access_token"):
         return {"error": "connection missing or not a configured Procore connection"}
-    kinds = sched.kinds or list(KINDS)
-    return sync_procore(db, sched.project_id, c.config["access_token"],
-                        str(sched.procore_project_id), kinds, actor, None)
+    token, kinds = c.config["access_token"], (sched.kinds or list(KINDS))
+    out = sync_procore(db, sched.project_id, token, str(sched.procore_project_id), kinds, actor, None)
+    if getattr(sched, "push", False):           # two-way schedule: also push local changes back
+        out["push"] = push_procore(db, sched.project_id, token, str(sched.procore_project_id), ["rfi"], actor)
+    return out
 
 
 def run_due(db: Session, now=None) -> list[dict[str, Any]]:

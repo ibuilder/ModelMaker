@@ -36,7 +36,7 @@ export interface ConnectionItem {
 /** A recurring Procore→modules auto-sync schedule. */
 export interface SyncScheduleItem {
   id: string; connection_id: string; procore_project_id: string; kinds: string[];
-  interval_minutes: number; enabled: boolean;
+  interval_minutes: number; enabled: boolean; push: boolean;
   last_run: string | null; last_result: { imported_total?: number; error?: string } | null;
 }
 
@@ -285,14 +285,20 @@ export class ApiClient {
       `/projects/${pid}/sync/procore`,
       { method: "POST", body: JSON.stringify({ connection_id: connectionId, procore_project_id: procoreProjectId, ...(kinds ? { kinds } : {}) }) });
   }
+  /** Two-way: push locally-resolved records (RFI status + answer) back to Procore. */
+  pushProcore(pid: string, connectionId: string, procoreProjectId: string, kinds: string[] = ["rfi"]) {
+    return this.json<{ pushed_total: number; results: Record<string, { pushed: number; skipped: number; errors: string[] }> }>(
+      `/projects/${pid}/sync/procore/push`,
+      { method: "POST", body: JSON.stringify({ connection_id: connectionId, procore_project_id: procoreProjectId, kinds }) });
+  }
   // --- auto-sync schedules (project admin) ---
   syncSchedules(pid: string) {
     return this.json<SyncScheduleItem[]>(`/projects/${pid}/sync/schedules`);
   }
-  createSyncSchedule(pid: string, body: { connection_id: string; procore_project_id: string; kinds?: string[]; interval_minutes?: number }) {
+  createSyncSchedule(pid: string, body: { connection_id: string; procore_project_id: string; kinds?: string[]; interval_minutes?: number; push?: boolean }) {
     return this.json<SyncScheduleItem>(`/projects/${pid}/sync/schedules`, { method: "POST", body: JSON.stringify(body) });
   }
-  updateSyncSchedule(pid: string, sid: string, patch: { enabled?: boolean; interval_minutes?: number; kinds?: string[] }) {
+  updateSyncSchedule(pid: string, sid: string, patch: { enabled?: boolean; interval_minutes?: number; kinds?: string[]; push?: boolean }) {
     return this.json<SyncScheduleItem>(`/projects/${pid}/sync/schedules/${sid}`, { method: "PUT", body: JSON.stringify(patch) });
   }
   deleteSyncSchedule(pid: string, sid: string) {

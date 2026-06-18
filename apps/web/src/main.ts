@@ -618,10 +618,11 @@ function schedulesModal(connectionId: string) {
       const info = document.createElement("span"); info.className = "meta"; info.style.flex = "1";
       const lr = s.last_run ? new Date(s.last_run).toLocaleString() : "never";
       const tail = s.last_result?.imported_total != null ? ` (+${s.last_result.imported_total})` : s.last_result?.error ? " (error)" : "";
-      info.innerHTML = `Procore #${s.procore_project_id} · every ${s.interval_minutes}m · ${s.kinds.join("/")}`
+      info.innerHTML = `Procore #${s.procore_project_id} · every ${s.interval_minutes}m · ${s.kinds.join("/")}${s.push ? " · two-way ⇄" : ""}`
         + `<br><span style="font-size:11px">${s.enabled ? "enabled" : "disabled"} · last: ${lr}${tail}</span>`;
       row.append(info,
         act(s.enabled ? "Disable" : "Enable", () => api.updateSyncSchedule(pid, s.id, { enabled: !s.enabled })),
+        act(s.push ? "Two-way ✓" : "Two-way", () => api.updateSyncSchedule(pid, s.id, { push: !s.push })),
         act("Run now", async () => { const r = await api.runSyncSchedule(pid, s.id); toast(r.error ? `error: ${r.error}` : `imported ${r.imported_total ?? 0}`, "info"); }),
         act("Delete", () => api.deleteSyncSchedule(pid, s.id)));
       list.appendChild(row);
@@ -629,13 +630,15 @@ function schedulesModal(connectionId: string) {
     const form = document.createElement("div"); form.style.cssText = "border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center";
     const pp = document.createElement("input"); pp.placeholder = "Procore project ID"; pp.className = "portal-filter"; pp.style.flex = "1";
     const iv = document.createElement("input"); iv.type = "number"; iv.value = "60"; iv.title = "interval (minutes, min 5)"; iv.className = "portal-filter"; iv.style.width = "80px";
+    const tw = document.createElement("input"); tw.type = "checkbox"; tw.id = "sched-twoway";
+    const twl = document.createElement("label"); twl.htmlFor = "sched-twoway"; twl.textContent = "two-way"; twl.className = "meta"; twl.style.fontSize = "12px";
     const add = document.createElement("button"); add.className = "file-btn"; add.textContent = "Add schedule";
     add.onclick = async () => {
       if (!pp.value.trim()) { msg.textContent = "Procore project ID required"; return; }
-      try { await api.createSyncSchedule(pid, { connection_id: connectionId, procore_project_id: pp.value.trim(), interval_minutes: Math.max(5, parseInt(iv.value) || 60) }); pp.value = ""; await render(); }
+      try { await api.createSyncSchedule(pid, { connection_id: connectionId, procore_project_id: pp.value.trim(), interval_minutes: Math.max(5, parseInt(iv.value) || 60), push: tw.checked }); pp.value = ""; tw.checked = false; await render(); }
       catch { msg.textContent = "could not add schedule"; }
     };
-    form.append(pp, iv, add); list.appendChild(form);
+    form.append(pp, iv, tw, twl, add); list.appendChild(form);
   };
   card.appendChild(msg); void render();
 }
@@ -678,6 +681,13 @@ function connectionsModal() {
           const r = await api.syncProcore(projectId, cx.id, pp.trim());
           const by = Object.entries(r.results).map(([k, v]) => `${v.imported} ${k}`).join(", ");
           toast(`Procore: imported ${r.imported_total} record(s) (${by})`, "info");
+        }));
+        row.append(act("Push", async () => {
+          if (!projectId) { msg.textContent = "open a project first"; return; }
+          const pp = prompt("Procore project ID to push resolved RFIs (answer + status) to:");
+          if (!pp || !pp.trim()) return;
+          const r = await api.pushProcore(projectId, cx.id, pp.trim());
+          toast(`Pushed ${r.pushed_total} RFI(s) back to Procore`, "info");
         }));
         row.append(act("Schedules", async () => {
           if (!projectId) { msg.textContent = "open a project first to schedule auto-sync"; return; }

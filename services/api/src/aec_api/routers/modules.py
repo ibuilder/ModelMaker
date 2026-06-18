@@ -71,18 +71,36 @@ def sync_procore(pid: str, connection_id: str = Body(..., embed=True),
                                     _party(pid, db, user))
 
 
+@router.post("/projects/{pid}/sync/procore/push")
+def push_procore(pid: str, connection_id: str = Body(..., embed=True),
+                 procore_project_id: str = Body(..., embed=True),
+                 kinds: list[str] = Body(default=["rfi"], embed=True),
+                 db: Session = Depends(get_db), user: str = Depends(require_role("editor"))):
+    """Two-way: push locally-resolved records (v1: RFI status + answer) back to Procore. Only
+    records imported from Procore are pushed; idempotent."""
+    c = db.get(Connection, connection_id)
+    if not c or c.type != "procore":
+        raise HTTPException(400, "connection_id must reference a Procore connection")
+    token = (c.config or {}).get("access_token")
+    if not token:
+        raise HTTPException(400, "Procore connection has no access token")
+    return sync_engine.push_procore(db, pid, token, str(procore_project_id), kinds, user)
+
+
 class ScheduleIn(BaseModel):
     connection_id: str
     procore_project_id: str
     kinds: list[str] = ["rfi", "submittal", "change_event"]
     interval_minutes: int = 60
     enabled: bool = True
+    push: bool = False
 
 
 def _sched_public(s: SyncSchedule) -> dict:
     return {"id": s.id, "connection_id": s.connection_id, "procore_project_id": s.procore_project_id,
             "kinds": s.kinds or [], "interval_minutes": s.interval_minutes,
-            "enabled": s.enabled is not False, "last_run": s.last_run, "last_result": s.last_result}
+            "enabled": s.enabled is not False, "push": bool(s.push), "last_run": s.last_run,
+            "last_result": s.last_result}
 
 
 @router.get("/projects/{pid}/sync/schedules")
@@ -99,7 +117,7 @@ def create_schedule(pid: str, body: ScheduleIn, db: Session = Depends(get_db),
         raise HTTPException(400, "connection_id must reference a Procore connection")
     s = SyncSchedule(project_id=pid, connection_id=body.connection_id,
                      procore_project_id=str(body.procore_project_id), kinds=body.kinds,
-                     interval_minutes=max(5, body.interval_minutes), enabled=body.enabled)
+                     interval_minutes=max(5, body.interval_minutes), enabled=body.enabled, push=body.push)
     db.add(s)
     db.commit()
     return _sched_public(s)
@@ -109,6 +127,7 @@ def create_schedule(pid: str, body: ScheduleIn, db: Session = Depends(get_db),
 def update_schedule(pid: str, sid: str, enabled: bool | None = Body(default=None, embed=True),
                     interval_minutes: int | None = Body(default=None, embed=True),
                     kinds: list[str] | None = Body(default=None, embed=True),
+                    push: bool | None = Body(default=None, embed=True),
                     db: Session = Depends(get_db), _: str = Depends(require_role("admin"))):
     s = db.get(SyncSchedule, sid)
     if not s or s.project_id != pid:
@@ -119,6 +138,8 @@ def update_schedule(pid: str, sid: str, enabled: bool | None = Body(default=None
         s.interval_minutes = max(5, interval_minutes)
     if kinds is not None:
         s.kinds = kinds
+    if push is not None:
+        s.push = push
     db.commit()
     return _sched_public(s)
 

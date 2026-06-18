@@ -132,10 +132,30 @@ def _procore_change_events(token: str, project_id: str) -> list[dict]:
     return _procore_get(f"/rest/v1.1/projects/{project_id}/change_events", token) or []
 
 
-# overridable seams so tests can drive the sync without a live Procore
+def map_rfi_to_procore(record: dict) -> dict[str, Any]:
+    """Normalize one of our rfi records into a Procore RFI update payload (status + answer).
+    The exact PATCH body shape is applied in procore_update_rfi (Procore API-version specific)."""
+    d = record.get("data") or {}
+    status = {"answered": "open", "closed": "closed"}.get(record.get("workflow_state"), "open")
+    return {"status": status, "answer": d.get("answer") or ""}
+
+
+def _procore_update_rfi(token: str, project_id: str, rfi_id: str, payload: dict) -> Any:
+    body = json.dumps({"rfi": payload}).encode()
+    req = urllib.request.Request(
+        f"https://api.procore.com/rest/v1.0/projects/{project_id}/rfis/{rfi_id}",
+        data=body, method="PATCH",
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
+                 "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as r:  # noqa: S310 — fixed Procore host
+        return json.loads(r.read().decode() or "{}")
+
+
+# overridable seams so tests can drive the sync (read + write) without a live Procore
 procore_rfis = _procore_rfis
 procore_submittals = _procore_submittals
 procore_change_events = _procore_change_events
+procore_update_rfi = _procore_update_rfi
 
 
 def _test_procore(config: dict) -> dict[str, Any]:

@@ -260,6 +260,7 @@ class SyncSchedule(Base):
     kinds: Mapped[dict | None] = mapped_column(JSON, nullable=True)   # ["rfi","submittal","change_event"]
     interval_minutes: Mapped[int] = mapped_column(default=60)
     enabled: Mapped[bool | None] = mapped_column(Boolean, default=True)
+    push: Mapped[bool | None] = mapped_column(Boolean, default=False)  # two-way: also push back to Procore
     last_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

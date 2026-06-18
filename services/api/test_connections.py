@@ -126,10 +126,37 @@ with TestClient(app) as c:
     # a second run_due immediately is NOT due (interval not elapsed)
     with _SL() as _db:
         assert _sync.run_due(_db) == []
+    # two-way schedule flag round-trips
+    sch2 = c.post(f"/projects/{proj}/sync/schedules", headers=BEARER(tok),
+                  json={"connection_id": pc["id"], "procore_project_id": "9999", "push": True}).json()
+    assert sch2["push"] is True
+    assert c.put(f"/projects/{proj}/sync/schedules/{sch2['id']}", headers=BEARER(tok),
+                 json={"push": False}).json()["push"] is False
+    c.delete(f"/projects/{proj}/sync/schedules/{sch2['id']}", headers=BEARER(tok))
     # disable + delete
     assert c.put(f"/projects/{proj}/sync/schedules/{sch['id']}", headers=BEARER(tok),
                  json={"enabled": False}).json()["enabled"] is False
     assert c.delete(f"/projects/{proj}/sync/schedules/{sch['id']}", headers=BEARER(tok)).json()["ok"]
+
+    # --- two-way: push a resolved RFI back to Procore (stubbed write) -----------
+    pushes: list = []
+    _conn.procore_update_rfi = lambda token, ppid, rid, payload: pushes.append((rid, payload)) or {}
+    rfis = c.get(f"/projects/{proj}/modules/rfi").json()
+    rid = rfis[0]["id"]
+    pext = rfis[0]["data"]["procore_id"]
+    c.post(f"/projects/{proj}/modules/rfi/{rid}/transition", headers=BEARER(tok), json={"action": "submit"})   # draft->open
+    c.patch(f"/projects/{proj}/modules/rfi/{rid}", headers=BEARER(tok), json={"answer": "Yes, proceed."})
+    c.post(f"/projects/{proj}/modules/rfi/{rid}/transition", headers=BEARER(tok), json={"action": "respond"})  # open->answered
+    p1 = c.post(f"/projects/{proj}/sync/procore/push", headers=BEARER(tok),
+                json={"connection_id": pc["id"], "procore_project_id": "9999", "kinds": ["rfi"]}).json()
+    assert p1["pushed_total"] == 1 and len(pushes) == 1, (p1, pushes)
+    assert pushes[0][0] == pext and pushes[0][1]["answer"] == "Yes, proceed." and pushes[0][1]["status"] == "open", pushes
+    # idempotent (already pushed this state) + the still-draft RFI is never pushed
+    p2 = c.post(f"/projects/{proj}/sync/procore/push", headers=BEARER(tok),
+                json={"connection_id": pc["id"], "procore_project_id": "9999"}).json()
+    assert p2["pushed_total"] == 0 and len(pushes) == 1, (p2, pushes)
+    assert c.post(f"/projects/{proj}/sync/procore/push", headers=BEARER(tok),
+                  json={"connection_id": "local", "procore_project_id": "1"}).status_code in (400, 404)
 
     print("CONNECTIONS OK — status, masked secrets, test, CRUD, validation, read-only browse/query, "
           "Procore->rfi/submittal/change_event sync (idempotent), auto-sync schedules + run_due")
