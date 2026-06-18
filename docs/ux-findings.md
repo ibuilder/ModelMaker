@@ -17,13 +17,14 @@ Severity: **High** (hurts daily use / blocks discovery) · **Med** (friction) ·
   (`ui/result.ts`) with tables/metric grids; a one-line status stays in the rail.
 - ✅ **Not role-aware.** Tools panel now persona-ordered (`TOOLS_BY_PERSONA`): a persona's primary
   tools sit on top, the rest fold under "More tools". Mirrors the existing workspace/rail filtering.
+- ✅ **Construction portal scaled poorly (68 modules).** The catalog is now a collapsible,
+  persona-aware section accordion (12 groups with count badges; `SECTIONS_BY_PERSONA` controls
+  default-open), with ★ favorites pinned to a top group and a "Filter modules…" box that narrows and
+  auto-expands matches. Open state persists; re-orders live on persona change.
 
 ## Backlog
 
 ### High
-- **Construction portal scales poorly (68 modules).** A flat module list is overwhelming. Needs
-  grouping (by discipline/phase), search, favorites/pins, and **persona filtering** (a GC, architect,
-  and owner's-rep should not see the same 68 entries). Extend the `TOOLS_BY_PERSONA` idea to modules.
 - **Workspace ↔ tool overlap.** Exports, Cost/Pay Apps, and Schedule live in the viewer's ⚙ Tools
   rail *and* conceptually belong to the Construction/Finance workspaces. Decide one home per
   capability (or make the rail a quick-access shortcut that deep-links into the workspace) so users
