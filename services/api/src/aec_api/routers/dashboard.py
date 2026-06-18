@@ -24,8 +24,10 @@ def get_dashboard(pid: str, party: str | None = None, db: Session = Depends(get_
 def capabilities():
     """Which optional integrations are wired (for at-a-glance status badges). Not sensitive —
     just feature flags + the configured SSO provider ids."""
+    from .. import rbac
     return {"ai": ai.ai_enabled(), "email": mailer.smtp_configured(),
-            "sso": [p["id"] for p in oauth.enabled_providers()]}
+            "sso": [p["id"] for p in oauth.enabled_providers()],
+            "local_mode": rbac.LOCAL_MODE}
 
 
 @router.get("/projects/{pid}/ai/risk-summary")

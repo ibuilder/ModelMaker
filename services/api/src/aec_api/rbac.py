@@ -22,6 +22,10 @@ from .models import ProjectMember
 ROLE_ORDER = {"viewer": 0, "reviewer": 1, "editor": 2, "admin": 3}
 RBAC_ON = os.environ.get("AEC_RBAC") == "1"
 API_KEY = os.environ.get("AEC_API_KEY")
+# Single-operator desktop build (AEC_LOCAL_MODE=1): the local user owns the one site, so there
+# is no login and admin-only features (connections, settings, schedules) live in Settings,
+# ungated. The Pro/cloud build leaves this off and keeps the account + admin gates.
+LOCAL_MODE = os.environ.get("AEC_LOCAL_MODE") == "1"
 
 
 def _resolve_active(db: Session, sub: str) -> str:

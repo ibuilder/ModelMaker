@@ -1047,7 +1047,10 @@ async function startup() {
     gear.className = "tool-btn"; gear.style.marginLeft = "6px"; gear.textContent = "⚙"; gear.title = "Settings";
     gear.onclick = settingsModal;
     toolbar.insertBefore(gear, statusEl);
-    void buildAuthControl();             // no accounts without a backend
+    // single-operator local build: no accounts — the operator owns the site, admin UI is open
+    let localMode = false;
+    try { localMode = (await api.capabilities()).local_mode === true; } catch { /* default off */ }
+    if (!localMode) void buildAuthControl();
   }
 }
 

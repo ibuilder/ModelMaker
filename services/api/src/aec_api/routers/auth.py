@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from .. import audit, auth, oauth, settings_store
 from ..db import get_db
 from ..models import AuditLog, User
+from .. import rbac
 from ..rbac import current_user
 
 router = APIRouter()
@@ -21,7 +22,10 @@ router = APIRouter()
 
 def require_admin_user(db: Session = Depends(get_db), user: str = Depends(current_user)) -> User:
     """Gate user-management endpoints on a global admin account (independent of AEC_RBAC,
-    which governs per-project routes)."""
+    which governs per-project routes). In single-operator local mode there is no login — the
+    local user is implicitly the owner/admin, so admin features open without an account."""
+    if rbac.LOCAL_MODE:
+        return User(username="local", password_hash="", role="admin", active=True)
     u = db.get(User, user)
     if not u or u.role != "admin":
         raise HTTPException(403, "an admin account is required")

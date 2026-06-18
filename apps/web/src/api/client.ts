@@ -323,7 +323,7 @@ export class ApiClient {
   }
   /** Which optional integrations are wired (AI / email / SSO) — for status badges. */
   capabilities() {
-    return this.json<{ ai: boolean; email: boolean; sso: string[] }>("/capabilities");
+    return this.json<{ ai: boolean; email: boolean; sso: string[]; local_mode?: boolean }>("/capabilities");
   }
   /** AI/rules risk summary over a project's dashboard. */
   riskSummary(pid: string) {
