@@ -600,6 +600,46 @@ function settingsModal() {
 }
 
 /** Data-source connections (admin): the local app DB + external Postgres/Supabase/Procore. */
+/** Auto-sync schedules for a Procore connection → the current project's modules. */
+function schedulesModal(connectionId: string) {
+  const pid = projectId; if (!pid) return;
+  const { card, msg } = modalShell("Auto-sync schedules", 500);
+  msg.style.color = "#e2554a";
+  const list = document.createElement("div"); card.appendChild(list);
+  const render = async () => {
+    list.textContent = "";
+    let scheds: import("./api/client").SyncScheduleItem[] = [];
+    try { scheds = (await api.syncSchedules(pid)).filter((s) => s.connection_id === connectionId); }
+    catch { list.innerHTML = `<div class="meta">admin only.</div>`; return; }
+    if (!scheds.length) { const e = document.createElement("div"); e.className = "meta"; e.textContent = "No schedules yet — add one below."; list.appendChild(e); }
+    const act = (label: string, fn: () => Promise<unknown>) => { const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = label; b.onclick = async () => { try { await fn(); await render(); } catch { msg.textContent = "action failed"; } }; return b; };
+    for (const s of scheds) {
+      const row = document.createElement("div"); row.style.cssText = "border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px";
+      const info = document.createElement("span"); info.className = "meta"; info.style.flex = "1";
+      const lr = s.last_run ? new Date(s.last_run).toLocaleString() : "never";
+      const tail = s.last_result?.imported_total != null ? ` (+${s.last_result.imported_total})` : s.last_result?.error ? " (error)" : "";
+      info.innerHTML = `Procore #${s.procore_project_id} · every ${s.interval_minutes}m · ${s.kinds.join("/")}`
+        + `<br><span style="font-size:11px">${s.enabled ? "enabled" : "disabled"} · last: ${lr}${tail}</span>`;
+      row.append(info,
+        act(s.enabled ? "Disable" : "Enable", () => api.updateSyncSchedule(pid, s.id, { enabled: !s.enabled })),
+        act("Run now", async () => { const r = await api.runSyncSchedule(pid, s.id); toast(r.error ? `error: ${r.error}` : `imported ${r.imported_total ?? 0}`, "info"); }),
+        act("Delete", () => api.deleteSyncSchedule(pid, s.id)));
+      list.appendChild(row);
+    }
+    const form = document.createElement("div"); form.style.cssText = "border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center";
+    const pp = document.createElement("input"); pp.placeholder = "Procore project ID"; pp.className = "portal-filter"; pp.style.flex = "1";
+    const iv = document.createElement("input"); iv.type = "number"; iv.value = "60"; iv.title = "interval (minutes, min 5)"; iv.className = "portal-filter"; iv.style.width = "80px";
+    const add = document.createElement("button"); add.className = "file-btn"; add.textContent = "Add schedule";
+    add.onclick = async () => {
+      if (!pp.value.trim()) { msg.textContent = "Procore project ID required"; return; }
+      try { await api.createSyncSchedule(pid, { connection_id: connectionId, procore_project_id: pp.value.trim(), interval_minutes: Math.max(5, parseInt(iv.value) || 60) }); pp.value = ""; await render(); }
+      catch { msg.textContent = "could not add schedule"; }
+    };
+    form.append(pp, iv, add); list.appendChild(form);
+  };
+  card.appendChild(msg); void render();
+}
+
 function connectionsModal() {
   const { card, msg } = modalShell("Data connections", 560);
   msg.style.color = "#e2554a";
@@ -631,12 +671,17 @@ function connectionsModal() {
         row.append(act("Browse", async () => browseConnection(cx.id, cx.name)));
       }
       if (cx.type === "procore") {
-        row.append(act("Sync RFIs", async () => {
-          if (!projectId) { msg.textContent = "open a project first to import RFIs into it"; return; }
-          const pp = prompt("Procore project ID to import RFIs from:");
+        row.append(act("Sync now", async () => {
+          if (!projectId) { msg.textContent = "open a project first to import into it"; return; }
+          const pp = prompt("Procore project ID to import from (RFIs, submittals, change events):");
           if (!pp || !pp.trim()) return;
           const r = await api.syncProcore(projectId, cx.id, pp.trim());
-          toast(`Procore: imported ${r.imported} RFI(s) · ${r.skipped} already present`, "info");
+          const by = Object.entries(r.results).map(([k, v]) => `${v.imported} ${k}`).join(", ");
+          toast(`Procore: imported ${r.imported_total} record(s) (${by})`, "info");
+        }));
+        row.append(act("Schedules", async () => {
+          if (!projectId) { msg.textContent = "open a project first to schedule auto-sync"; return; }
+          schedulesModal(cx.id);
         }));
       }
       if (!cx.builtin) {

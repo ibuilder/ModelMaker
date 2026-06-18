@@ -1,6 +1,7 @@
 """FastAPI app entry (guide §7). Run: uvicorn aec_api.main:app --reload"""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -16,12 +17,40 @@ from .routers import (analysis, auth, authoring, bim, connections, convert, cost
                       drawings, exports, modules, proforma, properties, schedule)
 
 _access_log = logging.getLogger("aec.access")
+_log = logging.getLogger("aec.autosync")
+
+
+async def _autosync_loop() -> None:
+    """Run due Procore auto-sync schedules every minute. Per-process (single-worker / dev);
+    for multi-worker, run a single scheduler or use a DB lock. Disable with AEC_AUTOSYNC=0."""
+    from . import sync
+    from .db import SessionLocal
+
+    def _run() -> list:
+        with SessionLocal() as db:
+            return sync.run_due(db)
+
+    while True:
+        try:
+            await asyncio.sleep(60)
+            ran = await asyncio.to_thread(_run)
+            if ran:
+                _log.info("auto-sync ran %d schedule(s)", len(ran))
+        except asyncio.CancelledError:
+            break
+        except Exception as e:                   # noqa: BLE001 — the loop must survive any error
+            _log.warning("auto-sync tick failed: %s", e)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
-    yield
+    task = asyncio.create_task(_autosync_loop()) if os.environ.get("AEC_AUTOSYNC", "1") == "1" else None
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
 
 
 app = FastAPI(title="AEC BIM Platform API", version="0.1.0", lifespan=lifespan)

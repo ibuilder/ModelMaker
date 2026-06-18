@@ -33,6 +33,13 @@ export interface ConnectionItem {
   status?: { ok: boolean; detail: string };
 }
 
+/** A recurring Procore→modules auto-sync schedule. */
+export interface SyncScheduleItem {
+  id: string; connection_id: string; procore_project_id: string; kinds: string[];
+  interval_minutes: number; enabled: boolean;
+  last_run: string | null; last_result: { imported_total?: number; error?: string } | null;
+}
+
 /** A user's membership of one project: capability role + optional workflow party + company. */
 export interface ProjectMember {
   user: string;
@@ -272,11 +279,27 @@ export class ApiClient {
     return this.json<{ columns?: string[]; rows?: unknown[][]; row_count?: number; error?: string }>(
       `/connections/${id}/query`, { method: "POST", body: JSON.stringify({ sql, limit }) });
   }
-  /** Import a Procore project's RFIs into this project's rfi module (via a saved connection). */
-  syncProcore(pid: string, connectionId: string, procoreProjectId: string) {
-    return this.json<{ fetched: number; imported: number; skipped: number }>(
+  /** Import a Procore project's RFIs / submittals / change events into the matching modules. */
+  syncProcore(pid: string, connectionId: string, procoreProjectId: string, kinds?: string[]) {
+    return this.json<{ source: string; imported_total: number; results: Record<string, { module: string; fetched: number; imported: number; skipped: number }> }>(
       `/projects/${pid}/sync/procore`,
-      { method: "POST", body: JSON.stringify({ connection_id: connectionId, procore_project_id: procoreProjectId }) });
+      { method: "POST", body: JSON.stringify({ connection_id: connectionId, procore_project_id: procoreProjectId, ...(kinds ? { kinds } : {}) }) });
+  }
+  // --- auto-sync schedules (project admin) ---
+  syncSchedules(pid: string) {
+    return this.json<SyncScheduleItem[]>(`/projects/${pid}/sync/schedules`);
+  }
+  createSyncSchedule(pid: string, body: { connection_id: string; procore_project_id: string; kinds?: string[]; interval_minutes?: number }) {
+    return this.json<SyncScheduleItem>(`/projects/${pid}/sync/schedules`, { method: "POST", body: JSON.stringify(body) });
+  }
+  updateSyncSchedule(pid: string, sid: string, patch: { enabled?: boolean; interval_minutes?: number; kinds?: string[] }) {
+    return this.json<SyncScheduleItem>(`/projects/${pid}/sync/schedules/${sid}`, { method: "PUT", body: JSON.stringify(patch) });
+  }
+  deleteSyncSchedule(pid: string, sid: string) {
+    return this.json<{ ok: boolean }>(`/projects/${pid}/sync/schedules/${sid}`, { method: "DELETE" });
+  }
+  runSyncSchedule(pid: string, sid: string) {
+    return this.json<{ imported_total?: number; error?: string }>(`/projects/${pid}/sync/schedules/${sid}/run-now`, { method: "POST" });
   }
   /** Which optional integrations are wired (AI / email / SSO) — for status badges. */
   capabilities() {

@@ -77,26 +77,59 @@ with TestClient(app) as c:
     c.cookies.clear()
     assert c.get("/connections/local/tables").status_code == 403
 
-    # --- Procore → module sync (stubbed fetch; idempotent) ---------------------
+    # --- Procore → module sync: RFIs + submittals + change events (idempotent) --
     from aec_api import connectors as _conn
     _conn.procore_rfis = lambda token, ppid: [
         {"id": 101, "number": "1", "subject": "Beam penetration", "questions": [{"body": "OK to core?"}]},
         {"id": 102, "number": "2", "subject": "Slab edge", "body": "Confirm dimension?"}]
+    _conn.procore_submittals = lambda token, ppid: [
+        {"id": 201, "number": "S-1", "title": "Rebar shop drawings", "specification_section": "03 20 00",
+         "type": "Shop Drawing", "status": "Open"}]
+    _conn.procore_change_events = lambda token, ppid: [
+        {"id": 301, "number": "CE-1", "title": "Added fireproofing",
+         "change_event_line_items": [{"amount": 12000}, {"amount": 3000}]}]
     pc = c.post("/connections", headers=BEARER(tok),
                 json={"name": "Procore sync", "type": "procore", "config": {"access_token": "tok-xyz"}}).json()
     proj = c.post("/projects", json={"name": "Sync Target"}).json()["id"]
     s1 = c.post(f"/projects/{proj}/sync/procore", headers=BEARER(tok),
                 json={"connection_id": pc["id"], "procore_project_id": "9999"}).json()
-    assert s1["imported"] == 2 and s1["fetched"] == 2, s1
-    recs = c.get(f"/projects/{proj}/modules/rfi").json()
-    assert len(recs) == 2 and all(x["data"].get("procore_id") for x in recs), recs
-    assert any("core" in (x["data"].get("question") or "") for x in recs), recs    # mapped the question body
+    assert s1["imported_total"] == 4, s1                                              # 2 rfi + 1 sub + 1 ce
+    assert s1["results"]["rfi"]["imported"] == 2 and s1["results"]["submittal"]["imported"] == 1
+    assert s1["results"]["change_event"]["imported"] == 1, s1["results"]
+    # mappings landed in the right modules
+    assert any("core" in (x["data"].get("question") or "") for x in c.get(f"/projects/{proj}/modules/rfi").json())
+    subs = c.get(f"/projects/{proj}/modules/submittal").json()
+    assert subs[0]["data"]["spec_section"] == "03 20 00" and subs[0]["data"]["procore_id"] == "201", subs
+    ces = c.get(f"/projects/{proj}/modules/change_event").json()
+    assert ces[0]["data"]["rom"] == 15000.0, ces                                      # summed line items
+    # idempotent re-run
     s2 = c.post(f"/projects/{proj}/sync/procore", headers=BEARER(tok),
                 json={"connection_id": pc["id"], "procore_project_id": "9999"}).json()
-    assert s2["imported"] == 0 and s2["skipped"] == 2, s2                            # idempotent
+    assert s2["imported_total"] == 0, s2
     # a non-Procore connection can't be used for the Procore sync
     assert c.post(f"/projects/{proj}/sync/procore", headers=BEARER(tok),
                   json={"connection_id": "local", "procore_project_id": "1"}).status_code in (400, 404)
 
-    print("CONNECTIONS OK — local status, masked secrets, test, CRUD, validation, "
-          "read-only browse/query (SELECT-only guard), Procore->rfi sync (idempotent)")
+    # --- scheduled / auto-sync ------------------------------------------------
+    sch = c.post(f"/projects/{proj}/sync/schedules", headers=BEARER(tok),
+                 json={"connection_id": pc["id"], "procore_project_id": "9999", "kinds": ["rfi"],
+                       "interval_minutes": 30}).json()
+    assert sch["enabled"] and sch["interval_minutes"] == 30 and sch["last_run"] is None
+    # run_due imports nothing new (already synced) but stamps last_run + last_result
+    from aec_api import sync as _sync
+    from aec_api.db import SessionLocal as _SL
+    with _SL() as _db:
+        ran = _sync.run_due(_db)
+    assert any(r["schedule_id"] == sch["id"] for r in ran), ran
+    after = next(x for x in c.get(f"/projects/{proj}/sync/schedules", headers=BEARER(tok)).json() if x["id"] == sch["id"])
+    assert after["last_run"] is not None and after["last_result"]["imported_total"] == 0, after
+    # a second run_due immediately is NOT due (interval not elapsed)
+    with _SL() as _db:
+        assert _sync.run_due(_db) == []
+    # disable + delete
+    assert c.put(f"/projects/{proj}/sync/schedules/{sch['id']}", headers=BEARER(tok),
+                 json={"enabled": False}).json()["enabled"] is False
+    assert c.delete(f"/projects/{proj}/sync/schedules/{sch['id']}", headers=BEARER(tok)).json()["ok"]
+
+    print("CONNECTIONS OK — status, masked secrets, test, CRUD, validation, read-only browse/query, "
+          "Procore->rfi/submittal/change_event sync (idempotent), auto-sync schedules + run_due")

@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, Response, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .. import ai
@@ -16,7 +17,7 @@ from .. import rbac
 from .. import sync as sync_engine
 from ..db import get_db
 from ..models import Connection
-from ..models import Project, ProjectMember, User
+from ..models import Project, ProjectMember, SyncSchedule, User
 from ..rbac import current_user, require_role
 
 router = APIRouter()
@@ -55,18 +56,96 @@ def list_modules():
 
 @router.post("/projects/{pid}/sync/procore")
 def sync_procore(pid: str, connection_id: str = Body(..., embed=True),
-                 procore_project_id: str = Body(..., embed=True), db: Session = Depends(get_db),
-                 user: str = Depends(require_role("editor"))):
-    """Import a Procore project's RFIs into this project's rfi module (idempotent). Uses a saved
-    Procore connection's token. Editor+ (it writes records)."""
+                 procore_project_id: str = Body(..., embed=True),
+                 kinds: list[str] = Body(default=["rfi", "submittal", "change_event"], embed=True),
+                 db: Session = Depends(get_db), user: str = Depends(require_role("editor"))):
+    """Import a Procore project's RFIs / submittals / change events into the matching modules
+    (idempotent). Uses a saved Procore connection's token. Editor+ (it writes records)."""
     c = db.get(Connection, connection_id)
     if not c or c.type != "procore":
         raise HTTPException(400, "connection_id must reference a Procore connection")
     token = (c.config or {}).get("access_token")
     if not token:
         raise HTTPException(400, "Procore connection has no access token")
-    return sync_engine.sync_procore_rfis(db, pid, token, str(procore_project_id), user,
-                                         _party(pid, db, user))
+    return sync_engine.sync_procore(db, pid, token, str(procore_project_id), kinds, user,
+                                    _party(pid, db, user))
+
+
+class ScheduleIn(BaseModel):
+    connection_id: str
+    procore_project_id: str
+    kinds: list[str] = ["rfi", "submittal", "change_event"]
+    interval_minutes: int = 60
+    enabled: bool = True
+
+
+def _sched_public(s: SyncSchedule) -> dict:
+    return {"id": s.id, "connection_id": s.connection_id, "procore_project_id": s.procore_project_id,
+            "kinds": s.kinds or [], "interval_minutes": s.interval_minutes,
+            "enabled": s.enabled is not False, "last_run": s.last_run, "last_result": s.last_result}
+
+
+@router.get("/projects/{pid}/sync/schedules")
+def list_schedules(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("admin"))):
+    """Auto-sync schedules for this project (Procore → modules on an interval)."""
+    return [_sched_public(s) for s in db.query(SyncSchedule).filter(SyncSchedule.project_id == pid).all()]
+
+
+@router.post("/projects/{pid}/sync/schedules", status_code=201)
+def create_schedule(pid: str, body: ScheduleIn, db: Session = Depends(get_db),
+                    _: str = Depends(require_role("admin"))):
+    c = db.get(Connection, body.connection_id)
+    if not c or c.type != "procore":
+        raise HTTPException(400, "connection_id must reference a Procore connection")
+    s = SyncSchedule(project_id=pid, connection_id=body.connection_id,
+                     procore_project_id=str(body.procore_project_id), kinds=body.kinds,
+                     interval_minutes=max(5, body.interval_minutes), enabled=body.enabled)
+    db.add(s)
+    db.commit()
+    return _sched_public(s)
+
+
+@router.put("/projects/{pid}/sync/schedules/{sid}")
+def update_schedule(pid: str, sid: str, enabled: bool | None = Body(default=None, embed=True),
+                    interval_minutes: int | None = Body(default=None, embed=True),
+                    kinds: list[str] | None = Body(default=None, embed=True),
+                    db: Session = Depends(get_db), _: str = Depends(require_role("admin"))):
+    s = db.get(SyncSchedule, sid)
+    if not s or s.project_id != pid:
+        raise HTTPException(404, "no such schedule")
+    if enabled is not None:
+        s.enabled = enabled
+    if interval_minutes is not None:
+        s.interval_minutes = max(5, interval_minutes)
+    if kinds is not None:
+        s.kinds = kinds
+    db.commit()
+    return _sched_public(s)
+
+
+@router.delete("/projects/{pid}/sync/schedules/{sid}")
+def delete_schedule(pid: str, sid: str, db: Session = Depends(get_db),
+                    _: str = Depends(require_role("admin"))):
+    s = db.get(SyncSchedule, sid)
+    if not s or s.project_id != pid:
+        raise HTTPException(404, "no such schedule")
+    db.delete(s)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/projects/{pid}/sync/schedules/{sid}/run-now")
+def run_schedule_now(pid: str, sid: str, db: Session = Depends(get_db),
+                     user: str = Depends(require_role("editor"))):
+    from datetime import datetime, timezone
+    s = db.get(SyncSchedule, sid)
+    if not s or s.project_id != pid:
+        raise HTTPException(404, "no such schedule")
+    res = sync_engine.run_schedule(db, s, actor=user)
+    s.last_run = datetime.now(timezone.utc)
+    s.last_result = res
+    db.commit()
+    return res
 
 
 @router.post("/projects/{pid}/ai/draft-rfi")

@@ -247,3 +247,19 @@ class Connection(Base):
     type: Mapped[str] = mapped_column(String, nullable=False)        # postgres | supabase | procore
     config: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # {dsn} or {access_token}
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class SyncSchedule(Base):
+    """A recurring import from a Procore connection into a project's modules (auto-sync). A
+    background loop runs due schedules; `last_result` holds the most recent run summary."""
+    __tablename__ = "sync_schedules"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    connection_id: Mapped[str] = mapped_column(String, nullable=False)
+    procore_project_id: Mapped[str] = mapped_column(String, nullable=False)
+    kinds: Mapped[dict | None] = mapped_column(JSON, nullable=True)   # ["rfi","submittal","change_event"]
+    interval_minutes: Mapped[int] = mapped_column(default=60)
+    enabled: Mapped[bool | None] = mapped_column(Boolean, default=True)
+    last_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

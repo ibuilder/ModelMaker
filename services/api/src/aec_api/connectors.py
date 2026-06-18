@@ -94,12 +94,48 @@ def map_procore_rfi(r: dict) -> dict[str, Any]:
                      "spec_section": r.get("specification_section") or ""}}
 
 
+def map_procore_submittal(s: dict) -> dict[str, Any]:
+    """Map a Procore submittal to our submittal-module record data (+ external id)."""
+    title = s.get("title") or (f"Submittal {s.get('number')}" if s.get("number") else "Imported submittal")
+    return {"procore_id": str(s.get("id")),
+            "data": {"title": title, "spec_section": s.get("specification_section") or "",
+                     "type": s.get("type") or "", "disposition": s.get("status") or ""}}
+
+
+def map_procore_change_event(ce: dict) -> dict[str, Any]:
+    """Map a Procore change event to our change_event-module record data (+ external id).
+    ROM is summed from line items when present, else the event's rom field."""
+    amt = 0.0
+    for li in (ce.get("change_event_line_items") or []):
+        try:
+            amt += float(li.get("amount") or 0)
+        except (TypeError, ValueError):
+            pass
+    if not amt:
+        try:
+            amt = float(ce.get("rom") or 0)
+        except (TypeError, ValueError):
+            amt = 0.0
+    subject = ce.get("title") or (f"CE {ce.get('number')}" if ce.get("number") else "Imported change event")
+    return {"procore_id": str(ce.get("id")), "data": {"subject": subject, "rom": amt}}
+
+
 def _procore_rfis(token: str, project_id: str) -> list[dict]:
     return _procore_get(f"/rest/v1.0/projects/{project_id}/rfis", token) or []
 
 
-# overridable seam so tests can drive the sync without a live Procore
+def _procore_submittals(token: str, project_id: str) -> list[dict]:
+    return _procore_get(f"/rest/v1.0/projects/{project_id}/submittals", token) or []
+
+
+def _procore_change_events(token: str, project_id: str) -> list[dict]:
+    return _procore_get(f"/rest/v1.1/projects/{project_id}/change_events", token) or []
+
+
+# overridable seams so tests can drive the sync without a live Procore
 procore_rfis = _procore_rfis
+procore_submittals = _procore_submittals
+procore_change_events = _procore_change_events
 
 
 def _test_procore(config: dict) -> dict[str, Any]:
