@@ -123,6 +123,23 @@ def connection_query(cid: str, sql: str = Body(..., embed=True), limit: int = Bo
     return connectors.query(ctype, config, sql, limit)
 
 
+@router.get("/connections/{cid}/acc/projects/{project_id}/issues")
+def acc_issues(cid: str, project_id: str, db: Session = Depends(get_db),
+               _: User = Depends(require_admin_user)):
+    """Read an ACC project's issues (browse the issues data plane for an Autodesk connection)."""
+    c = db.get(Connection, cid)
+    if not c or c.type != "acc":
+        raise HTTPException(400, "issues browse applies to Autodesk Construction Cloud connections")
+    token = (c.config or {}).get("access_token")
+    if not token:
+        raise HTTPException(400, "connection has no access token")
+    try:
+        rows = connectors.acc_issues(token, project_id)
+    except Exception as e:                       # noqa: BLE001 — surface upstream failure as data
+        return {"error": str(e).splitlines()[0][:160]}
+    return {"kind": "acc-issues", "count": len(rows), "issues": rows}
+
+
 @router.get("/connections/{cid}/mappings")
 def get_mappings(cid: str, db: Session = Depends(get_db), _: User = Depends(require_admin_user)):
     """Editable Procore→module field mapping: per kind, each module field with its default and

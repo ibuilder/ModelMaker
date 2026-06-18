@@ -7,8 +7,9 @@ Types:
   postgres   any PostgreSQL DSN
   supabase   a Supabase project's PostgreSQL DSN (Supabase's DB is Postgres)
   procore    Procore REST API via an access token (a data source, not a SQL DB)
+  acc        Autodesk Construction Cloud (APS) via a 3-legged OAuth token
 
-Secrets in a connection's config (DSN password, Procore access token) are masked on read."""
+Secrets in a connection's config (DSN password, Procore/ACC access token) are masked on read."""
 from __future__ import annotations
 
 import json
@@ -16,7 +17,7 @@ import re
 import urllib.request
 from typing import Any
 
-TYPES = ("local", "postgres", "supabase", "procore")
+TYPES = ("local", "postgres", "supabase", "procore", "acc")
 
 
 def _mask_dsn(dsn: str) -> str:
@@ -212,6 +213,63 @@ procore_change_events = _procore_change_events
 procore_update_rfi = _procore_update_rfi
 
 
+# --- Autodesk Construction Cloud (APS) -----------------------------------------
+# ACC is another major BIM data platform; same adapter pattern as Procore. A 3-legged OAuth
+# token reaches the user profile + (with an account_id) the account's projects and their issues.
+def _aps_get(path: str, token: str) -> Any:
+    req = urllib.request.Request(f"https://developer.api.autodesk.com{path}",
+                                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=8) as r:  # noqa: S310 — fixed Autodesk host
+        return json.loads(r.read().decode())
+
+
+def _acc_list(payload: Any) -> list[dict]:
+    """ACC list endpoints wrap rows under 'results' (Issues/Admin) or 'data' (Data Mgmt)."""
+    if isinstance(payload, dict):
+        for key in ("results", "data"):
+            if isinstance(payload.get(key), list):
+                return payload[key]
+    return payload if isinstance(payload, list) else []
+
+
+def _acc_projects(token: str, account_id: str) -> list[dict]:
+    # ACC Admin API: projects under an account (account_id == ACC account/hub GUID)
+    return _acc_list(_aps_get(f"/construction/admin/v1/accounts/{account_id}/projects", token))
+
+
+def _acc_issues(token: str, project_id: str) -> list[dict]:
+    return _acc_list(_aps_get(f"/construction/issues/v1/projects/{project_id}/issues", token))
+
+
+# overridable seams so tests can drive ACC reads without a live Autodesk tenant
+acc_projects = _acc_projects
+acc_issues = _acc_issues
+
+
+def _test_acc(config: dict) -> dict[str, Any]:
+    token = (config or {}).get("access_token")
+    if not token:
+        return {"ok": False, "detail": "no access token"}
+    try:
+        me = _aps_get("/userprofile/v1/users/@me", token)
+        who = me.get("userName") or me.get("emailId") or me.get("userId") or "connected"
+        return {"ok": True, "detail": f"Autodesk · {who}"}
+    except Exception as e:                       # noqa: BLE001
+        return {"ok": False, "detail": str(e)[:140]}
+
+
+def _info_acc(config: dict) -> dict[str, Any]:
+    token, account = config.get("access_token"), (config.get("account_id") or "").strip()
+    if not (token and account):
+        return {"hint": "set account_id to list projects"} if token else {}
+    try:
+        projects = acc_projects(token, account)
+        names = [p.get("name") for p in projects[:5] if isinstance(p, dict)]
+        return {"projects": names, "project_count": len(projects)}
+    except Exception:                            # noqa: BLE001
+        return {}
+
+
 def _test_procore(config: dict) -> dict[str, Any]:
     token = (config or {}).get("access_token")
     if not token:
@@ -232,11 +290,13 @@ def test(ctype: str, config: dict | None) -> dict[str, Any]:
         return _test_sql(config.get("dsn", ""))
     if ctype == "procore":
         return _test_procore(config)
+    if ctype == "acc":
+        return _test_acc(config)
     return {"ok": False, "detail": f"unknown connection type {ctype!r}"}
 
 
 def info(ctype: str, config: dict | None) -> dict[str, Any]:
-    """A small status payload for the connection card. For Procore, lists a few projects."""
+    """A small status payload for the connection card. For Procore/ACC, lists a few projects."""
     config = config or {}
     if ctype == "procore" and config.get("access_token"):
         try:
@@ -245,6 +305,8 @@ def info(ctype: str, config: dict | None) -> dict[str, Any]:
             return {"projects": names, "project_count": len(projects or [])}
         except Exception:                        # noqa: BLE001
             return {}
+    if ctype == "acc":
+        return _info_acc(config)
     return {}
 
 
@@ -270,6 +332,8 @@ def tables(ctype: str, config: dict | None) -> dict[str, Any]:
     config = config or {}
     if ctype == "procore":
         return {"kind": "procore", **info("procore", config)}
+    if ctype == "acc":
+        return {"kind": "acc", **info("acc", config)}
     if ctype not in ("local", "postgres", "supabase"):
         return {"error": f"{ctype} is not browsable"}
     from sqlalchemy import inspect

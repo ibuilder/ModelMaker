@@ -695,6 +695,8 @@ function connectionsModal() {
     postgres: [{ key: "dsn", label: "Connection string", secret: true, placeholder: "postgresql://user:pass@host:5432/db" }],
     supabase: [{ key: "dsn", label: "Supabase DB URL", secret: true, placeholder: "postgresql://postgres:pass@db.xxx.supabase.co:5432/postgres" }],
     procore: [{ key: "access_token", label: "Access token", secret: true, placeholder: "Procore OAuth access token" }],
+    acc: [{ key: "access_token", label: "Access token", secret: true, placeholder: "Autodesk (APS) 3-legged OAuth token" },
+          { key: "account_id", label: "Account ID", placeholder: "ACC account / hub GUID (to list projects)" }],
   };
 
   const render = async () => {
@@ -737,6 +739,15 @@ function connectionsModal() {
         }));
         row.append(act("Mapping", async () => mappingModal(cx.id, cx.name)));
       }
+      if (cx.type === "acc") {
+        row.append(act("Issues", async () => {
+          const pp = prompt("ACC project ID to list issues from:");
+          if (!pp || !pp.trim()) return;
+          const r = await api.accIssues(cx.id, pp.trim());
+          if (r.error) { msg.textContent = `ACC: ${r.error}`; return; }
+          toast(`ACC: ${r.count ?? 0} issue(s) on project ${pp.trim()}`, "info");
+        }));
+      }
       if (!cx.builtin) {
         row.append(
           act("Test", async () => { detail.textContent = "testing…"; const r = await api.testConnection(cx.id); badge(r.status.ok); detail.textContent = r.status.detail + (r.info.project_count ? ` · ${r.info.project_count} projects` : ""); }),
@@ -749,7 +760,7 @@ function connectionsModal() {
     form.innerHTML = `<div class="meta" style="font-weight:600;color:var(--text);margin-bottom:6px">Add connection</div>`;
     const nu = document.createElement("input"); nu.placeholder = "name"; nu.className = "portal-filter"; nu.style.cssText = "width:100%;margin-bottom:6px";
     const ty = document.createElement("select"); ty.className = "portal-filter"; ty.style.cssText = "width:100%;margin-bottom:6px";
-    for (const t of ["postgres", "supabase", "procore"]) { const o = document.createElement("option"); o.value = o.textContent = t; ty.appendChild(o); }
+    for (const t of ["postgres", "supabase", "procore", "acc"]) { const o = document.createElement("option"); o.value = o.textContent = t; ty.appendChild(o); }
     const fields = document.createElement("div");
     const inputs: Record<string, HTMLInputElement> = {};
     const renderFields = () => {

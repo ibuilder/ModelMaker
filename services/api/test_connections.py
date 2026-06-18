@@ -181,6 +181,25 @@ with TestClient(app) as c:
     assert c.post(f"/projects/{proj}/sync/procore/push", headers=BEARER(tok),
                   json={"connection_id": "local", "procore_project_id": "1"}).status_code in (400, 404)
 
+    # --- Autodesk Construction Cloud (ACC): same adapter pattern (token + project/issue read) --
+    assert "acc" in c.get("/connections", headers=BEARER(tok)).json()["types"]
+    _conn._aps_get = lambda path, token: {"userName": "jane.doe", "emailId": "jane@firm.com"}  # /me
+    _conn.acc_projects = lambda token, account: [{"id": "p1", "name": "Tower A"}, {"id": "p2", "name": "Garage"}]
+    _conn.acc_issues = lambda token, pid: [{"id": "i1", "title": "Cracked slab", "status": "open"}]
+    acc = c.post("/connections", headers=BEARER(tok),
+                 json={"name": "ACC", "type": "acc",
+                       "config": {"access_token": "aps-tok", "account_id": "acct-1"}}).json()
+    assert acc["config"].get("access_token_set") is True and acc["config"].get("account_id") == "acct-1", acc["config"]
+    at = c.post(f"/connections/{acc['id']}/test", headers=BEARER(tok)).json()
+    assert at["status"]["ok"] and "jane.doe" in at["status"]["detail"], at                # token validated via /me
+    assert at["info"]["project_count"] == 2 and "Tower A" in at["info"]["projects"], at["info"]
+    accb = c.get(f"/connections/{acc['id']}/tables", headers=BEARER(tok)).json()
+    assert accb["kind"] == "acc" and accb["project_count"] == 2, accb                     # browse -> projects
+    iss = c.get(f"/connections/{acc['id']}/acc/projects/p1/issues", headers=BEARER(tok)).json()
+    assert iss["kind"] == "acc-issues" and iss["count"] == 1 and iss["issues"][0]["title"] == "Cracked slab", iss
+    # issues browse is an ACC-only concept
+    assert c.get(f"/connections/{pc['id']}/acc/projects/p1/issues", headers=BEARER(tok)).status_code == 400
+
     print("CONNECTIONS OK - status, masked secrets, test, CRUD, validation, read-only browse/query, "
           "Procore->rfi/submittal/change_event sync (idempotent), field-mapping editor, "
-          "auto-sync schedules + run_due, two-way push")
+          "auto-sync schedules + run_due, two-way push, ACC token/project/issue read")

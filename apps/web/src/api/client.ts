@@ -279,6 +279,11 @@ export class ApiClient {
     return this.json<{ columns?: string[]; rows?: unknown[][]; row_count?: number; error?: string }>(
       `/connections/${id}/query`, { method: "POST", body: JSON.stringify({ sql, limit }) });
   }
+  /** Read an ACC (Autodesk Construction Cloud) project's issues. */
+  accIssues(id: string, projectId: string) {
+    return this.json<{ kind?: string; count?: number; issues?: Record<string, unknown>[]; error?: string }>(
+      `/connections/${id}/acc/projects/${projectId}/issues`);
+  }
   /** Editable Procore->module field mapping for a connection (admin). */
   connectionMappings(id: string) {
     return this.json<{ mappings: Record<string, { module: string; fields: { field: string; label: string; default: string; path: string }[] }> }>(
