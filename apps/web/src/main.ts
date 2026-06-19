@@ -4,6 +4,7 @@ import { PortalUI } from "./portal/portal";
 import { ProformaUI } from "./proforma/proforma";
 import { ApiClient } from "./api/client";
 import { toast } from "./ui/feedback";
+import { autoCheck, checkForUpdates, currentVersion } from "./ui/update";
 import type { Settings, ViewerApp } from "./viewer/app";
 
 // ---- shell DOM + shared state (no three/@thatopen here — those load lazily) --
@@ -598,8 +599,18 @@ function settingsModal() {
   }).catch(() => { badges.textContent = ""; });
   const credit = document.createElement("div");
   credit.className = "meta"; credit.style.cssText = "margin-top:8px;font-size:11px";
-  credit.innerHTML = `AEC BIM Platform — created by <b>Matthew M. Emma</b>, built with Claude Code as AI assistant.`;
+  credit.innerHTML = `AEC BIM Platform <b>v${currentVersion()}</b> — created by <b>Matthew M. Emma</b>, built with Claude Code as AI assistant.`;
   about.appendChild(credit);
+  const upRow = document.createElement("div"); upRow.style.cssText = "margin-top:6px;display:flex;gap:8px;align-items:center";
+  const upBtn = document.createElement("button"); upBtn.className = "tool-btn"; upBtn.textContent = "Check for updates";
+  const upMsg = document.createElement("span"); upMsg.className = "meta"; upMsg.style.fontSize = "11px";
+  upBtn.onclick = async () => {
+    upMsg.textContent = "checking…";
+    const info = await checkForUpdates();
+    if (info) { upMsg.innerHTML = `v${info.version} available — <a class="ref-link" href="${info.url}" target="_blank" rel="noopener">download</a>`; }
+    else upMsg.textContent = "you're on the latest version";
+  };
+  upRow.append(upBtn, upMsg); about.appendChild(upRow);
 
   // keyboard shortcuts (amenity)
   const sc = document.createElement("div");
@@ -1063,6 +1074,7 @@ async function startup() {
   }
   if (projectId) connectNotifications();
   void applyCapabilities();
+  if (!demo) void autoCheck();          // show a banner if a newer release is published
   if (!demo) {
     const conn = document.createElement("button");
     conn.className = "tool-btn"; conn.style.marginLeft = "6px"; conn.textContent = "🗄"; conn.title = "Data connections";

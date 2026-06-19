@@ -6,6 +6,9 @@ import { VitePWA } from "vite-plugin-pwa";
 // conflict), so web-ifc/@thatopen multithreaded WASM (SharedArrayBuffer) still works.
 const PAGES = process.env.VITE_PAGES === "1";
 const BASE = process.env.VITE_BASE || "/";
+// app version, baked in at build time so the in-app update check can compare against the latest
+// GitHub release (kept in sync with package.json / tauri.conf.json).
+const APP_VERSION = process.env.npm_package_version || "0.0.0";
 
 const coiInject: Plugin = {
   name: "coi-serviceworker-inject",
@@ -16,7 +19,10 @@ const coiInject: Plugin = {
 export default defineConfig({
   base: BASE,
   // expose the Pages/demo flag to the client (no backend → skip API probes)
-  define: { "import.meta.env.VITE_PAGES": JSON.stringify(PAGES) },
+  define: {
+    "import.meta.env.VITE_PAGES": JSON.stringify(PAGES),
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(APP_VERSION),
+  },
   plugins: PAGES ? [coiInject] : [
     VitePWA({
       registerType: "autoUpdate",

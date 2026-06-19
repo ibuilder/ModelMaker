@@ -139,6 +139,22 @@ build; projects are saved/opened as portable `.mmproj` bundles (Open/Save menu).
 A native-window wrapper (Tauri, below) can host this same backend; the PyInstaller `.exe` already
 ships a complete, double-clickable app on its own (it opens the system browser).
 
+### Auto-update
+- **Update check (built-in, no setup):** on launch the app checks the project's GitHub *Releases*
+  for a newer version than the one baked in at build (`VITE_APP_VERSION` ← `package.json`), and shows
+  a dismissible banner with a download link; there's also a manual "Check for updates" in Settings
+  (`apps/web/src/ui/update.ts`). Works for the `.exe`, the Tauri build, and the browser. It links to
+  the new installer rather than hot-swapping (an OS can't replace a running `.exe` in place).
+- **Silent self-install (Tauri, optional):** for true in-app install, enable the Tauri updater —
+  it requires a signing keypair:
+  1. `npx @tauri-apps/cli signer generate -w aec.key` → keep the **public** key, guard the private one.
+  2. Put the public key in `tauri.conf.json` under `plugins.updater.pubkey` and set
+     `bundle.createUpdaterArtifacts: true` + `plugins.updater.endpoints` to the release `latest.json`.
+  3. Add repo secrets `TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` and pass them
+     to the `tauri-action` step (tauri-action then emits the signed updater bundles + `latest.json`).
+  Not enabled by default because `createUpdaterArtifacts` makes the build *require* the signing key —
+  so flip it on only once the secret is configured (otherwise the release build fails).
+
 ## Desktop installers (Tauri) & code signing
 `.github/workflows/desktop.yml` builds Windows / macOS (arm64) / Linux installers. Push a tag
 (`v0.1.0`) for a draft Release; run it manually (Actions → Desktop release → Run workflow) for
