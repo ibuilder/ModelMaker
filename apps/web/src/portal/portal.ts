@@ -194,15 +194,22 @@ export class PortalUI {
     wrap.appendChild(filter);
 
     const mkBtn = (m: ModuleDef) => {
-      const b = document.createElement("button"); b.className = "portal-mod"; b.dataset.modname = m.name.toLowerCase();
+      // a row of two real buttons (favorite toggle + open) — both keyboard-focusable, no nested
+      // interactive elements (a <button> inside a <button> is invalid + unfocusable).
+      const row = document.createElement("div"); row.className = "portal-mod-row"; row.dataset.modname = m.name.toLowerCase();
       const fav = favs.has(m.key);
-      const star = document.createElement("span"); star.className = "mod-fav" + (fav ? " on" : ""); star.textContent = fav ? "★" : "☆";
+      const star = document.createElement("button");
+      star.type = "button"; star.className = "mod-fav" + (fav ? " on" : ""); star.textContent = fav ? "★" : "☆";
       star.title = fav ? "Unfavorite" : "Favorite";
+      star.setAttribute("aria-label", `${fav ? "Unfavorite" : "Favorite"} ${m.name}`);
+      star.setAttribute("aria-pressed", String(fav));
       star.onclick = (e) => { e.stopPropagation(); this.toggleFav(m.key); };
-      b.append(star, Object.assign(document.createElement("span"), { className: "ic", textContent: m.icon || "•" }),
+      const open = document.createElement("button"); open.type = "button"; open.className = "portal-mod";
+      open.append(Object.assign(document.createElement("span"), { className: "ic", textContent: m.icon || "•" }),
         document.createTextNode(" " + m.name));
-      b.onclick = () => this.openModule(m);
-      return b;
+      open.onclick = () => this.openModule(m);
+      row.append(star, open);
+      return row;
     };
 
     const sections = new Map<string, ModuleDef[]>();
@@ -220,9 +227,9 @@ export class PortalUI {
       const q = filter.value.trim().toLowerCase();
       wrap.querySelectorAll<HTMLElement>(".tool-group").forEach((g) => {
         let any = false;
-        g.querySelectorAll<HTMLElement>(".portal-mod").forEach((btn) => {
-          const hit = !q || (btn.dataset.modname || "").includes(q);
-          btn.style.display = hit ? "" : "none"; if (hit) any = true;
+        g.querySelectorAll<HTMLElement>(".portal-mod-row").forEach((row) => {
+          const hit = !q || (row.dataset.modname || "").includes(q);
+          row.style.display = hit ? "" : "none"; if (hit) any = true;
         });
         g.style.display = any ? "" : "none";
         if (q) g.classList.toggle("open", any);
