@@ -666,7 +666,7 @@ function schedulesModal(connectionId: string) {
     let scheds: import("./api/client").SyncScheduleItem[] = [];
     try { scheds = (await api.syncSchedules(pid)).filter((s) => s.connection_id === connectionId); }
     catch { list.innerHTML = `<div class="meta">admin only.</div>`; return; }
-    if (!scheds.length) { const e = document.createElement("div"); e.className = "meta"; e.textContent = "No schedules yet — add one below."; list.appendChild(e); }
+    if (!scheds.length) { const e = document.createElement("div"); e.className = "empty-state"; e.innerHTML = `No schedules yet<span class="es-hint">Add one below to auto-sync from Procore.</span>`; list.appendChild(e); }
     const act = (label: string, fn: () => Promise<unknown>) => { const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = label; b.onclick = async () => { try { await fn(); await render(); } catch { msg.textContent = "action failed"; } }; return b; };
     for (const s of scheds) {
       const row = document.createElement("div"); row.style.cssText = "border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px";

@@ -65,7 +65,7 @@ export class DrawingsUI {
     const pid = this.host_.projectId();
     const list = this.root.querySelector<HTMLElement>("#dwg-list")!;
     list.innerHTML = "";
-    if (!pid) { list.innerHTML = `<div class="meta">connect a project to view drawings</div>`; return; }
+    if (!pid) { list.innerHTML = `<div class="empty-state">No project open<span class="es-hint">Pick a project in the toolbar to view its drawings.</span></div>`; return; }
     const pq = (s: Record<string, string | number>) =>
       Object.entries(s).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
 

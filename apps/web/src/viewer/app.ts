@@ -685,7 +685,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     if (!host) return;
     host.innerHTML = "";
     const ids = [...loader.fragments.list.keys()];
-    if (!ids.length) { host.innerHTML = `<div class="meta">no models loaded — use Open ▾</div>`; return; }
+    if (!ids.length) { host.innerHTML = `<div class="empty-state">No models loaded<span class="es-hint">Use Open ▾ to load an IFC or .frag.</span></div>`; return; }
     for (const id of ids) {
       const model = loader.fragments.list.get(id) as { object: { visible: boolean } } | undefined;
       if (!model) continue;

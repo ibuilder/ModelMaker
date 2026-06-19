@@ -21,7 +21,7 @@ export class PortalUI {
   constructor(private root: HTMLElement, private host: PortalHost) {}
 
   async init() {
-    if (!this.host.projectId()) { this.root.textContent = "connect a project to use the portal"; return; }
+    if (!this.host.projectId()) { this.root.innerHTML = `<div class="empty-state">No project open<span class="es-hint">Pick a project in the toolbar to use the GC portal.</span></div>`; return; }
     this.mods = await this.host.api.modules();
     // re-order the module catalog's default-open sections when the persona changes
     window.addEventListener("aec:persona", () => this.refreshCatalog());
@@ -45,7 +45,7 @@ export class PortalUI {
         results.innerHTML = "";
         if (search.value.trim().length < 2) return;
         const hits = await this.host.api.searchAll(pid, search.value.trim());
-        if (!hits.length) { results.innerHTML = `<div class="meta">no matches</div>`; return; }
+        if (!hits.length) { results.innerHTML = `<div class="empty-state">No matches</div>`; return; }
         for (const h of hits) {
           const row = document.createElement("button"); row.className = "portal-mod";
           row.innerHTML = `<span class="ic">${h.icon}</span> ${h.ref} ${h.title ?? ""} <span class="badge">${h.module_name}</span>`;
@@ -292,8 +292,10 @@ export class PortalUI {
     this.root.appendChild(actions);
 
     if (!records.length) {
-      const e = document.createElement("div"); e.className = "meta";
-      e.textContent = filter.q || filter.state ? "no matching records" : "no records yet";
+      const e = document.createElement("div"); e.className = "empty-state";
+      e.innerHTML = filter.q || filter.state
+        ? `No matching records<span class="es-hint">Try clearing the filter or state.</span>`
+        : `No ${m.name.toLowerCase()} yet<span class="es-hint">Use “+ New” to create the first one.</span>`;
       this.root.appendChild(e);
       return;
     }

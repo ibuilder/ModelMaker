@@ -195,6 +195,10 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 .badge.answered, .badge.closed { color: #8fd98f; }
 .section-title { font-size: 11px; text-transform: uppercase; color: var(--muted); margin: 4px 0 8px; letter-spacing: .04em; }
 
+/* consistent panel empty-state (one muted line, matches the tools-accordion reason style) */
+.empty-state { color: var(--muted); font-size: 12px; line-height: 1.5; padding: 14px 12px; text-align: center; }
+.empty-state .es-hint { display: block; margin-top: 2px; font-size: 11px; opacity: .8; }
+
 /* collapsible tool sections (the ⚙ Tools panel) */
 .tool-group { border-bottom: 1px solid var(--line); }
 .tool-group-head {
