@@ -22,7 +22,6 @@
     ],
     "security": {
       "csp": null,
-      "// note": "COOP/COEP keep the WebView cross-origin isolated so web-ifc's multithreaded WASM (SharedArrayBuffer) works inside Tauri, mirroring the nginx + Vite headers.",
       "headers": {
         "Cross-Origin-Opener-Policy": "same-origin",
         "Cross-Origin-Embedder-Policy": "require-corp"
