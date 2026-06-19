@@ -139,7 +139,8 @@ A development-finance engine for the owner/developer side (the **Finance** works
   installers (`.github/workflows/desktop.yml`); each runner first builds the Python backend
   sidecar (PyInstaller) so the installer ships the full app, not just the viewer. A viewer-only
   **GitHub Pages** demo deploys from `pages.yml`.
-- **CI gate** — `services/api/run_tests.py` runs all suites (8/8); GitHub Actions runs it + the web build.
+- **CI gate** — `services/api/run_tests.py` runs all Python suites (incl. interop/bundle/desktop/
+  local-mode); GitHub Actions runs it + the web build (tsc + vitest + prod build).
 
 ## Gallery
 
@@ -159,8 +160,15 @@ GC portal schedule visuals (from the `schedule_activity` module):
 |---|---|
 | ![gantt](docs/img/gantt.png) | ![lob](docs/img/lob.png) |
 
-> Live 3D-viewer UI captures (model + panels) can be added to `docs/img/` — the viewer is a
-> WebGL app, so these are best grabbed from the running app (`apps/web`).
+Platform interface (vector renders of the redesigned UI — see the [live demo](https://ibuilder.github.io/ModelMaker/app/) for the running app):
+
+| Tools panel + readable results | 68-module portal catalog |
+|---|---|
+| ![tools panel](docs/img/ui-tools-panel.svg) | ![portal catalog](docs/img/ui-portal-catalog.svg) |
+
+The ⚙ Tools panel is a persona-ordered, collapsible, state-aware accordion (secondary tools fold
+under "More tools"; analysis opens in a readable modal); the GC-portal catalog tames 68 modules
+with ★ favorites, collapsible persona-aware sections, and a filter.
 
 ## Architecture
 

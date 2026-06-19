@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 540" font-family="system-ui,Segoe UI,Roboto,sans-serif">
+  <!-- Interface render (not a raw screenshot): the redesigned ⚙ Tools panel + readable result modal -->
+  <rect width="760" height="540" fill="#16171a"/>
+  <!-- rail icons -->
+  <rect x="0" y="0" width="40" height="540" fill="#25272b"/>
+  <g fill="#9aa0a6" font-size="16" text-anchor="middle">
+    <text x="20" y="40">⌗</text><text x="20" y="76">≣</text><text x="20" y="112">⚑</text>
+    <rect x="6" y="128" width="28" height="28" rx="6" fill="#4a8cff"/><text x="20" y="148" fill="#fff">⚙</text>
+  </g>
+  <!-- tools panel -->
+  <g transform="translate(40,0)">
+    <rect width="320" height="540" fill="#25272b"/>
+    <text x="14" y="26" fill="#9aa0a6" font-size="11">Model-derived analysis &amp; exports. Full records</text>
+    <text x="14" y="40" fill="#9aa0a6" font-size="11">live in the Construction &amp; Finance workspaces.</text>
+    <!-- helper for a section header -->
+    <g font-size="11" letter-spacing="0.4">
+      <!-- open: Cost -->
+      <line x1="14" y1="58" x2="306" y2="58" stroke="#2b2d31"/>
+      <text x="16" y="78" fill="#e7e7e7" font-weight="600">▾  COST / PAY APPS</text>
+      <rect x="14" y="90" width="292" height="26" rx="5" fill="#2b2d31"/><text x="22" y="107" fill="#e7e7e7" font-size="12">Σ  Cost Summary</text>
+      <rect x="14" y="120" width="292" height="26" rx="5" fill="#2b2d31"/><text x="22" y="137" fill="#e7e7e7" font-size="12">↓  G702/G703 Pay App (PDF)</text>
+      <text x="16" y="162" fill="#4a8cff" font-size="11">Manage budgets &amp; change orders in Construction →</text>
+      <!-- open: Schedule -->
+      <line x1="14" y1="176" x2="306" y2="176" stroke="#2b2d31"/>
+      <text x="16" y="196" fill="#e7e7e7" font-weight="600">▾  SCHEDULE</text>
+      <rect x="14" y="208" width="292" height="26" rx="5" fill="#2b2d31"/><text x="22" y="225" fill="#e7e7e7" font-size="12">▤  Gantt chart</text>
+      <!-- gated: QA -->
+      <line x1="14" y1="248" x2="306" y2="248" stroke="#2b2d31"/>
+      <text x="16" y="268" fill="#9aa0a6" font-weight="600">▸  COORDINATION &amp; QA</text>
+      <text x="300" y="268" fill="#9aa0a6" font-size="10" font-style="italic" text-anchor="end">needs a source IFC</text>
+      <!-- More tools divider -->
+      <line x1="14" y1="288" x2="306" y2="288" stroke="#2b2d31" stroke-dasharray="3 3"/>
+      <text x="16" y="304" fill="#9aa0a6" font-size="10" letter-spacing="1">MORE TOOLS</text>
+      <text x="16" y="330" fill="#9aa0a6" font-weight="600">▸  ENERGY &amp; MEP</text>
+      <text x="300" y="330" fill="#9aa0a6" font-size="10" font-style="italic" text-anchor="end">needs a source IFC</text>
+      <text x="16" y="356" fill="#9aa0a6" font-weight="600">▸  DRAWINGS (2D)</text>
+      <text x="300" y="356" fill="#9aa0a6" font-size="10" font-style="italic" text-anchor="end">needs a source IFC</text>
+    </g>
+  </g>
+  <!-- readable result modal -->
+  <g transform="translate(250,150)">
+    <rect width="420" height="250" rx="10" fill="#2b2d31" stroke="#16171a" filter="drop-shadow(0 12px 30px #000a)"/>
+    <text x="18" y="34" fill="#e7e7e7" font-size="15" font-weight="700">Cost summary</text>
+    <text x="398" y="32" fill="#9aa0a6" font-size="15" text-anchor="end">✕</text>
+    <line x1="0" y1="50" x2="420" y2="50" stroke="#16171a"/>
+    <g font-size="13">
+      <g transform="translate(0,50)">
+        <text x="18" y="28" fill="#9aa0a6">Budget</text><text x="402" y="28" fill="#e7e7e7" text-anchor="end">$8,400,000</text>
+        <rect x="250" y="40" width="118" height="20" rx="4" fill="#4a8cff" opacity="0.22"/>
+        <text x="18" y="58" fill="#9aa0a6">Committed</text><text x="402" y="58" fill="#e7e7e7" text-anchor="end">$5,100,000 (61%)</text>
+        <rect x="250" y="70" width="78" height="20" rx="4" fill="#4a8cff" opacity="0.22"/>
+        <text x="18" y="88" fill="#9aa0a6">Actual</text><text x="402" y="88" fill="#e7e7e7" text-anchor="end">$3,750,000 (45%)</text>
+        <text x="18" y="118" fill="#9aa0a6">Forecast</text><text x="402" y="118" fill="#e7e7e7" text-anchor="end">$8,610,000</text>
+        <line x1="14" y1="132" x2="406" y2="132" stroke="#16171a"/>
+        <text x="18" y="160" fill="#e7e7e7" font-weight="700">Projected over / under</text>
+        <text x="402" y="160" fill="#e2554a" font-weight="700" text-anchor="end">$210,000</text>
+      </g>
+    </g>
+  </g>
+  <text x="380" y="528" fill="#5a5f66" font-size="11" text-anchor="middle">Persona-ordered, collapsible Tools panel — secondary tools fold under “More tools”; results open in a readable modal.</text>
+</svg>

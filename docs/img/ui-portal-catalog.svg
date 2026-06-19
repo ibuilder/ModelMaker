@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 540" font-family="system-ui,Segoe UI,Roboto,sans-serif">
+  <!-- Interface render (not a raw screenshot): the 68-module GC-portal catalog with favorites,
+       collapsible persona-aware sections, count badges, and a filter -->
+  <rect width="760" height="540" fill="#16171a"/>
+  <g transform="translate(40,20)">
+    <!-- filter -->
+    <rect x="0" y="0" width="680" height="30" rx="6" fill="#2b2d31" stroke="#16171a"/>
+    <text x="12" y="20" fill="#9aa0a6" font-size="13">Filter modules…</text>
+
+    <!-- helpers: section header with count badge -->
+    <g font-size="12">
+      <!-- Favorites (open) -->
+      <text x="2" y="58" fill="#ffd479" font-weight="600">▾  ★ FAVORITES</text>
+      <rect x="640" y="46" width="34" height="16" rx="8" fill="#2b2d31" stroke="#16171a"/><text x="657" y="58" fill="#9aa0a6" font-size="10" text-anchor="middle">3</text>
+      <g>
+        <rect x="0" y="68" width="680" height="26" rx="5" fill="#2b2d31"/><text x="12" y="85" fill="#ffd479">★</text><text x="30" y="85" fill="#e7e7e7">📩  RFIs</text>
+        <rect x="0" y="98" width="680" height="26" rx="5" fill="#2b2d31"/><text x="12" y="115" fill="#ffd479">★</text><text x="30" y="115" fill="#e7e7e7">📝  Submittals</text>
+        <rect x="0" y="128" width="680" height="26" rx="5" fill="#2b2d31"/><text x="12" y="145" fill="#ffd479">★</text><text x="30" y="145" fill="#e7e7e7">💲  Change Orders</text>
+      </g>
+
+      <!-- Cost (open, persona-primary) -->
+      <line x1="0" y1="170" x2="680" y2="170" stroke="#2b2d31"/>
+      <text x="2" y="190" fill="#e7e7e7" font-weight="600">▾  COST</text>
+      <rect x="640" y="178" width="34" height="16" rx="8" fill="#2b2d31" stroke="#16171a"/><text x="657" y="190" fill="#9aa0a6" font-size="10" text-anchor="middle">6</text>
+      <rect x="0" y="200" width="680" height="26" rx="5" fill="#2b2d31"/><text x="12" y="217" fill="#9aa0a6">☆</text><text x="30" y="217" fill="#e7e7e7">💰  Prime Contract</text>
+      <rect x="0" y="230" width="680" height="26" rx="5" fill="#2b2d31"/><text x="12" y="247" fill="#9aa0a6">☆</text><text x="30" y="247" fill="#e7e7e7">🧾  Budget</text>
+
+      <!-- Field (open, persona-primary) -->
+      <line x1="0" y1="270" x2="680" y2="270" stroke="#2b2d31"/>
+      <text x="2" y="290" fill="#e7e7e7" font-weight="600">▾  FIELD</text>
+      <rect x="636" y="278" width="38" height="16" rx="8" fill="#2b2d31" stroke="#16171a"/><text x="655" y="290" fill="#9aa0a6" font-size="10" text-anchor="middle">11</text>
+      <rect x="0" y="300" width="680" height="26" rx="5" fill="#2b2d31"/><text x="12" y="317" fill="#9aa0a6">☆</text><text x="30" y="317" fill="#e7e7e7">📋  Daily Log</text>
+
+      <!-- collapsed sections -->
+      <g fill="#9aa0a6" font-weight="600">
+        <line x1="0" y1="340" x2="680" y2="340" stroke="#2b2d31"/>
+        <text x="2" y="360">▸  ENGINEERING</text>
+        <rect x="636" y="348" width="38" height="16" rx="8" fill="#2b2d31" stroke="#16171a"/><text x="655" y="360" fill="#9aa0a6" font-size="10" text-anchor="middle">10</text>
+        <line x1="0" y1="376" x2="680" y2="376" stroke="#2b2d31"/>
+        <text x="2" y="396">▸  SAFETY</text>
+        <rect x="640" y="384" width="34" height="16" rx="8" fill="#2b2d31" stroke="#16171a"/><text x="657" y="396" fill="#9aa0a6" font-size="10" text-anchor="middle">7</text>
+        <line x1="0" y1="412" x2="680" y2="412" stroke="#2b2d31"/>
+        <text x="2" y="432">▸  QUALITY</text>
+        <rect x="640" y="420" width="34" height="16" rx="8" fill="#2b2d31" stroke="#16171a"/><text x="657" y="432" fill="#9aa0a6" font-size="10" text-anchor="middle">4</text>
+        <line x1="0" y1="448" x2="680" y2="448" stroke="#2b2d31"/>
+        <text x="2" y="468">▸  CONTRACTS</text>
+        <rect x="640" y="456" width="34" height="16" rx="8" fill="#2b2d31" stroke="#16171a"/><text x="657" y="468" fill="#9aa0a6" font-size="10" text-anchor="middle">4</text>
+      </g>
+    </g>
+  </g>
+  <text x="380" y="528" fill="#5a5f66" font-size="11" text-anchor="middle">68 modules across 12 collapsible sections — ★ favorites pinned on top, persona-relevant sections open by default, live filter.</text>
+</svg>
