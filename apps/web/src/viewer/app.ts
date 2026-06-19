@@ -760,9 +760,11 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       const saved = localStorage.getItem(`tools-open:${key}`);
       const open = saved == null ? (ok && isPrimary) : saved === "1";
       group.classList.toggle("open", open);
+      head.setAttribute("aria-expanded", String(open));
       head.onclick = () => {
         const o = !group.classList.contains("open");
-        group.classList.toggle("open", o); localStorage.setItem(`tools-open:${key}`, o ? "1" : "0");
+        group.classList.toggle("open", o); head.setAttribute("aria-expanded", String(o));
+        localStorage.setItem(`tools-open:${key}`, o ? "1" : "0");
       };
       panel.appendChild(group);
       if (!ok) { const n = document.createElement("div"); n.className = "meta"; n.textContent = `${reason} to use this.`; body.appendChild(n); return null; }

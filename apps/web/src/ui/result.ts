@@ -4,28 +4,49 @@
  *  scannable result opens here. */
 
 let host: HTMLElement | null = null;
+let lastFocus: HTMLElement | null = null;
 
 function close() {
   host?.remove();
   host = null;
   document.removeEventListener("keydown", onKey);
+  lastFocus?.focus?.();        // return focus to whatever opened the modal
+  lastFocus = null;
+}
+function focusable(): HTMLElement[] {
+  if (!host) return [];
+  return [...host.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !el.hasAttribute("disabled"));
 }
 function onKey(e: KeyboardEvent) {
-  if (e.key === "Escape") close();
+  if (e.key === "Escape") { close(); return; }
+  if (e.key === "Tab" && host) {          // trap focus inside the dialog
+    const items = focusable();
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    const active = document.activeElement as HTMLElement;
+    if (e.shiftKey && (active === first || !host.contains(active))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+  }
 }
 
 /** Open a result modal titled `title`; `render` fills the scrollable body. Replaces any open one. */
 export function showResult(title: string, render: (body: HTMLElement) => void): void {
   close();
+  lastFocus = document.activeElement as HTMLElement | null;
   host = document.createElement("div");
   host.className = "result-overlay";
   const card = document.createElement("div");
   card.className = "result-card";
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-modal", "true");
+  card.setAttribute("aria-label", title);
   const head = document.createElement("div");
   head.className = "result-head";
   head.innerHTML = `<strong>${title}</strong>`;
   const x = document.createElement("button");
-  x.className = "result-close"; x.textContent = "✕"; x.title = "Close (Esc)"; x.onclick = close;
+  x.className = "result-close"; x.textContent = "✕"; x.title = "Close (Esc)";
+  x.setAttribute("aria-label", "Close"); x.onclick = close;
   head.appendChild(x);
   const body = document.createElement("div");
   body.className = "result-body";
@@ -35,6 +56,7 @@ export function showResult(title: string, render: (body: HTMLElement) => void): 
   document.addEventListener("keydown", onKey);
   document.body.appendChild(host);
   render(body);
+  x.focus();                   // move focus into the dialog
 }
 
 /** Key/value table — e.g. a cost roll-up. `bar` (0..1) draws a proportional fill behind the value. */

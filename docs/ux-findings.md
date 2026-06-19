@@ -31,18 +31,22 @@ Severity: **High** (hurts daily use / blocks discovery) · **Med** (friction) ·
 
 ## Backlog
 
-### Med
-- **Empty-state consistency.** Different panels phrase "no project / no model / no source IFC"
-  differently. Standardize copy and styling (the tools accordion's muted-reason pattern is a good
-  template to reuse in the portal and drawings).
-- **Result/feedback reuse.** The new `toast` + `showResult` modal pattern should be the standard for
-  long-running portal actions (sync, exports, bulk ops) instead of inline text.
+### Done (later pass)
+- ✅ **Empty-state consistency.** Shared `.empty-state` style (one muted line + optional hint),
+  applied to the portal (was unstyled), no-records/no-matches, drawings register, model-federation
+  list, and Procore schedules.
+- ✅ **Theme/contrast audit (light mode).** Verified the Tools accordion, result modal, catalog, and
+  empty-states in light mode — all CSS-variable driven, good contrast, no fixes needed.
+- ✅ **Keyboard & a11y (modal + accordions).** Result modal is `role="dialog"` + `aria-modal`, moves
+  focus in on open, **traps Tab**, and **returns focus** to the opener on close; both accordions set
+  `aria-expanded` and toggle it. (Minor remaining: the catalog ★ favorite is a span-in-button —
+  click works, keyboard focus doesn't, without invalid nested-interactive markup.)
 
-### Low
-- **Theme/contrast audit** in light mode (the dark theme is the primary; verify the result modal,
-  accordion chevrons, and disabled-state contrast in light mode).
-- **Keyboard & a11y.** Accordion headers are real `<button>`s with focus (good); audit tab order and
-  ensure the result modal traps/returns focus and the toolbar buttons keep their `aria-label`s.
+### Low (remaining)
+- **Result/feedback reuse.** Extend the `toast` + `showResult` pattern to any remaining inline portal
+  output (already used for sync/push/schedules; audit bulk-action feedback).
+- **Responsive / mobile** layout (rail + floating toolbar) — pairs with the Capacitor/Tauri-mobile
+  wrapper.
 - **Responsive / mobile** layout was not reviewed; the rail + floating toolbar likely need a
   narrow-viewport treatment.
 

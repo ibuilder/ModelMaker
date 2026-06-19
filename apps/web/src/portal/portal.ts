@@ -233,12 +233,14 @@ export class PortalUI {
   private catalogGroup(title: string, key: string, buttons: HTMLElement[], openDefault: boolean): HTMLElement {
     const g = document.createElement("section"); g.className = "tool-group";
     const saved = localStorage.getItem(`portal-open:${key}`);
-    g.classList.toggle("open", saved == null ? openDefault : saved === "1");
+    const open0 = saved == null ? openDefault : saved === "1";
+    g.classList.toggle("open", open0);
     const head = document.createElement("button"); head.type = "button"; head.className = "tool-group-head";
+    head.setAttribute("aria-expanded", String(open0));
     head.innerHTML = `<span class="chev">▸</span><span class="t">${title}</span><span class="cnt">${buttons.length}</span>`;
     const body = document.createElement("div"); body.className = "tool-group-body";
     for (const b of buttons) body.appendChild(b);
-    head.onclick = () => { const o = !g.classList.contains("open"); g.classList.toggle("open", o); localStorage.setItem(`portal-open:${key}`, o ? "1" : "0"); };
+    head.onclick = () => { const o = !g.classList.contains("open"); g.classList.toggle("open", o); head.setAttribute("aria-expanded", String(o)); localStorage.setItem(`portal-open:${key}`, o ? "1" : "0"); };
     g.append(head, body);
     return g;
   }
