@@ -39,6 +39,9 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 18px}
   .card h3{margin:0 0 6px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
   .card p{margin:0;color:var(--muted);font-size:14px}
+  a.card.dl{display:block;text-decoration:none;color:inherit;transition:border-color .12s,transform .12s}
+  a.card.dl:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .dl-go{display:block;margin-top:8px;color:var(--accent);font-weight:600}
   .ic{width:28px;height:28px;border-radius:7px;background:var(--panel2);display:inline-flex;align-items:center;justify-content:center;font-size:15px}
   /* code block */
   pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13.5px;line-height:1.7;color:#d7dbe0}
@@ -66,10 +69,10 @@
       development proforma — one platform for a project's whole lifecycle, acquisition to turnover.
       No proprietary format, no per-seat license.</p>
     <div class="cta">
-      <a class="btn primary" href="app/">Try the live demo →</a>
+      <a class="btn primary" href="#download">Download the app ↓</a>
+      <a class="btn ghost" href="app/">Try the live demo →</a>
       <a class="btn ghost" href="#run">Run the full stack</a>
       <a class="btn ghost" href="https://github.com/ibuilder/ModelMaker">View on GitHub</a>
-      <a class="btn ghost" href="https://github.com/ibuilder/ModelMaker/actions/workflows/ci.yml">CI status</a>
     </div>
     <p style="margin:14px 0 0;font-size:13px;color:var(--muted)">
       The live demo runs the BIM viewer entirely in your browser (no backend) on bundled sample
@@ -85,6 +88,30 @@
     </div>
   </div>
 </header>
+
+<section id="download">
+  <div class="wrap">
+    <h2>Download</h2>
+    <p class="sub">Free single-project desktop app — the whole platform in one offline install (no Docker, no login). Pick your platform; each opens the latest release. Builds are currently unsigned, so Windows SmartScreen / macOS Gatekeeper may warn on first launch.</p>
+    <div class="grid">
+      <a class="card dl" href="https://github.com/ibuilder/ModelMaker/releases/latest">
+        <h3><span class="ic">🪟</span> Windows</h3>
+        <p><code>.exe</code> installer or <code>.msi</code> — 64-bit. <span class="dl-go">Get latest →</span></p>
+      </a>
+      <a class="card dl" href="https://github.com/ibuilder/ModelMaker/releases/latest">
+        <h3><span class="ic"></span> macOS</h3>
+        <p><code>.dmg</code> — Apple Silicon (arm64). <span class="dl-go">Get latest →</span></p>
+      </a>
+      <a class="card dl" href="https://github.com/ibuilder/ModelMaker/releases/latest">
+        <h3><span class="ic">🐧</span> Linux</h3>
+        <p><code>.AppImage</code> or <code>.deb</code> — x86-64. <span class="dl-go">Get latest →</span></p>
+      </a>
+    </div>
+    <p style="margin:16px 0 0;font-size:13px;color:var(--muted)">
+      All releases &amp; checksums: <a href="https://github.com/ibuilder/ModelMaker/releases">github.com/ibuilder/ModelMaker/releases</a>.
+      Prefer the server stack? <a href="#run">Run it with Docker ↓</a></p>
+  </div>
+</section>
 
 <section>
   <div class="wrap">

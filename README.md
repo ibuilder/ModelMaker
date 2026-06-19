@@ -16,6 +16,7 @@ drives) — no proprietary format, no per-seat license.
 > **Real-Estate Development Proforma** (sources & uses, S-curve draws, XIRR/NPV, JV
 > waterfall) — switched via a Model / Construction / Finance workspace bar.
 
+⬇️ **Download the desktop app:** [ibuilder.github.io/ModelMaker#download](https://ibuilder.github.io/ModelMaker/#download) — free single-project installers for **Windows / macOS / Linux** (or grab them straight from [the latest release](https://github.com/ibuilder/ModelMaker/releases/latest)).
 📄 **Project page:** [ibuilder.github.io/ModelMaker](https://ibuilder.github.io/ModelMaker/) — overview + how to run it.
 🧊 **Live viewer demo:** [ibuilder.github.io/ModelMaker/app/](https://ibuilder.github.io/ModelMaker/app/) — the BIM viewer running in-browser (no backend) on bundled sample models.
 
