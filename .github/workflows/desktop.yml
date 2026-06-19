@@ -103,18 +103,28 @@ jobs:
           $json | ConvertTo-Json -Depth 32 | Set-Content $conf -Encoding utf8
           "Signing with thumbprint $($cert.Thumbprint)"
 
-      - id: tauri
-        uses: tauri-apps/tauri-action@v0
+      # macOS signing + notarization — only feed the Apple vars to the build when a cert secret is
+      # actually configured. An EMPTY APPLE_CERTIFICATE is NOT a no-op: tauri-bundler still runs
+      # `security import` on it and fails, so without this guard the unsigned macOS build breaks.
+      # When the secrets are present, these export to the env tauri-action reads → signed + notarized.
+      - name: Configure macOS signing
+        if: matrix.platform == 'macos-latest' && env.APPLE_CERTIFICATE != ''
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS signing + notarization — tauri-action imports the cert and notarizes when these
-          # are present; all are no-ops when the secrets are empty (build stays unsigned).
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            echo "$v=${!v}" >> "$GITHUB_ENV"
+          done
+
+      - id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/web
           # release only on a tag push; a manual run leaves tagName empty → build, no release
