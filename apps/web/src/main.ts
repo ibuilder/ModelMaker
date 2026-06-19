@@ -596,6 +596,10 @@ function settingsModal() {
     badges.append(badge("AI assist", cap.ai), badge("Email digests", cap.email),
       badge(`SSO${cap.sso.length ? " (" + cap.sso.join(", ") + ")" : ""}`, cap.sso.length > 0));
   }).catch(() => { badges.textContent = ""; });
+  const credit = document.createElement("div");
+  credit.className = "meta"; credit.style.cssText = "margin-top:8px;font-size:11px";
+  credit.innerHTML = `AEC BIM Platform — created by <b>Matthew M. Emma</b>, built with Claude Code as AI assistant.`;
+  about.appendChild(credit);
 
   // keyboard shortcuts (amenity)
   const sc = document.createElement("div");

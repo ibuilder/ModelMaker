@@ -6,6 +6,10 @@
   --muted: #9aa0a6;
   --accent: #4a8cff;
   --line: #16171a;
+  --control: #3a3d44;        /* form controls: selects, inputs, tool buttons */
+  --control-hover: #45484f;
+  --hover: #34373d;          /* row/list hover */
+  --accent-soft: #23304d;    /* selected-row tint (a dim accent that works behind --text) */
 }
 
 * { box-sizing: border-box; }
@@ -26,6 +30,7 @@ html, body, #app {
 :root[data-theme="light"] {
   --bg: #f4f5f7; --panel: #ffffff; --panel2: #eceef1;
   --text: #1d1f23; --muted: #5f6368; --accent: #2f6fed; --line: #d6d9de;
+  --control: #ffffff; --control-hover: #e6e9ee; --hover: #eef1f5; --accent-soft: #dce8ff;
 }
 
 /* ---- 4-zone shell: top chrome / stage / bottom settings bar ---- */
@@ -52,7 +57,7 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
   font-size: 18px; padding: 2px 6px; border-radius: 4px;
 }
 #rail-toggle:hover { background: #ffffff14; }
-#persona { background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+#persona { background: var(--control); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
 #status { font-size: 12px; opacity: 0.7; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 /* workspace switcher (segmented control) */
@@ -101,6 +106,11 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 }
 #viewer-tools:empty { display: none; }
 .icon-btn { width: 30px; height: 30px; padding: 0; font-size: 15px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+/* the floating toolbar is always dark (it glasses over the 3D viewport), so its buttons keep
+   light-on-dark styling in both themes rather than following --control */
+#viewer-tools .tool-btn { background: rgba(255, 255, 255, 0.08); color: #e7e7e7; border-color: rgba(255, 255, 255, 0.14); }
+#viewer-tools .tool-btn:hover { background: rgba(255, 255, 255, 0.18); }
+#viewer-tools .tool-btn.on { background: var(--accent); color: #fff; }
 /* separator between functional groups of toolbar buttons */
 .tool-sep { width: 1px; align-self: stretch; margin: 2px 3px; background: var(--line); flex: 0 0 auto; }
 
@@ -123,9 +133,9 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 }
 .sb-group { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
 .sb-group > label { color: var(--muted); white-space: nowrap; }
-.sb-toggle { cursor: pointer; padding: 2px 9px; background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; }
+.sb-toggle { cursor: pointer; padding: 2px 9px; background: var(--control); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; }
 .sb-toggle.on { background: var(--accent); color: #fff; }
-.sb-sel { background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; padding: 2px 4px; }
+.sb-sel { background: var(--control); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; padding: 2px 4px; }
 .sb-sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 0; }
 #sb-coords { font-family: ui-monospace, monospace; color: var(--muted); }
 #sb-saved { color: #8fd98f; margin-left: auto; opacity: 0; transition: opacity .2s; }
@@ -162,10 +172,10 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 }
 .menu-sep:first-child { border-top: none; margin-top: 0; }
 .tool-btn {
-  cursor: pointer; padding: 4px 9px; background: #3a3d44; color: var(--text);
+  cursor: pointer; padding: 4px 9px; background: var(--control); color: var(--text);
   border: 1px solid var(--line); border-radius: 4px; font-size: 12px;
 }
-.tool-btn:hover { background: #45484f; }
+.tool-btn:hover { background: var(--control-hover); }
 .tool-btn.on { background: var(--accent); }
 
 /* tree */
@@ -185,10 +195,10 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 
 /* issues */
 .issue { padding: 7px 8px; margin-bottom: 6px; background: var(--panel); border-radius: 5px; cursor: pointer; border-left: 3px solid var(--accent); }
-.issue:hover { background: #34373d; }
+.issue:hover { background: var(--hover); }
 .issue .t { font-weight: 600; }
 .issue .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
-.badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #3a3d44; }
+.badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--control); border: 1px solid var(--line); }
 .badge.rfi { background: #4a8cff44; }
 .badge.punch { background: #ff8c0044; }
 .badge.open { color: #ffd479; }
@@ -277,13 +287,13 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
   background: var(--panel); color: var(--text); border: 1px solid var(--line);
   border-radius: 5px; cursor: pointer; font-size: 12px;
 }
-.portal-mod:hover { background: #34373d; }
+.portal-mod:hover { background: var(--hover); }
 .portal-mod .ic { display: inline-block; width: 18px; color: #b083d6; font-weight: 700; }
 .portal-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .portal-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .portal-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--line); }
-.portal-table td { padding: 5px 6px; border-bottom: 1px solid #2b2d31; cursor: pointer; }
-.portal-table tr:hover td { background: #34373d; }
+.portal-table td { padding: 5px 6px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.portal-table tr:hover td { background: var(--hover); }
 /* inline-editable cells (assignee / status) — subtle dashed affordance on hover */
 .portal-table td.editable:hover { outline: 1px dashed var(--accent, #4a8cff); outline-offset: -2px; }
 /* loading skeleton — shimmer rows shown while a list/board fetch is in flight */
@@ -294,7 +304,7 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 @keyframes skel { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 .portal-field { display: block; font-size: 11px; color: var(--muted); margin: 6px 0; }
 .portal-field input, .portal-field textarea, .portal-field select {
-  display: block; width: 100%; margin-top: 3px; padding: 5px; background: #1e1f22;
+  display: block; width: 100%; margin-top: 3px; padding: 5px; background: var(--control);
   color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 12px;
 }
 .portal-field textarea { min-height: 56px; resize: vertical; }
@@ -306,7 +316,7 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 .ref-link:hover { text-decoration: underline; }
 .chip { display: inline-block; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-size: 11px; margin: 1px 0; }
 .computed { font-style: italic; color: #b083d6; }
-.portal-filter { background: #3a3d44; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.portal-filter { background: var(--control); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
 .chart-box { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
 .chart-box svg { max-width: 320px; display: block; }
 .notif { border-left: 3px solid var(--accent); }
@@ -360,7 +370,7 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 @keyframes spin { to { transform: rotate(360deg); } }
 
 kbd {
-  background: #3a3d44; border: 1px solid var(--line); border-radius: 3px;
+  background: var(--control); border: 1px solid var(--line); border-radius: 3px;
   padding: 1px 5px; font-size: 11px; font-family: ui-monospace, monospace;
 }
 
@@ -368,7 +378,7 @@ kbd {
 .pf-form { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; margin: 6px 0; }
 .pf-field { display: flex; flex-direction: column; font-size: 10px; color: var(--muted); }
 .pf-field input {
-  margin-top: 2px; padding: 4px; background: #1e1f22; color: var(--text);
+  margin-top: 2px; padding: 4px; background: var(--control); color: var(--text);
   border: 1px solid var(--line); border-radius: 4px; font-size: 12px;
 }
 .sens-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
@@ -398,7 +408,7 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
 .dwg-item { display: block; width: 100%; text-align: left; padding: 6px 8px; margin: 2px 0; font-size: 12px;
   background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
 .dwg-item:hover { background: var(--panel2); }
-.dwg-item.active { border-color: var(--accent); background: #23304d; }
+.dwg-item.active { border-color: var(--accent); background: var(--accent-soft); }
 .dwg-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .dwg-toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
 .dwg-name { font-weight: 600; font-size: 13px; }

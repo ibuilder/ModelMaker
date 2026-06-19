@@ -283,3 +283,7 @@ API smoke test, and Python compile all green.
 Open stack (That Open MIT-style, IfcOpenShell LGPL). The Blender + Bonsai desktop editor is
 **GPL** — kept a separate process you *use*, not linked in. Optional Autodesk APS RVT→IFC is
 paid/flagged. See [LICENSE-NOTES.md](LICENSE-NOTES.md).
+
+## Author
+
+Created by **Matthew M. Emma** — built with [Claude Code](https://claude.com/claude-code) as AI assistant.
