@@ -101,6 +101,8 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 }
 #viewer-tools:empty { display: none; }
 .icon-btn { width: 30px; height: 30px; padding: 0; font-size: 15px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+/* separator between functional groups of toolbar buttons */
+.tool-sep { width: 1px; align-self: stretch; margin: 2px 3px; background: var(--line); flex: 0 0 auto; }
 
 /* CONSTRUCTION / FINANCE: full-width workspaces */
 #ws-construction.active, #ws-finance.active { display: block; }

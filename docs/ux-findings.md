@@ -21,19 +21,17 @@ Severity: **High** (hurts daily use / blocks discovery) · **Med** (friction) ·
   persona-aware section accordion (12 groups with count badges; `SECTIONS_BY_PERSONA` controls
   default-open), with ★ favorites pinned to a top group and a "Filter modules…" box that narrows and
   auto-expands matches. Open state persists; re-orders live on persona change.
+- ✅ **Workspace ↔ tool overlap.** The ⚙ Tools rail now opens with a one-line note framing it as
+  "model-derived analysis & exports", and the Cost section deep-links to the Construction workspace
+  (where budgets/change-orders are managed) via an `aec:workspace` event — so the rail reads as a
+  quick model-side surface, not a competing home.
+- ✅ **Icon-only floating toolbar.** The ~20-glyph row is split into functional groups with
+  separators — measure/visibility ┊ collaboration ┊ view-aids ┊ authoring (the authoring group and
+  its divider hide for non-editors).
 
 ## Backlog
 
-### High
-- **Workspace ↔ tool overlap.** Exports, Cost/Pay Apps, and Schedule live in the viewer's ⚙ Tools
-  rail *and* conceptually belong to the Construction/Finance workspaces. Decide one home per
-  capability (or make the rail a quick-access shortcut that deep-links into the workspace) so users
-  aren't unsure where the "real" one is.
-
 ### Med
-- **Icon-only floating toolbar (~20 glyphs).** Discoverability relies entirely on hover titles
-  (`↔ ▱ ✂ ⊙ ◐ ⊞ ⌫ 👥 ⤴ ⬚ ☰ ▭ ▮ ▬ ❏ ␡ ◧ ◨ ✥ ⟲ ✎ ⧉`). Group by function with dividers, consider an
-  overflow menu for the long tail, and/or a one-time labelled "what's this" affordance.
 - **Empty-state consistency.** Different panels phrase "no project / no model / no source IFC"
   differently. Standardize copy and styling (the tools accordion's muted-reason pattern is a good
   template to reuse in the portal and drawings).

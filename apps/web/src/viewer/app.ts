@@ -272,6 +272,12 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     viewerTools.appendChild(b);
     return b;
   }
+  /** Visual separator between functional groups of toolbar buttons (legibility for the icon row). */
+  function toolDivider(cap?: "edit" | "review") {
+    const d = document.createElement("span"); d.className = "tool-sep";
+    if (cap) d.dataset.cap = cap;   // hide the divider too when its group is capability-hidden
+    viewerTools.appendChild(d);
+  }
   const setMeasure = (m: MeasureMode) => {
     measure.setMode(m);
     setStatus(`measure: ${m}`);
@@ -285,6 +291,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   toolBtn("◐", "Color selection", () => selection && colorize.color(selection, "#ffb000"));
   toolBtn("⌫", "Clear measurements", () => measure.deleteCurrent());
   toolBtn("⊞", "Show all (H)", async () => { await visibility.showAll(); await colorize.reset(); });
+  toolDivider();   // ── measure / visibility ──┊── collaboration ──
 
   // ---- live presence + shared viewpoints ----------------------------------
   type Peer = { user: string; seconds_ago: number; viewpoint: { position: THREE.Vector3Like; target: THREE.Vector3Like } | null };
@@ -322,6 +329,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     void beat();
     window.setInterval(beat, 20000);   // heartbeat keeps presence live while the tab is open
   }
+  toolDivider();   // ── collaboration ──┊── view aids ──
 
   // section box: 6 clipping planes shrunk inside the model bounds (renderer-level clip)
   let sectionBox: THREE.Plane[] | null = null;
@@ -380,6 +388,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     (Object.keys(placeBtns) as PlaceKind[]).forEach((k) => placeBtns[k].classList.toggle("on", k === kind));
     if (kind) notify(`${kind}: click the ${PLACE_PTS[kind] === 1 ? "point" : "start point"} on the floor/grid`, "info");
   }
+  toolDivider("edit");   // ── view aids ──┊── authoring (editors only) ──
   placeBtns.wall = toolBtn("▭", "Add wall (click two points)", () => setPlaceMode(placeMode === "wall" ? null : "wall"), "edit");
   placeBtns.column = toolBtn("▮", "Add column (click one point)", () => setPlaceMode(placeMode === "column" ? null : "column"), "edit");
   placeBtns.beam = toolBtn("▬", "Add beam (click two points)", () => setPlaceMode(placeMode === "beam" ? null : "beam"), "edit");
@@ -714,6 +723,11 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   async function buildToolsPanel() {
     const panel = $("panel-tools");
     panel.innerHTML = "";
+    const intro = document.createElement("div");
+    intro.className = "meta"; intro.style.cssText = "margin:2px 2px 8px;font-size:11px;line-height:1.4";
+    intro.textContent = "Model-derived analysis & exports. The full records live in the Construction & Finance workspaces.";
+    panel.appendChild(intro);
+    const goWorkspace = (key: string) => window.dispatchEvent(new CustomEvent("aec:workspace", { detail: key }));
 
     // model metadata gates IFC-only tools (drawings, QA, energy, authoring, exports)
     let hasIfc = false;
@@ -815,6 +829,10 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
         }));
         b.appendChild(toolBtn2("↓ G702/G703 Pay App (PDF)", () => window.open(api.url(`/projects/${projectId}/cost/g702.pdf?app_no=1`), "_blank")));
         b.appendChild(out);
+        const link = document.createElement("a"); link.href = "#"; link.className = "ref-link"; link.style.cssText = "display:inline-block;margin-top:6px;font-size:11px";
+        link.textContent = "Manage budgets & change orders in Construction →";
+        link.onclick = (e) => { e.preventDefault(); goWorkspace("construction"); };
+        b.appendChild(link);
       },
       schedule: () => {
         const b = section("schedule", "Schedule", { requires: "project", tool: true });

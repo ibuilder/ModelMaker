@@ -150,6 +150,11 @@ function setWorkspace(key: string) {
   if (key === "model") void ensureViewer().then((v) => v.onModelShown());   // lazy-load the 3D app
   localStorage.setItem("workspace", key);
 }
+// deep-link from a tool section to the workspace that owns the full records (e.g. Cost → Construction)
+window.addEventListener("aec:workspace", (e) => {
+  const key = (e as CustomEvent<string>).detail;
+  if (WORKSPACES.some((w) => w.key === key)) setWorkspace(key);
+});
 const wsEl = $("workspaces");
 for (const w of WORKSPACES) {
   const b = document.createElement("button");
