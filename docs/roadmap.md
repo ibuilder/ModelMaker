@@ -4,7 +4,7 @@ A consolidated, honest snapshot of what's built across the three pillars + platf
 prioritized list of gaps. Complements the feature-level [capability matrix](capability-matrix.md),
 the [platform-packaging roadmap](roadmap-platforms.md), and the [modeling-tools roadmap](roadmap-modeling-tools.md).
 
-_Last evaluated: 2026-06-17._
+_Last evaluated: 2026-06-18._
 
 ## What's built (by pillar)
 
@@ -33,13 +33,27 @@ European, pref + tiered promote, clawback), 2-variable **sensitivity** tables, *
 risk (percentiles, P[≥target], histogram), actuals→re-forecast **draw bridge**, scenario CRUD
 + sharing + clone, multi-deal **portfolio** roll-up, scenario **compare**.
 
+### Interoperability — new
+A data-source **Connections** framework (one adapter pattern): **Postgres/Supabase** read-only
+browse + guarded SELECT console; **Procore** two-way sync (import RFIs/submittals/change-events,
+push resolved RFI status/answers back, scheduled auto-sync); **Autodesk Construction Cloud**
+project/issue read. Admin **field-mapping editor** remaps external→module fields per connection;
+secrets write-only + masked; admin-gated. Portable **`.mmproj` project bundles** (export/import
+geometry + all data + attachments) and a **delete-project** path.
+
+### Desktop / packaging — new
+The whole platform runs in **one process** (FastAPI + SPA + SQLite, single-operator local mode,
+no login) and ships as a self-contained **`.exe`** (PyInstaller; `desktop.py` + `build-desktop.ps1`)
+— the free Bluebeam-style single-project app, verified booting + serving the full stack. The
+Tauri 2 shell spawns it as a sidecar for a native window (CI-built; compile pending a CI run).
+
 ### Platform / identity / infra — mature
 Token + httpOnly-cookie auth, bootstrap admin, **user management** (create/list/role/activate/
 deactivate/reset), self-service password, deactivation revokes tokens immediately. **Project
 RBAC** (viewer<reviewer<editor<admin + workflow party), member-management UI, web capability
 gating. Audit log (server-side). Docker compose (dev + prod Caddy auto-HTTPS), nginx `/api`
-proxy, Postgres/MinIO. **CI**: 8-suite Python gate; desktop release workflow (Win/macOS/Linux,
-signing-ready); GitHub Pages viewer demo.
+proxy, Postgres/MinIO. **CI**: multi-suite Python gate (incl. connections/bundle/desktop/
+local-mode); desktop release workflow (Win/macOS/Linux, signing-ready); GitHub Pages viewer demo.
 
 ## Gaps (prioritized)
 
@@ -76,9 +90,20 @@ signing-ready); GitHub Pages viewer demo.
   tars → one timestamped tarball) + `scripts/restore.sh`; cron + retention + DR notes in
   `docs/deploy.md`.
 
+### P2 — recently shipped
+- ✅ **DONE** — **Interoperability** (the #1 2026 AEC gap). Connections framework
+  (Postgres/Supabase/Procore/ACC), Procore **two-way** sync + scheduled auto-sync, ACC
+  project/issue read, and an admin **field-mapping editor**. Verified by `test_connections`.
+- ✅ **DONE** — **Free single-project desktop `.exe`** (PyInstaller one-process build) + portable
+  `.mmproj` bundles + delete-project. Verified booting + serving API/SPA/SQLite standalone.
+- ✅ **DONE** — **UX pass**: persona-ordered collapsible Tools panel with result modals; the
+  68-module portal catalog (favorites + collapsible persona sections + filter); grouped viewer
+  toolbar; model-type tags in the project picker. Backlog tracked in [ux-findings.md](ux-findings.md).
+
 ### P3 — external dependency / environment-gated
-- **Desktop installers** must be built once on a Rust machine / via the CI workflow to verify
-  the Tauri compile (config + icons + workflow are ready; the compile itself is unverified here).
+- **Tauri native-window installer** — the free `.exe` is verified; the Tauri shell now spawns it
+  as a sidecar, but the Rust/CI compile is unverified locally (no toolchain) — run the **Desktop
+  release** workflow to build + smoke-test it.
 - **Bonsai bridge (M5)** — parametric authoring recipes are written but need Blender + Bonsai-
   MCP to run end-to-end.
 - **RVT→IFC** via Autodesk APS — skeleton only; needs a paid APS account (behind a cost flag).
@@ -93,5 +118,6 @@ Carlo made on-demand.
 UI)~~ ✅ → **P2 next** → P3. Each item is independently shippable; P3 items are gated on
 external accounts/hardware and are user-performed steps.
 
-_P0 and all P1 items shipped 2026-06-17. Next up: P2 (Capacitor mobile, email digests, drawing
-leaders/callouts, SSO/OIDC, observability)._
+_P0 and all P1 items shipped 2026-06-17. Interoperability, the free desktop `.exe`, and the UX
+pass shipped 2026-06-18. Next up: Capacitor mobile, the Tauri sidecar CI smoke build, and the
+remaining UX backlog (empty-state consistency, light-mode contrast)._

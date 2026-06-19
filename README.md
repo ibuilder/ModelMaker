@@ -94,9 +94,25 @@ A development-finance engine for the owner/developer side (the **Finance** works
 - **In-viewer modeling** — 18-tool authoring toolbar (walls/slabs/columns/beams/roofs,
   doors/windows, delete/move/rotate/copy, Pset edit) + grid/corner snap, section box, levels
   overlay — all server-authored via `ifcopenshell` and proven live.
+- **Interoperability** — a data-source **Connections** framework: register external
+  **Postgres/Supabase** (read-only table browse + a guarded SELECT console), **Procore**
+  (two-way sync — import RFIs/submittals/change-events into the portal, push resolved RFI
+  status/answers back, scheduled auto-sync), and **Autodesk Construction Cloud** (project/issue
+  read) — all behind one adapter pattern. An admin **field-mapping editor** remaps each external
+  field → module field per connection; secrets are write-only and masked on read; admin-gated.
+- **Free single-project desktop app (.exe)** — the whole platform in **one process** (FastAPI
+  serving the API + SPA, SQLite + local files, single-operator local mode, no login), packaged
+  self-contained with PyInstaller (`services/api/desktop.py`, `build-desktop.ps1`) — a
+  Bluebeam-style local app; data lives under `%LOCALAPPDATA%\AEC-BIM`, uninstall = delete the
+  folder. Projects are portable **`.mmproj` bundles** (geometry + all data + attachments) via the
+  Open/Save menu. The Tauri 2 shell spawns this backend as a sidecar for a **native window**;
+  mobile (Capacitor/Tauri-mobile) is next.
+- **UX** — the ⚙ Tools panel is a collapsible, **persona-ordered**, state-aware accordion with
+  **readable result modals** (cost/energy/IDS/clash); the **68-module portal catalog** gains ★
+  favorites + collapsible persona-aware sections + a filter; the viewer toolbar is grouped. The
+  project picker tags each project's model type (`.frag`/`.ifc`). (See `docs/ux-findings.md`.)
 - **Installable + offline** — PWA (manifest + Workbox service worker; lean ~97 KB precache,
-  viewer libs/WASM/tiles runtime-cached). **Desktop** is scaffolded as a Tauri 2 shell
-  (`apps/web/src-tauri/`) wrapping the same build; mobile (Capacitor/Tauri-mobile) is next.
+  viewer libs/WASM/tiles runtime-cached).
 - **Authentication** — username/password accounts (PBKDF2-hashed) + signed bearer tokens
   (stdlib, dependency-free) at `/auth/{register,login,me}`. The token is the identity the RBAC
   layer trusts (replacing the dev `X-User` header); per-project authorization stays in
@@ -120,8 +136,9 @@ A development-finance engine for the owner/developer side (the **Finance** works
   (stdlib SMTP, no-op-but-logged when unconfigured); a **backup/restore runbook** + scripts
   (`scripts/backup.sh` / `restore.sh`: pg_dump + MinIO/IFC volumes).
 - **Desktop release CI** — tag-driven GitHub Actions builds signed Win/macOS/Linux Tauri
-  installers (`.github/workflows/desktop.yml`); a viewer-only **GitHub Pages** demo deploys from
-  `pages.yml`.
+  installers (`.github/workflows/desktop.yml`); each runner first builds the Python backend
+  sidecar (PyInstaller) so the installer ships the full app, not just the viewer. A viewer-only
+  **GitHub Pages** demo deploys from `pages.yml`.
 - **CI gate** — `services/api/run_tests.py` runs all suites (8/8); GitHub Actions runs it + the web build.
 
 ## Gallery
@@ -235,6 +252,15 @@ GET    /projects/{id}/module-pins             anchored records → viewer overla
 GET    /projects/{id}/cost/{g703,g702,summary} financials (+ g702.pdf, POST /cost/tm)
 GET    /projects/{id}/schedule/{gantt,lob}.svg  Gantt + Line-of-Balance
 GET    /projects/{id}/dashboard               role-tailored dashboard
+
+# interoperability + portability
+GET/POST /connections[/{id}]                  data-source connections (Postgres/Supabase/Procore/ACC)
+GET    /connections/{id}/tables | POST .../query   read-only browse + SELECT (SQL sources)
+GET/PUT /connections/{id}/mappings            admin field-mapping editor (external → module fields)
+POST   /projects/{id}/sync/procore[/push]     Procore import + two-way push (+ /sync/schedules)
+GET    /connections/{id}/acc/projects/{pid}/issues   Autodesk Construction Cloud issue read
+GET    /projects/{id}/bundle | POST /projects/import-bundle   portable .mmproj save / open
+DELETE /projects/{id}                          delete a project (rows + geometry + attachments)
 ```
 
 ## Verification
