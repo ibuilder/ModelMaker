@@ -76,3 +76,7 @@ Thumbs.db
 # logs
 *.log
 npm-debug.log*
+
+# Tauri updater signing keys — private key goes in a CI secret, never committed
+apps/web/src-tauri/aec-updater.key
+apps/web/src-tauri/aec-updater.key.pub

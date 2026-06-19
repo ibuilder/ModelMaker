@@ -28,6 +28,12 @@
       }
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5OTIzMTFBOEQ5OTUyNTQKUldSVVVwbU5HakdTcVUzY2NpZVBVL0NNcmtQOEUzTVlwcUl0L1JXZnRuaFp0RkJ3L2czRUlvQmwK",
+      "endpoints": ["https://github.com/ibuilder/ModelMaker/releases/latest/download/latest.json"]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

@@ -121,10 +121,25 @@ jobs:
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
 
+      # Updater: only emit signed updater artifacts (+ latest.json) when a signing key is set.
+      # createUpdaterArtifacts forces signing, so leave it off by default (keeps unsigned builds
+      # green) and flip it on here only when the secret exists.
+      - name: Enable updater artifacts
+        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          python -c "import json;p='apps/web/src-tauri/tauri.conf.json';d=json.load(open(p));d['bundle']['createUpdaterArtifacts']=True;json.dump(d,open(p,'w'),indent=2)"
+          echo "updater artifacts enabled"
+
       - id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # signed self-update bundles (no-op when the secret is unset → createUpdaterArtifacts stays off)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/web
           # release only on a tag push; a manual run leaves tagName empty → build, no release

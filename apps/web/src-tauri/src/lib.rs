@@ -5,16 +5,43 @@
 // bundled sidecar) the spawn is skipped and the devUrl frontend loads as before.
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_updater::UpdaterExt;
 
 const PORT: u16 = 8765;
+
+// Check the signed GitHub release feed on launch; if a newer version is published, download +
+// install it and relaunch. No-op when offline or already current. Runs natively (the WebView is
+// pointed at the local sidecar origin, so the JS updater API isn't available there).
+fn spawn_update_check(handle: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let updater = match handle.updater() {
+            Ok(u) => u,
+            Err(e) => { eprintln!("updater unavailable: {e}"); return; }
+        };
+        match updater.check().await {
+            Ok(Some(update)) => {
+                eprintln!("installing update {}", update.version);
+                if let Err(e) = update.download_and_install(|_chunk, _total| {}, || {}).await {
+                    eprintln!("update install failed: {e}");
+                    return;
+                }
+                handle.restart();
+            }
+            Ok(None) => {}                       // already up to date
+            Err(e) => eprintln!("update check failed: {e}"),
+        }
+    });
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())   // self-update from signed releases
         .plugin(tauri_plugin_dialog::init())   // native Open/Save dialogs
         .plugin(tauri_plugin_fs::init())        // read/write the chosen file
         .setup(|app| {
+            spawn_update_check(app.handle().clone());
             // data dir under the OS app-data location (matches the PyInstaller build's default)
             let data_dir = app.path().app_data_dir().ok();
 
