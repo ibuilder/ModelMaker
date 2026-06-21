@@ -1,0 +1,31 @@
+{
+  "key": "risk",
+  "name": "Risk Register",
+  "section": "Quality",
+  "icon": "!",
+  "ref_prefix": "RISK",
+  "title_field": "title",
+  "pinnable": false,
+  "fields": [
+    { "name": "title", "label": "Risk", "type": "text", "required": true },
+    { "name": "category", "label": "Category", "type": "select", "options": ["Cost", "Schedule", "Safety", "Design", "Procurement", "Permitting", "Weather", "Other"] },
+    { "name": "probability", "label": "Probability", "type": "select", "options": ["Low", "Medium", "High"], "required": true },
+    { "name": "impact", "label": "Impact", "type": "select", "options": ["Low", "Medium", "High"], "required": true },
+    { "name": "cost_exposure", "label": "Cost Exposure", "type": "currency" },
+    { "name": "schedule_days", "label": "Schedule Days", "type": "number" },
+    { "name": "mitigation", "label": "Mitigation", "type": "textarea" },
+    { "name": "owner", "label": "Owner", "type": "text" },
+    { "name": "due_date", "label": "Review Date", "type": "date" }
+  ],
+  "workflow": {
+    "initial": "open",
+    "states": ["open", "mitigating", "accepted", "closed"],
+    "transitions": [
+      { "from": "open", "to": "mitigating", "action": "mitigate", "party": ["GC", "OwnersRep"] },
+      { "from": "open", "to": "accepted", "action": "accept", "party": ["Owner", "OwnersRep"] },
+      { "from": "mitigating", "to": "closed", "action": "close", "party": ["GC", "OwnersRep"] },
+      { "from": "mitigating", "to": "open", "action": "reopen", "party": ["GC"] }
+    ]
+  },
+  "list_columns": ["category", "probability", "impact", "cost_exposure"]
+}

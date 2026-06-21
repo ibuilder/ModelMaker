@@ -1,0 +1,29 @@
+{
+  "key": "selection",
+  "name": "Selections",
+  "section": "Engineering",
+  "icon": "◈",
+  "ref_prefix": "SEL",
+  "title_field": "item",
+  "pinnable": false,
+  "fields": [
+    { "name": "item", "label": "Item", "type": "text", "required": true },
+    { "name": "location", "label": "Room/Location", "type": "text" },
+    { "name": "category", "label": "Category", "type": "select", "options": ["Finishes", "Fixtures", "Appliances", "Cabinetry", "Flooring", "Lighting", "Other"] },
+    { "name": "option", "label": "Selected Option", "type": "text" },
+    { "name": "allowance", "label": "Allowance", "type": "currency" },
+    { "name": "actual_cost", "label": "Actual Cost", "type": "currency" },
+    { "name": "due_date", "label": "Due Date", "type": "date" },
+    { "name": "client_approval", "label": "Client Approval", "type": "signature" }
+  ],
+  "workflow": {
+    "initial": "open",
+    "states": ["open", "selected", "approved"],
+    "transitions": [
+      { "from": "open", "to": "selected", "action": "select", "party": ["GC", "Subcontractor"] },
+      { "from": "selected", "to": "approved", "action": "approve", "party": ["Owner", "OwnersRep"] },
+      { "from": "selected", "to": "open", "action": "revise", "party": ["GC"] }
+    ]
+  },
+  "list_columns": ["category", "allowance", "actual_cost", "due_date"]
+}
