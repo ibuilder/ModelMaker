@@ -340,23 +340,39 @@ async function openPortfolioTab() {
 // tracked (those need the paid Autodesk bridge and convert to IFC/frag first), so a project is
 // only ever ".frag" (published tile), ".ifc" (source IFC on disk), or has no model yet.
 const MODEL_TAG: Record<string, string> = { frag: " (.frag)", ifc: " (.ifc)" };
+/** Create a blank project (no IFC) and switch to it — GC portal + proforma work immediately. */
+async function newProject() {
+  const name = prompt("New project name:");
+  if (!name || !name.trim()) return;
+  try { const p = await api.createProject(name.trim()); window.location.search = `?project=${p.id}`; }
+  catch { toast("Couldn't create project (sign in as an editor?)", "error"); }
+}
+
 function buildProjectPicker(projects: { id: string; name: string; model_kind?: string | null }[]) {
-  const sel = document.createElement("select");
-  sel.className = "tool-btn"; sel.title = "Project";
-  for (const p of projects) {
-    const o = document.createElement("option");
-    o.value = p.id;
-    o.textContent = p.name + (p.model_kind ? MODEL_TAG[p.model_kind] ?? "" : " (no model)");
-    o.selected = p.id === projectId;
-    sel.appendChild(o);
+  if (projects.length) {
+    const sel = document.createElement("select");
+    sel.className = "tool-btn"; sel.title = "Project";
+    for (const p of projects) {
+      const o = document.createElement("option");
+      o.value = p.id;
+      o.textContent = p.name + (p.model_kind ? MODEL_TAG[p.model_kind] ?? "" : " (no model)");
+      o.selected = p.id === projectId;
+      sel.appendChild(o);
+    }
+    sel.onchange = () => { window.location.search = `?project=${sel.value}`; };
+    toolbar.insertBefore(sel, statusEl);
   }
-  sel.onchange = () => { window.location.search = `?project=${sel.value}`; };
-  toolbar.insertBefore(sel, statusEl);
+  // always available — create a blank project (no model required) from a cold start
+  const add = document.createElement("button");
+  add.className = "tool-btn"; add.style.marginLeft = "4px"; add.textContent = "＋ New"; add.title = "New project (no IFC needed)";
+  add.onclick = () => void newProject();
+  toolbar.insertBefore(add, statusEl);
+  if (!projects.length) return;   // nothing more to render (no current project to delete)
   // delete the current project (rows + geometry); confirm, then reload to the next one
   const del = document.createElement("button");
   del.className = "tool-btn"; del.style.marginLeft = "4px"; del.textContent = "🗑"; del.title = "Delete current project";
   del.onclick = async () => {
-    const cur = projects.find((p) => p.id === sel.value);
+    const cur = projects.find((p) => p.id === projectId);
     if (!cur || !confirm(`Delete project “${cur.name}” and all its data? This can't be undone.`)) return;
     try {
       await api.deleteProject(cur.id);
@@ -1066,8 +1082,8 @@ async function startup() {
     const chosen = projects.find((p) => p.id === wanted) ?? projects[0];
     projectId = chosen?.id ?? null;
     projectName = chosen?.name ?? "";
-    setStatus(projectId ? `connected • ${projectName}` : "connected • no project");
-    if (projects.length) buildProjectPicker(projects);
+    setStatus(projectId ? `connected • ${projectName}` : "connected • no project — ＋ New to start");
+    buildProjectPicker(projects);   // always (shows ＋ New even with zero projects)
   } else {
     setStatus(demo ? "demo — pick a sample from Open ▾ to view"
                    : "offline — open a .frag to view (API not reachable)");

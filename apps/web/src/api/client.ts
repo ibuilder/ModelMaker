@@ -410,6 +410,10 @@ export class ApiClient {
   bundleUrl(pid: string) {
     return this.url(`/projects/${pid}/bundle`);
   }
+  /** Create a blank project (no IFC needed) — GC portal + proforma work immediately. */
+  createProject(name: string) {
+    return this.json<{ id: string; name: string }>("/projects", { method: "POST", body: JSON.stringify({ name }) });
+  }
   /** Delete a project and everything it owns (rows + geometry + blobs). */
   deleteProject(pid: string) {
     return this.json<{ deleted: boolean; id: string; rows: Record<string, number> }>(
