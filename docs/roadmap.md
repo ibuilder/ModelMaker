@@ -31,7 +31,8 @@ Sources & uses with **interest-reserve circularity**, S-curve cost draws, levere
 cash flows, XIRR/NPV/equity-multiple/yield-on-cost/dev-spread, **JV waterfall** (American/
 European, pref + tiered promote, clawback), 2-variable **sensitivity** tables, **Monte Carlo**
 risk (percentiles, P[≥target], histogram), actuals→re-forecast **draw bridge**, scenario CRUD
-+ sharing + clone, multi-deal **portfolio** roll-up, scenario **compare**.
++ sharing + clone, multi-deal **portfolio** roll-up, scenario **compare**, and a **model→proforma
+link** (seed hard cost + rent from the source IFC's net floor area).
 
 ### Interoperability — new
 A data-source **Connections** framework (one adapter pattern): **Postgres/Supabase** read-only
@@ -73,11 +74,12 @@ Quick scan of the field to find where we're behind. Sources:
 - ✅ **DONE** — **Loading an IFC auto-populates the project.** Opening an IFC with a project open
   now sets it as the source model (publish) so drawings / clash / IDS / energy / exports /
   authoring light up automatically — no separate "upload source IFC" step.
-- **★ Model → Proforma link (highest-value differentiator, à la TestFit).** Pull GFA / floor
-  areas / unit count / structural & envelope quantities from the source IFC (we already compute
-  QTO + spaces) and pre-fill the proforma assumptions (`/proforma/solve` inputs), so the deal
-  underwrites against the actual model. Today the proforma is keyed by hand and never reads the
-  model. *Next implementation target.*
+- ✅ **DONE** — **★ Model → Proforma link (TestFit-style differentiator).**
+  `GET /projects/{id}/proforma/model-metrics` derives net floor area (m²+sf) + space/storey counts
+  from the source IFC (reuses the spaces + drawings engines); the Finance view's "📐 From model"
+  panel applies editable $/sf hard-cost and rent rates to seed `cost_lines[hard]` +
+  `operations.potential_rent_annual` and re-solves. The deal now underwrites against the real model.
+  *Next: extend to unit count + envelope/structural quantities (QTO) and exit-value drivers.*
 - **Model version history / diff** (Speckle-style) — the `.mmproj` bundle + GUID-stable authoring
   already give the substrate; add per-publish snapshots + a changed-elements view.
 - **Portfolio cost-overrun forecasting** (Northspyre-style) — extend the risk engine across the
@@ -128,12 +130,17 @@ Quick scan of the field to find where we're behind. Sources:
   68-module portal catalog (favorites + collapsible persona sections + filter); grouped viewer
   toolbar; model-type tags in the project picker. Backlog tracked in [ux-findings.md](ux-findings.md).
 
+### P2 — recently shipped (cont.)
+- ✅ **DONE** — **Tauri native-window installers** — CI builds Win/macOS/Linux installers that
+  bundle the Python backend as a sidecar; **v0.1.2 published** with **signed auto-update**
+  (`tauri-plugin-updater` + `latest.json`) plus an in-app update banner. Download section on the
+  GitHub Pages landing page → latest release.
+
 ### P3 — external dependency / environment-gated
-- **Tauri native-window installer** — the free `.exe` is verified; the Tauri shell now spawns it
-  as a sidecar, but the Rust/CI compile is unverified locally (no toolchain) — run the **Desktop
-  release** workflow to build + smoke-test it.
-- **Bonsai bridge (M5)** — parametric authoring recipes are written but need Blender + Bonsai-
-  MCP to run end-to-end.
+- **Code signing** — installers are unsigned (SmartScreen/Gatekeeper warn). Add the
+  `WINDOWS_CERTIFICATE` / `APPLE_*` secrets (paid certs) the workflow already supports.
+- **Capacitor / Tauri-mobile** wrapper + responsive layout — needs the mobile toolchain/devices.
+- **Bonsai bridge (M5)** — parametric authoring recipes are written but need Blender + Bonsai-MCP.
 - **RVT→IFC** via Autodesk APS — skeleton only; needs a paid APS account (behind a cost flag).
 
 ## Product improvement plan (audit)
@@ -143,9 +150,12 @@ Carlo made on-demand.
 
 ## Execution order
 ~~P0 (web test harness)~~ ✅ → ~~P1 (debt sizing → password reset → audit viewer → federation
-UI)~~ ✅ → **P2 next** → P3. Each item is independently shippable; P3 items are gated on
-external accounts/hardware and are user-performed steps.
+UI)~~ ✅ → ~~P2 (interop → desktop `.exe` → UX pass → signed installers + auto-update → IFC
+auto-populate → model→proforma link)~~ ✅ → **P3 (external-gated)**. Each item is independently
+shippable; P3 items are gated on paid accounts / certs / hardware and are user-performed steps.
 
-_P0 and all P1 items shipped 2026-06-17. Interoperability, the free desktop `.exe`, and the UX
-pass shipped 2026-06-18. Next up: Capacitor mobile, the Tauri sidecar CI smoke build, and the
-remaining UX backlog (empty-state consistency, light-mode contrast)._
+_Shipped: P0 + P1 (2026-06-17); interoperability, free desktop `.exe`, UX pass (2026-06-18);
+signed Win/macOS/Linux installers + auto-update (v0.1.2), IFC-auto-populate, and the
+model→proforma link (2026-06-19). **Remaining = P3 only** (code-signing certs, mobile wrapper,
+Bonsai/Blender, RVT/APS) plus three roadmapped follow-ons: deeper model→proforma (QTO/units),
+model version/diff, and portfolio cost-overrun forecasting._
