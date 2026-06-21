@@ -665,6 +665,11 @@ export class ApiClient {
   }
 
   // authoring round-trip (Phase 6)
+  /** Bid leveling — submissions tabulated by package with low/high/avg/spread. */
+  bidLeveling(pid: string) {
+    return this.json<{ package_count: number; bid_count: number; packages: { package: string; bid_count: number; low: number | null; high: number | null; avg: number | null; spread: number; bids: { bidder: string | null; amount: number | null; is_low: boolean }[] }[] }>(
+      `/projects/${pid}/bids/leveling`);
+  }
   /** Conceptual estimate from the IFC takeoff × unit rates — priced line items + total. */
   estimateFromModel(pid: string) {
     return this.json<{ total: number; element_count: number; lines: { ifc_class: string; count: number; unit: string; quantity: number; rate: number; amount: number }[]; unpriced: { ifc_class: string; count: number }[] }>(

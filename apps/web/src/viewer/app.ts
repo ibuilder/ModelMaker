@@ -855,6 +855,20 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
           ])));
         }));
         b.appendChild(toolBtn2("↓ G702/G703 Pay App (PDF)", () => window.open(api.url(`/projects/${projectId}/cost/g702.pdf?app_no=1`), "_blank")));
+        b.appendChild(toolBtn2("⚖ Bid leveling", async () => {
+          out.textContent = "tabulating…";
+          const r = await api.bidLeveling(pid);
+          const money = (n: number | null) => n == null ? "—" : `$${Math.round(n).toLocaleString()}`;
+          out.textContent = `${r.package_count} package(s) · ${r.bid_count} bid(s)`;
+          showResult("Bid leveling", (body) => {
+            if (!r.packages.length) { body.appendChild(resultNote("No bid packages yet — add them in Construction → Preconstruction.")); return; }
+            for (const p of r.packages) {
+              body.appendChild(resultNote(`<b>${p.package}</b> — ${p.bid_count} bids · low ${money(p.low)} · spread ${money(p.spread)}`));
+              if (p.bids.length) body.appendChild(kvTable(p.bids.map((bd) => ({
+                k: `${bd.is_low ? "★ " : ""}${bd.bidder || "—"}`, v: money(bd.amount), strong: bd.is_low }))));
+            }
+          });
+        }));
         b.appendChild(toolBtn2("📐 Estimate from model (takeoff)", async () => {
           out.textContent = "taking off…";
           let r;

@@ -116,11 +116,18 @@ be measured against, and where we're light. (Categories & products per market re
    + total + unpriced classes; per-class overrides). `GET /projects/{id}/estimate/from-model` + a
    "📐 Estimate from model" cost tool. Verified (test_estimate + live: basichouse → ~$254k).
    *Next: assembly/cost-code rollup, editable rate table UI, push the total to budget/proforma hard cost.*
-3. **Accounting/ERP connectors** — QuickBooks / Sage / Viewpoint adapters in the Connections
-   framework (mirror the Procore/ACC pattern). *(Medium.)*
-4. **Owner capital-program controls** — risk register module + cross-project program portfolio view.
-5. **Residential client portal** — selections + e-signature + a shared owner/client view.
-6. **ITB distribution + bid leveling** — turn the bid_* modules into an outbound invitation + tabulation flow.
+3. ✅ **DONE (QuickBooks)** — **Accounting/ERP connector.** `quickbooks` connection type (token +
+   realm_id → CompanyInfo, chart-of-accounts in browse, read accounts/vendors/bills) via the same
+   adapter as Procore/ACC. *Next: Sage / Viewpoint adapters (same shape), and reconcile cost-module
+   actuals against the books.*
+4. ✅ **DONE (risk register)** — **Owner capital-program controls.** New `risk` module
+   (category/probability/impact/cost-exposure/mitigation, open→mitigating→accepted→closed).
+   *Next: cross-project program portfolio view.*
+5. ✅ **DONE (selections)** — **Residential.** New `selection` module (item/allowance/actual-cost +
+   client_approval signature, open→selected→approved). *Next: a shared client/owner portal view.*
+6. ✅ **DONE (bid leveling)** — **ITB.** `GET /projects/{id}/bids/leveling` tabulates bid_submission
+   by package (low/high/avg/spread + low-bidder flag) + a "⚖ Bid leveling" tool. *Next: outbound ITB
+   invitation/distribution flow.*
 
 ## Gaps (prioritized)
 
