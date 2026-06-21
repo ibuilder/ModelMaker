@@ -339,7 +339,8 @@ export class ApiClient {
       "/auth/register", { method: "POST", body: JSON.stringify({ username, password }) });
   }
   me() {
-    return this.json<{ username: string; role: string | null; authenticated: boolean }>("/auth/me");
+    return this.json<{ username: string; role: string | null; authenticated: boolean;
+      tier?: string; features?: Record<string, boolean>; platform_admin?: boolean }>("/auth/me");
   }
   logout() {
     return this.json<{ ok: boolean }>("/auth/logout", { method: "POST" }).catch(() => ({ ok: false }));

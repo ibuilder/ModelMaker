@@ -126,8 +126,8 @@ export class ProformaUI {
       ["Front setback (m)", "front_setback", 6, "any"], ["Rear setback (m)", "rear_setback", 6, "any"],
       ["Side setback (m)", "side_setback", 3, "any"], ["Height limit (m)", "height_limit", 0, "any"],
       ["Floor-to-floor (m)", "floor_to_floor", 3.5, "0.1"], ["Avg unit (m²)", "avg_unit_m2", 75, "any"],
-      ["Land cost $", "land_cost", 4_000_000, "any"], ["Hard $/sf", "hard_cost_psf", 225, "any"],
-      ["Rent $/unit·mo", "rent_per_unit_month", 2200, "any"], ["Exit cap", "exit_cap", 0.055, "0.005"],
+      ["Land cost $", "land_cost", 2_500_000, "any"], ["Hard $/sf", "hard_cost_psf", 225, "any"],
+      ["Rent $/unit·mo", "rent_per_unit_month", 3000, "any"], ["Exit cap", "exit_cap", 0.05, "0.005"],
     ];
     const grid = document.createElement("div"); grid.className = "pf-form";
     // use type selector
