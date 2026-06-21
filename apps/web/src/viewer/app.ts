@@ -866,6 +866,22 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
         if (!b) return;
         for (const [label, file] of [["Gantt chart", "gantt"], ["Line of Balance", "lob"]] as const)
           b.appendChild(toolBtn2(`▤ ${label}`, () => window.open(api.url(`/projects/${projectId}/schedule/${file}.svg`), "_blank")));
+        const out = document.createElement("div"); out.className = "meta"; out.style.marginTop = "4px";
+        b.appendChild(toolBtn2("⛓ Critical path (CPM)", async () => {
+          out.textContent = "computing…";
+          const r = await api.scheduleCpm(pid);
+          out.textContent = `${r.project_duration}d · ${r.critical_count}/${r.activity_count} critical`;
+          showResult("Critical path (CPM)", (body) => {
+            body.appendChild(resultNote(
+              `Project duration <b>${r.project_duration} days</b> · <b>${r.critical_count}</b> of ${r.activity_count} activities critical`
+              + (r.has_cycle ? " · ⚠ dependency cycle detected" : ""), r.has_cycle ? "bad" : "ok"));
+            if (!r.activities.length) { body.appendChild(resultNote("No schedule activities yet — add some in Construction → Schedule.")); return; }
+            body.appendChild(kvTable(r.activities.map((a) => ({
+              k: `${a.critical ? "★ " : ""}${a.ref || ""} ${a.name || ""}`.trim(),
+              v: `${a.duration}d · float ${a.total_float}`, strong: a.critical }))));
+          });
+        }));
+        b.appendChild(out);
       },
       qa: () => {
         const b = section("qa", "Coordination & QA", { requires: "sourceIfc", tool: true });

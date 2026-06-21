@@ -2,7 +2,7 @@
   "key": "schedule_activity",
   "name": "Schedule",
   "section": "Field",
-  "icon": "\u25b8",
+  "icon": "▸",
   "ref_prefix": "ACT",
   "title_field": "name",
   "pinnable": false,
@@ -37,6 +37,16 @@
       "name": "location",
       "label": "Location",
       "type": "text"
+    },
+    {
+      "name": "duration",
+      "label": "Duration (days)",
+      "type": "number"
+    },
+    {
+      "name": "predecessors",
+      "label": "Predecessors (ref/WBS, comma-sep)",
+      "type": "text"
     }
   ],
   "workflow": {
@@ -55,5 +65,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "wbs",
+    "duration",
+    "start"
+  ]
 }

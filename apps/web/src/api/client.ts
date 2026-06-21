@@ -665,6 +665,11 @@ export class ApiClient {
   }
 
   // authoring round-trip (Phase 6)
+  /** CPM analysis of the schedule activities — float + critical path. */
+  scheduleCpm(pid: string) {
+    return this.json<{ project_duration: number; activity_count: number; critical_count: number; has_cycle: boolean; critical_path: string[]; activities: { ref: string | null; name: string; duration: number; es: number; ef: number; total_float: number; critical: boolean }[] }>(
+      `/projects/${pid}/schedule/cpm`);
+  }
   /** Proforma seed metrics derived from the project's source IFC (areas / space + storey counts). */
   proformaModelMetrics(pid: string) {
     return this.json<{ space_count: number; spaces_with_area: number; storey_count: number; net_floor_area_m2: number; net_floor_area_sf: number }>(

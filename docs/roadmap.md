@@ -106,9 +106,11 @@ be measured against, and where we're light. (Categories & products per market re
 | Accounting / ERP | Sage 300 CRE / **Intacct**, **Viewpoint**, Foundation, CMiC | Gap: **job-cost accounting / ERP sync** (we have cost modules + Procore/ACC connectors; add QuickBooks/Sage adapters via the Connections framework). |
 
 ### New backlog from this scan (priority order)
-1. **CPM scheduling engine** — critical path, total/free **float**, forward/backward pass, data-date,
-   DCMA-14 checks; upgrade `schedule_activity` from a flat list to a real network. *(High — clear,
-   self-contained, and a gap even Procore has.)*
+1. ✅ **DONE (v1)** — **CPM scheduling engine.** `schedule_cpm.compute()` does the forward/backward
+   pass → early/late dates, **total + free float**, and the **critical path** from each activity's
+   `duration` + `predecessors` (FS, resolved by ref/WBS; cycle-safe). `GET /projects/{id}/schedule/cpm`
+   + a "⛓ Critical path" tool that opens the result. Verified (test_cpm + live). *Next: lags, SS/FF
+   dependency types, data-date/progress, DCMA-14 checks, a network/Gantt overlay of the critical path.*
 2. **Estimating & takeoff** — quantity/assembly takeoff + unit-cost estimating that feeds the budget +
    proforma (extends the existing QTO + model→proforma link). *(High.)*
 3. **Accounting/ERP connectors** — QuickBooks / Sage / Viewpoint adapters in the Connections
