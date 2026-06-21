@@ -308,7 +308,28 @@ export class PortalUI {
       await this.host.api.saveView(pid, m.key, name, { q: filter.q, state: filter.state, sort: this.sort[m.key] });
       this.openModule(m, filter);
     };
-    actions.append(newBtn, boardBtn, csvBtn, fbox, stateSel, viewSel, saveView);
+    // reusable templates: apply a saved set of records, or save the current ones as a template
+    const tplBtn = document.createElement("button"); tplBtn.className = "tool-btn"; tplBtn.dataset.cap = "review"; tplBtn.textContent = "⌹ Templates";
+    tplBtn.title = "Apply or save a reusable template for this module";
+    tplBtn.onclick = async () => {
+      const tpls = await this.host.api.templates(m.key).catch(() => []);
+      const pick = tpls.length
+        ? prompt(`Apply a ${m.name} template — enter a number, or blank to save current as new:\n`
+            + tpls.map((t, i) => `${i + 1}. ${t.name} (${t.item_count})`).join("\n"))
+        : (alert(`No ${m.name} templates yet — saving the current records as one.`), "");
+      if (pick && pick.trim()) {
+        const t = tpls[parseInt(pick) - 1];
+        if (!t) return;
+        const r = await this.host.api.applyTemplate(pid, m.key, t.id);
+        this.host.setStatus(`applied "${r.applied}" — ${r.created} record(s)`);
+        this.openModule(m, filter);
+      } else {
+        const name = prompt("Save current records as template named:"); if (!name) return;
+        try { const s = await this.host.api.saveTemplate(pid, m.key, name); this.host.setStatus(`saved template (${s.item_count} items)`); }
+        catch (e) { this.host.setStatus(`couldn't save: ${(e as Error).message}`); }
+      }
+    };
+    actions.append(newBtn, boardBtn, csvBtn, tplBtn, fbox, stateSel, viewSel, saveView);
     this.root.appendChild(actions);
 
     if (!records.length) {

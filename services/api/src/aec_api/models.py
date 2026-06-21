@@ -223,6 +223,18 @@ class AppSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
 
+class Template(Base):
+    """A reusable set of records for a module — e.g. a pre-pour checklist or an inspection
+    template (Procore parity). Apply it to a project to instantiate one record per item. Global
+    (cross-project); `items` is a list of data blobs."""
+    __tablename__ = "templates"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    module: Mapped[str] = mapped_column(String, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    items: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class DrawingMarkup(Base):
     """A pin/redline note on a 2D sheet (plan/elevation/section). Stored in the sheet's intrinsic
     coordinate space (x,y) so it pans/zooms with the drawing. Can be promoted to a Topic (RFI)."""

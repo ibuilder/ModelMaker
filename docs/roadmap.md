@@ -211,9 +211,12 @@ workflow depth + evidence gate), no-IFC project creation, CPM scheduling (float/
 model-based estimating & takeoff, QuickBooks (ERP) connector, risk register, selections, bid
 leveling, TRIR safety analytics, and the construction program portfolio + cost-overrun roll-up._
 
+- ✅ **DONE — Reusable templates** (Procore parity). `Template` store + router: save a module's
+  records as a named template, list per module, and apply to any project (one record per item) —
+  `save-template` / `apply-template` + a "⌹ Templates" portal button. Verified (test_templates).
+
 **Remaining — larger standalone features (each its own focused pass):**
 - **Model version history / diff** (Speckle-style) — per-publish snapshots + changed-elements view.
-- **Reusable checklist / inspection templates** (Procore parity) — template store + apply-to-record.
 - **Branded per-tool PDFs** (generic per-record PDF already ships) + **Sage / Viewpoint** connectors
   (same shape as QuickBooks).
 - **P3 external-gated:** code-signing certs, Capacitor/mobile, Bonsai/Blender, RVT/APS.

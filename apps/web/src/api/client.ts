@@ -665,6 +665,16 @@ export class ApiClient {
   }
 
   // authoring round-trip (Phase 6)
+  /** Reusable templates for a module (save a project's records → apply to another project). */
+  templates(module: string) {
+    return this.json<{ id: string; module: string; name: string; item_count: number }[]>(`/templates?module=${encodeURIComponent(module)}`);
+  }
+  saveTemplate(pid: string, key: string, name: string) {
+    return this.json<{ id: string; item_count: number }>(`/projects/${pid}/modules/${key}/save-template`, { method: "POST", body: JSON.stringify({ name }) });
+  }
+  applyTemplate(pid: string, key: string, tid: string) {
+    return this.json<{ applied: string; created: number }>(`/projects/${pid}/modules/${key}/apply-template/${tid}`, { method: "POST" });
+  }
   /** Construction program portfolio — cost over/under + risk + safety across all projects. */
   constructionPortfolio() {
     return this.json<{ project_count: number; totals: { projected_over_under: number; over_budget_count: number; open_risks: number; risk_exposure: number; recordables: number; open_rfis: number }; projects: { id: string; name: string; projected_over_under: number; over_budget: boolean; open_risks: number; risk_exposure: number; recordables: number; open_rfis: number }[] }>(
