@@ -4,7 +4,7 @@ A consolidated, honest snapshot of what's built across the three pillars + platf
 prioritized list of gaps. Complements the feature-level [capability matrix](capability-matrix.md),
 the [platform-packaging roadmap](roadmap-platforms.md), and the [modeling-tools roadmap](roadmap-modeling-tools.md).
 
-_Last evaluated: 2026-06-18._
+_Last evaluated: 2026-06-19._
 
 ## What's built (by pillar)
 
@@ -54,6 +54,34 @@ RBAC** (viewer<reviewer<editor<admin + workflow party), member-management UI, we
 gating. Audit log (server-side). Docker compose (dev + prod Caddy auto-HTTPS), nginx `/api`
 proxy, Postgres/MinIO. **CI**: multi-suite Python gate (incl. connections/bundle/desktop/
 local-mode); desktop release workflow (Win/macOS/Linux, signing-ready); GitHub Pages viewer demo.
+
+## Competitor benchmark & gaps (2026-06)
+Quick scan of the field to find where we're behind. Sources:
+[Procore vs Autodesk](https://www.procore.com/compare/procore-vs-autodesk),
+[Revizto best-BIM-2026](https://revizto.com/resources/blog/best-bim-software-tools-2023),
+[TestFit](https://www.testfit.io/), [Northspyre](https://www.northspyre.com/real-estate-pro-forma-software).
+
+| Competitor | Their strength | Us | Gap to close |
+|---|---|---|---|
+| Procore / ACC | model viewer **inside** the CM workflow (RFIs/submittals/punch on the model) | model pins + BCF + 68-module portal | parity; keep two-way Procore/ACC sync deepening |
+| Revizto | real-time multi-model **coordination** | federation + clash + IDS + live presence | parity; add issue-tracker round-trip polish |
+| Speckle | open BIM **data** platform / versioning | open, IFC-native, .mmproj bundles | add model **version history / diff** |
+| **TestFit** | model **and proforma linked** — yield-on-cost from the layout | proforma is **manually keyed**, disconnected from the model | **★ link model → proforma** (areas/unit-count/QTO → assumptions) |
+| Northspyre | predictive **cost-overrun** flagging across a portfolio | per-project rules/AI risk + Monte Carlo | portfolio-level cost-overrun forecasting |
+
+### Top gaps to act on
+- ✅ **DONE** — **Loading an IFC auto-populates the project.** Opening an IFC with a project open
+  now sets it as the source model (publish) so drawings / clash / IDS / energy / exports /
+  authoring light up automatically — no separate "upload source IFC" step.
+- **★ Model → Proforma link (highest-value differentiator, à la TestFit).** Pull GFA / floor
+  areas / unit count / structural & envelope quantities from the source IFC (we already compute
+  QTO + spaces) and pre-fill the proforma assumptions (`/proforma/solve` inputs), so the deal
+  underwrites against the actual model. Today the proforma is keyed by hand and never reads the
+  model. *Next implementation target.*
+- **Model version history / diff** (Speckle-style) — the `.mmproj` bundle + GUID-stable authoring
+  already give the substrate; add per-publish snapshots + a changed-elements view.
+- **Portfolio cost-overrun forecasting** (Northspyre-style) — extend the risk engine across the
+  multi-deal portfolio roll-up.
 
 ## Gaps (prioritized)
 
