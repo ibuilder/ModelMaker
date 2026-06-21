@@ -80,10 +80,42 @@ Quick scan of the field to find where we're behind. Sources:
   panel applies editable $/sf hard-cost and rent rates to seed `cost_lines[hard]` +
   `operations.potential_rent_annual` and re-solves. The deal now underwrites against the real model.
   *Next: extend to unit count + envelope/structural quantities (QTO) and exit-value drivers.*
+- ✅ **DONE** — **GC + proforma usable without an IFC.** A "＋ New" toolbar button creates a blank
+  project (no model required); the GC portal + development proforma run on `projectId` alone, so the
+  whole non-geometry side works cold. Model-derived tools (drawings/clash/energy/authoring/
+  model→proforma) still gate on the source IFC. Verified: blank project → RFI 201, dashboard 200.
 - **Model version history / diff** (Speckle-style) — the `.mmproj` bundle + GUID-stable authoring
   already give the substrate; add per-publish snapshots + a changed-elements view.
 - **Portfolio cost-overrun forecasting** (Northspyre-style) — extend the risk engine across the
   multi-deal portfolio roll-up.
+
+## Broader competitor landscape (2026-06) & the gaps it surfaces
+A wider scan beyond the BIM-viewer category — the GC-lifecycle / owner / precon / field tools we'd
+be measured against, and where we're light. (Categories & products per market research.)
+
+| Category | Key players | Where we stand / gap |
+|---|---|---|
+| End-to-end GC PM | **Procore**, **Autodesk Construction Cloud** (Build/BIM360/BuildingConnected), INGENIOUS.BUILD, Archdesk, Buildern, ClickUp | Strong: 69-module portal + model + proforma + interop. Match, keep deepening. |
+| Enterprise doc control / capital PM | Oracle **Aconex / Primavera Unifier**, **e-Builder**, Kahua, PMWeb | Gap: **formal transmittal/correspondence control** (ISO 19650), submittal registers at scale. |
+| Owner / capital program & portfolio | **Mastt**, Kahua, PMWeb | Gap: **owner risk registers + portfolio program controls** (we have deal-level risk + proforma portfolio roll-up). |
+| Residential / homebuilder | **Buildertrend/CoConstruct**, ServiceTitan | Gap: **client portal + selections + e-signatures**; AIA-style progress billing (we have G702/G703). |
+| Field / punch / collab | **Fieldwire**, PlanGrid (→ ACC), eSUB, ConstructionOnline | Gap: **deep offline mobile field app** (we have PWA offline viewer + field modules + the evidence gate). |
+| Scheduling (CPM) | **Planera**, Oracle **Primavera P6**, MS Project (sunsetting 2026) | Gap: **true CPM** — forward/backward pass, **float**, critical path, DCMA-14 checks (we have Gantt/Line-of-Balance only; even Procore lacks float). |
+| Precon — estimating & takeoff | **Sage Estimating**, Trimble WinEst/B2W, DESTINI, STACK, ProEst, PlanSwift, **Bluebeam**, Togal.AI/Beam.AI | Gap: **takeoff + estimating** (we have IFC-driven QTO + a thin `estimate` module; no on-screen takeoff). Procore bought Esticom — head-to-head. |
+| Bidding / ITB / leads | **BuildingConnected**, ConstructConnect, PlanHub, **Dodge** | Gap: **ITB distribution + bid leveling + project-lead intelligence** (we have bid_package/solicitation/submission records, no distribution/intel). |
+| Accounting / ERP | Sage 300 CRE / **Intacct**, **Viewpoint**, Foundation, CMiC | Gap: **job-cost accounting / ERP sync** (we have cost modules + Procore/ACC connectors; add QuickBooks/Sage adapters via the Connections framework). |
+
+### New backlog from this scan (priority order)
+1. **CPM scheduling engine** — critical path, total/free **float**, forward/backward pass, data-date,
+   DCMA-14 checks; upgrade `schedule_activity` from a flat list to a real network. *(High — clear,
+   self-contained, and a gap even Procore has.)*
+2. **Estimating & takeoff** — quantity/assembly takeoff + unit-cost estimating that feeds the budget +
+   proforma (extends the existing QTO + model→proforma link). *(High.)*
+3. **Accounting/ERP connectors** — QuickBooks / Sage / Viewpoint adapters in the Connections
+   framework (mirror the Procore/ACC pattern). *(Medium.)*
+4. **Owner capital-program controls** — risk register module + cross-project program portfolio view.
+5. **Residential client portal** — selections + e-signature + a shared owner/client view.
+6. **ITB distribution + bid leveling** — turn the bid_* modules into an outbound invitation + tabulation flow.
 
 ## Gaps (prioritized)
 
