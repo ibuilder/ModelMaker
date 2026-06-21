@@ -51,7 +51,7 @@ A construction-management portal on top of the viewer — full writeup in
 [docs/gc-portal.md](docs/gc-portal.md). Highlights:
 
 - **Module engine** — every process (RFIs, Submittals, PCO/Change-Order chain, Daily
-  Reports, …) is a `module.json` → its own auto-created table. **69 modules / 12 sections**,
+  Reports, …) is a `module.json` → its own auto-created table. **71 modules / 12 sections**,
   no per-module code. Each gets CRUD, role-gated workflow, comments, CSV/PDF, pins, timeline.
 - **Two role dimensions** — capability roles (viewer→admin) + party roles
   (GC/Owner/OwnersRep/Consultant/Subcontractor) that gate workflow transitions.
@@ -98,9 +98,18 @@ A development-finance engine for the owner/developer side (the **Finance** works
 - **Interoperability** — a data-source **Connections** framework: register external
   **Postgres/Supabase** (read-only table browse + a guarded SELECT console), **Procore**
   (two-way sync — import RFIs/submittals/change-events into the portal, push resolved RFI
-  status/answers back, scheduled auto-sync), and **Autodesk Construction Cloud** (project/issue
-  read) — all behind one adapter pattern. An admin **field-mapping editor** remaps each external
-  field → module field per connection; secrets are write-only and masked on read; admin-gated.
+  status/answers back, scheduled auto-sync), **Autodesk Construction Cloud** (project/issue read),
+  and **accounting/ERP** — **QuickBooks** + generic-REST **Sage/Viewpoint** (read accounts /
+  vendors / bills) — all behind one adapter pattern. An admin **field-mapping editor** remaps each
+  external field → module field per connection; secrets are write-only and masked on read; admin-gated.
+- **Construction & financial depth** — **CPM scheduling** (forward/backward pass, total+free
+  **float**, critical path); **model-based estimating & takeoff** (IFC quantities × unit rates →
+  priced estimate); **model→proforma** (areas seed hard cost + rent); **bid leveling**; a **risk
+  register** + cross-project **construction program portfolio** with cost-overrun flagging;
+  **TRIR/DART safety analytics**; **reusable templates** (save a module's records, apply to any
+  project); and **model version history + diff** (GUID snapshot per publish). The GC portal +
+  proforma run on a **blank project — no IFC required**; model-derived tools light up once an IFC
+  is opened.
 - **Free single-project desktop app (.exe)** — the whole platform in **one process** (FastAPI
   serving the API + SPA, SQLite + local files, single-operator local mode, no login), packaged
   self-contained with PyInstaller (`services/api/desktop.py`, `build-desktop.ps1`) — a
@@ -109,7 +118,7 @@ A development-finance engine for the owner/developer side (the **Finance** works
   Open/Save menu. The Tauri 2 shell spawns this backend as a sidecar for a **native window**;
   mobile (Capacitor/Tauri-mobile) is next.
 - **UX** — the ⚙ Tools panel is a collapsible, **persona-ordered**, state-aware accordion with
-  **readable result modals** (cost/energy/IDS/clash); the **68-module portal catalog** gains ★
+  **readable result modals** (cost/energy/IDS/clash); the **71-module portal catalog** gains ★
   favorites + collapsible persona-aware sections + a filter; the viewer toolbar is grouped. The
   project picker tags each project's model type (`.frag`/`.ifc`). (See `docs/ux-findings.md`.)
 - **Installable + offline** — PWA (manifest + Workbox service worker; lean ~97 KB precache,
@@ -163,12 +172,12 @@ GC portal schedule visuals (from the `schedule_activity` module):
 
 Platform interface (vector renders of the redesigned UI — see the [live demo](https://ibuilder.github.io/ModelMaker/app/) for the running app):
 
-| Tools panel + readable results | 68-module portal catalog |
+| Tools panel + readable results | 71-module portal catalog |
 |---|---|
 | ![tools panel](docs/img/ui-tools-panel.svg) | ![portal catalog](docs/img/ui-portal-catalog.svg) |
 
 The ⚙ Tools panel is a persona-ordered, collapsible, state-aware accordion (secondary tools fold
-under "More tools"; analysis opens in a readable modal); the GC-portal catalog tames 68 modules
+under "More tools"; analysis opens in a readable modal); the GC-portal catalog tames 71 modules
 with ★ favorites, collapsible persona-aware sections, and a filter.
 
 ## Architecture
@@ -195,7 +204,7 @@ apps/editor-bridge/  Bonsai-MCP config + authoring recipes (desktop path)
 services/converter/  IFC→.frag (Node) + optional RVT→IFC via APS (paid, flagged)
 services/api/        FastAPI: BCF, properties, exports, clash/validate, drawings, edit/publish,
                        GC portal (modules, cost, schedule, dashboard)
-services/api/modules/  69 module.json definitions (GC portal — one table each)
+services/api/modules/  71 module.json definitions (GC portal — one table each)
 services/data/       IfcOpenShell: index, QTO, COBie, spaces, schedule, clash, IDS, drawings, edit
 packages/            shared types
 families/            IFC type libraries (versioned)
