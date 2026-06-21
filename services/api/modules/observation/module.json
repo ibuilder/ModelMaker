@@ -36,7 +36,8 @@
         "At-Risk",
         "Hazard",
         "Positive"
-      ]
+      ],
+      "required": true
     },
     {
       "name": "severity",
@@ -63,13 +64,48 @@
     "initial": "open",
     "states": [
       "open",
+      "assigned",
+      "corrected",
       "closed"
     ],
     "transitions": [
       {
         "from": "open",
+        "to": "assigned",
+        "action": "assign",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "open",
         "to": "closed",
-        "action": "close",
+        "action": "dismiss",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "assigned",
+        "to": "corrected",
+        "action": "correct",
+        "party": [
+          "Subcontractor",
+          "GC"
+        ]
+      },
+      {
+        "from": "corrected",
+        "to": "closed",
+        "action": "verify",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "corrected",
+        "to": "assigned",
+        "action": "reject",
         "party": [
           "GC"
         ]

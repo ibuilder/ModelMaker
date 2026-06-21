@@ -16,7 +16,8 @@
     {
       "name": "amount",
       "label": "Through Amount",
-      "type": "currency"
+      "type": "currency",
+      "required": true
     },
     {
       "name": "waiver_type",
@@ -50,13 +51,22 @@
     "initial": "open",
     "states": [
       "open",
+      "received",
       "closed"
     ],
     "transitions": [
       {
         "from": "open",
+        "to": "received",
+        "action": "receive",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "received",
         "to": "closed",
-        "action": "close",
+        "action": "verify",
         "party": [
           "GC"
         ]

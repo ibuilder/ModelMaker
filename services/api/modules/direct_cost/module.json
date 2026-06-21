@@ -57,6 +57,12 @@
         "Payroll",
         "Subcontractor"
       ]
+    },
+    {
+      "name": "commitment",
+      "label": "Commitment",
+      "type": "reference",
+      "module": "commitment"
     }
   ],
   "workflow": {

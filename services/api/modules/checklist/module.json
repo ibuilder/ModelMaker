@@ -49,9 +49,10 @@
       {
         "from": "open",
         "to": "closed",
-        "action": "close",
+        "action": "complete",
         "party": [
-          "GC"
+          "GC",
+          "Subcontractor"
         ]
       }
     ]

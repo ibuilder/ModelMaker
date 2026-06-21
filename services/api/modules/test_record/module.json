@@ -16,7 +16,8 @@
     {
       "name": "result",
       "label": "Result",
-      "type": "text"
+      "type": "text",
+      "required": true
     },
     {
       "name": "date",

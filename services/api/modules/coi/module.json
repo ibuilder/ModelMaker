@@ -36,20 +36,31 @@
     {
       "name": "expiry",
       "label": "Expiry",
-      "type": "date"
+      "type": "date",
+      "required": true
     }
   ],
   "workflow": {
     "initial": "open",
     "states": [
       "open",
+      "active",
       "closed"
     ],
     "transitions": [
       {
         "from": "open",
+        "to": "active",
+        "action": "approve",
+        "party": [
+          "GC",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "active",
         "to": "closed",
-        "action": "close",
+        "action": "expire",
         "party": [
           "GC"
         ]

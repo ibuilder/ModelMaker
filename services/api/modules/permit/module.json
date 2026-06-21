@@ -41,7 +41,8 @@
     {
       "name": "expiry",
       "label": "Expiry",
-      "type": "date"
+      "type": "date",
+      "required": true
     },
     {
       "name": "status",
@@ -59,13 +60,23 @@
     "initial": "applied",
     "states": [
       "applied",
-      "issued"
+      "issued",
+      "closed"
     ],
     "transitions": [
       {
         "from": "applied",
         "to": "issued",
         "action": "issue",
+        "party": [
+          "GC",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "issued",
+        "to": "closed",
+        "action": "close",
         "party": [
           "GC"
         ]

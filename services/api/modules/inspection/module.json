@@ -48,7 +48,8 @@
     {
       "name": "date",
       "label": "Date",
-      "type": "date"
+      "type": "date",
+      "required": true
     },
     {
       "name": "agency",

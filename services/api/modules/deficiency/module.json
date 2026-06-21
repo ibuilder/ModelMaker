@@ -32,7 +32,8 @@
         "Minor",
         "Major",
         "Critical"
-      ]
+      ],
+      "required": true
     },
     {
       "name": "trade",
@@ -54,13 +55,31 @@
     "initial": "open",
     "states": [
       "open",
+      "corrected",
       "closed"
     ],
     "transitions": [
       {
         "from": "open",
+        "to": "corrected",
+        "action": "correct",
+        "party": [
+          "Subcontractor",
+          "GC"
+        ]
+      },
+      {
+        "from": "corrected",
         "to": "closed",
-        "action": "close",
+        "action": "verify",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "corrected",
+        "to": "open",
+        "action": "reject",
         "party": [
           "GC"
         ]
