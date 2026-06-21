@@ -1,8 +1,10 @@
 # Platform evaluation & roadmap
 
 A consolidated, honest snapshot of what's built across the three pillars + platform, and a
-prioritized list of gaps. Complements the feature-level [capability matrix](capability-matrix.md),
-the [platform-packaging roadmap](roadmap-platforms.md), and the [modeling-tools roadmap](roadmap-modeling-tools.md).
+prioritized list of gaps. This is the **single roadmap** — the former `roadmap-platforms.md`,
+`roadmap-modeling-tools.md`, and `improvement-plan.md` are folded in below. Feature-by-feature
+detail lives in the [capability matrix](capability-matrix.md); the GC-tools deep-dive in
+[gc-tools-audit.md](gc-tools-audit.md); UX backlog in [ux-findings.md](ux-findings.md).
 
 _Last evaluated: 2026-06-19._
 
@@ -193,10 +195,9 @@ be measured against, and where we're light. (Categories & products per market re
 - **Bonsai bridge (M5)** — parametric authoring recipes are written but need Blender + Bonsai-MCP.
 - **RVT→IFC** via Autodesk APS — skeleton only; needs a paid APS account (behind a cost flag).
 
-## Product improvement plan (audit)
-A full-codebase performance/UX/competitive audit + prioritized roadmap lives in
-[improvement-plan.md](improvement-plan.md) (2026-06-17). First item executed: proforma Monte
-Carlo made on-demand.
+## Product improvement plan (audit) — folded in
+The 2026-06-17 full-codebase performance/UX/competitive audit is fully executed (e.g. proforma
+Monte Carlo made on-demand; empty-state polish). Its content lives in the sections above.
 
 ## Execution order
 ~~P0 (web test harness)~~ ✅ → ~~P1 (debt sizing → password reset → audit viewer → federation
@@ -220,8 +221,28 @@ leveling, TRIR safety analytics, and the construction program portfolio + cost-o
   history and added/removed elements between versions (no-op republishes skipped). "🕔 Version
   history" tool shows it. Verified (test_versions: A,B,C→B,C,D = +D/−A).
 
+- ✅ **DONE — Sage + Viewpoint connectors.** Generic-REST ERP adapter (base_url + token →
+  accounts/vendors/bills) completing the financial-backbone set (QuickBooks/Sage/Viewpoint).
+
 **Remaining — smaller follow-ons / external-gated:**
-- **Branded per-tool PDFs** (generic per-record PDF already ships) + **Sage / Viewpoint** connectors
-  (same shape as the QuickBooks adapter) + **changed-element geometry diff** (current diff is by
-  GUID add/remove; modified-geometry detection needs per-element hashes).
+- **Branded per-tool PDFs** (generic per-record PDF already ships) + **changed-element geometry
+  diff** (current diff is GUID add/remove; modified-geometry needs per-element hashes).
 - **P3 external-gated:** code-signing certs, Capacitor/mobile, Bonsai/Blender, RVT/APS.
+
+## Packaging & modeling (merged sub-roadmaps)
+*(Former `roadmap-platforms.md` + `roadmap-modeling-tools.md`, folded in.)*
+
+**Platform packaging — one web core, thin native shells.** Web/PWA ✅ (offline, COOP/COEP SW).
+Desktop ✅ — Tauri 2 shell spawns the bundled Python backend as a sidecar; signed Win/macOS/Linux
+installers + auto-update shipped (v0.1.2). Also a standalone PyInstaller `.exe` (browser UI).
+**Mobile** (Capacitor or Tauri-mobile wrapping the same build; site-photo→BCF) is the remaining
+target — pending WebView validation of the threaded-WASM viewer on mobile.
+
+**Modeling tools — author server-side, stream Fragments back.** ✅ Shipped: the floating toolbar
+collects intent (polyline+height, boundary) → POSTs params → `ifcopenshell.api` mutates the project
+IFC → reconvert/reindex → updated `.frag` streamed back (GUID-stable). Walls/slabs/columns/beams/
+roofs, doors/windows, move/rotate/copy/delete, Pset edit, plus grid/snap, section box, levels.
+Heavy parametric edits route to **Blender + Bonsai** over Bonsai-MCP (gated; needs Blender — P3).
+
+*(`improvement-plan.md` (2026-06-17 audit) is fully executed — its items, e.g. on-demand Monte
+Carlo and empty-state polish, shipped; superseded by this file.)*

@@ -215,7 +215,7 @@ docker compose --profile full --profile seed run --rm seed
 
 The web container reverse-proxies `/api` to the API (same-origin, no CORS), serves the
 viewer with the cross-origin isolation web-ifc needs, and persists Postgres/MinIO/IFC volumes.
-See [`.env.example`](.env.example) for every knob and [docs/roadmap-platforms.md](docs/roadmap-platforms.md)
+See [`.env.example`](.env.example) for every knob and [docs/roadmap.md](docs/roadmap.md)
 for the desktop (Tauri/Electron) and mobile (Capacitor) packaging plan.
 
 ## Quick start (dev)
