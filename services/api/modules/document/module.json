@@ -18,26 +18,77 @@
       "name": "doc_type",
       "label": "Type",
       "type": "select",
-      "options": ["Specification", "Contract", "Permit", "Report", "Procedure", "Other"]
+      "options": [
+        "Specification",
+        "Contract",
+        "Permit",
+        "Report",
+        "Procedure",
+        "Other"
+      ]
     },
     {
       "name": "discipline",
       "label": "Discipline",
       "type": "select",
-      "options": ["General", "Architectural", "Structural", "MEP", "Civil"]
+      "options": [
+        "General",
+        "Architectural",
+        "Structural",
+        "MEP",
+        "Civil"
+      ]
     },
     {
       "name": "notes",
       "label": "Notes",
       "type": "textarea"
+    },
+    {
+      "name": "revision",
+      "label": "Revision",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Draft",
+        "Issued",
+        "Superseded"
+      ]
     }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "issued", "void"],
+    "states": [
+      "draft",
+      "issued",
+      "void"
+    ],
     "transitions": [
-      { "from": "draft", "to": "issued", "action": "issue", "party": ["GC"] },
-      { "from": "issued", "to": "void", "action": "void", "party": ["GC"] }
+      {
+        "from": "draft",
+        "to": "issued",
+        "action": "issue",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "issued",
+        "to": "void",
+        "action": "void",
+        "party": [
+          "GC"
+        ]
+      }
     ]
-  }
+  },
+  "list_columns": [
+    "doc_type",
+    "revision",
+    "status"
+  ]
 }

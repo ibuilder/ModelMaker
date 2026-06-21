@@ -2,7 +2,7 @@
   "key": "coi",
   "name": "Insurance Certificates",
   "section": "Contracts",
-  "icon": "\u25a3",
+  "icon": "▣",
   "ref_prefix": "COI",
   "title_field": "vendor",
   "pinnable": false,
@@ -16,6 +16,26 @@
     {
       "name": "expires",
       "label": "Expires",
+      "type": "date"
+    },
+    {
+      "name": "carrier",
+      "label": "Carrier",
+      "type": "text"
+    },
+    {
+      "name": "policy_number",
+      "label": "Policy #",
+      "type": "text"
+    },
+    {
+      "name": "coverage",
+      "label": "Coverage",
+      "type": "currency"
+    },
+    {
+      "name": "expiry",
+      "label": "Expiry",
       "type": "date"
     }
   ],
@@ -35,5 +55,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "carrier",
+    "expiry"
+  ]
 }

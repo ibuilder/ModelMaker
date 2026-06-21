@@ -2,7 +2,7 @@
   "key": "orientation",
   "name": "Employee Orientations",
   "section": "Safety",
-  "icon": "\u263a",
+  "icon": "☺",
   "ref_prefix": "ORI",
   "title_field": "worker",
   "pinnable": false,
@@ -22,6 +22,11 @@
       "name": "date",
       "label": "Date",
       "type": "date"
+    },
+    {
+      "name": "trainer",
+      "label": "Trainer",
+      "type": "text"
     },
     {
       "name": "signature",
@@ -45,5 +50,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "company",
+    "date"
+  ]
 }

@@ -2,7 +2,7 @@
   "key": "location",
   "name": "Locations",
   "section": "Resources",
-  "icon": "\u25ce",
+  "icon": "◎",
   "ref_prefix": "LOC",
   "title_field": "name",
   "pinnable": false,
@@ -16,6 +16,16 @@
     {
       "name": "level",
       "label": "Level",
+      "type": "text"
+    },
+    {
+      "name": "building",
+      "label": "Building",
+      "type": "text"
+    },
+    {
+      "name": "area",
+      "label": "Area",
       "type": "text"
     }
   ],
@@ -35,5 +45,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "building",
+    "level"
+  ]
 }

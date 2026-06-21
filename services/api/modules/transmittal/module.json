@@ -2,7 +2,7 @@
   "key": "transmittal",
   "name": "Transmittals",
   "section": "Engineering",
-  "icon": "\u279f",
+  "icon": "➟",
   "ref_prefix": "TR",
   "title_field": "subject",
   "pinnable": false,
@@ -22,6 +22,33 @@
       "name": "contents",
       "label": "Contents",
       "type": "textarea"
+    },
+    {
+      "name": "purpose",
+      "label": "Purpose",
+      "type": "select",
+      "options": [
+        "For Review",
+        "For Approval",
+        "For Construction",
+        "For Record"
+      ]
+    },
+    {
+      "name": "items",
+      "label": "Items",
+      "type": "textarea"
+    },
+    {
+      "name": "method",
+      "label": "Method",
+      "type": "select",
+      "options": [
+        "Email",
+        "Portal",
+        "Hand",
+        "Courier"
+      ]
     }
   ],
   "workflow": {
@@ -41,5 +68,9 @@
       }
     ]
   },
-  "revisable": true
+  "revisable": true,
+  "list_columns": [
+    "purpose",
+    "method"
+  ]
 }

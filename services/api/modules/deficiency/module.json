@@ -2,7 +2,7 @@
   "key": "deficiency",
   "name": "Deficiencies",
   "section": "Quality",
-  "icon": "\u2717",
+  "icon": "✗",
   "ref_prefix": "DEF",
   "title_field": "description",
   "pinnable": true,
@@ -23,6 +23,31 @@
       "label": "Source Inspection",
       "type": "reference",
       "module": "inspection"
+    },
+    {
+      "name": "severity",
+      "label": "Severity",
+      "type": "select",
+      "options": [
+        "Minor",
+        "Major",
+        "Critical"
+      ]
+    },
+    {
+      "name": "trade",
+      "label": "Trade",
+      "type": "text"
+    },
+    {
+      "name": "due_date",
+      "label": "Due Date",
+      "type": "date"
+    },
+    {
+      "name": "corrective_action",
+      "label": "Corrective Action",
+      "type": "textarea"
     }
   ],
   "workflow": {
@@ -41,5 +66,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "severity",
+    "trade",
+    "due_date"
+  ]
 }

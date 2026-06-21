@@ -2,7 +2,7 @@
   "key": "punchlist",
   "name": "Punchlist",
   "section": "Field",
-  "icon": "\u2717",
+  "icon": "✗",
   "ref_prefix": "PL",
   "title_field": "description",
   "pinnable": true,
@@ -28,6 +28,31 @@
       "label": "Source Observation",
       "type": "reference",
       "module": "observation"
+    },
+    {
+      "name": "priority",
+      "label": "Priority",
+      "type": "select",
+      "options": [
+        "Low",
+        "Medium",
+        "High"
+      ]
+    },
+    {
+      "name": "responsible",
+      "label": "Responsible",
+      "type": "text"
+    },
+    {
+      "name": "due_date",
+      "label": "Due Date",
+      "type": "date"
+    },
+    {
+      "name": "cost",
+      "label": "Est. Cost",
+      "type": "currency"
     }
   ],
   "workflow": {
@@ -64,5 +89,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "trade",
+    "priority",
+    "due_date"
+  ]
 }

@@ -2,7 +2,7 @@
   "key": "timesheet",
   "name": "Timesheets",
   "section": "Field",
-  "icon": "\u23f1",
+  "icon": "⏱",
   "ref_prefix": "TS",
   "title_field": "worker",
   "pinnable": false,
@@ -28,6 +28,11 @@
       "label": "Cost Code",
       "type": "reference",
       "module": "cost_code"
+    },
+    {
+      "name": "trade",
+      "label": "Trade",
+      "type": "text"
     }
   ],
   "workflow": {
@@ -46,5 +51,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "trade",
+    "date",
+    "hours"
+  ]
 }

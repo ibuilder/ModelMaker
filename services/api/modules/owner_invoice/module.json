@@ -23,6 +23,22 @@
       "label": "Prime contract",
       "type": "reference",
       "module": "prime_contract"
+    },
+    {
+      "name": "period",
+      "label": "Period",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Draft",
+        "Submitted",
+        "Approved",
+        "Paid"
+      ]
     }
   ],
   "workflow": {
@@ -48,5 +64,9 @@
         "party": "Owner"
       }
     ]
-  }
+  },
+  "list_columns": [
+    "amount",
+    "status"
+  ]
 }

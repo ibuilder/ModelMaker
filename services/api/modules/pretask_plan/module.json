@@ -2,7 +2,7 @@
   "key": "pretask_plan",
   "name": "Pre-Task Plans",
   "section": "Safety",
-  "icon": "\u25a4",
+  "icon": "▤",
   "ref_prefix": "PTP",
   "title_field": "task",
   "pinnable": false,
@@ -17,6 +17,16 @@
       "name": "hazards",
       "label": "Hazards",
       "type": "textarea"
+    },
+    {
+      "name": "controls",
+      "label": "Controls",
+      "type": "textarea"
+    },
+    {
+      "name": "crew_size",
+      "label": "Crew Size",
+      "type": "number"
     },
     {
       "name": "signature",
@@ -40,5 +50,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "task",
+    "crew_size"
+  ]
 }

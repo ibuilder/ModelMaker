@@ -2,7 +2,7 @@
   "key": "drawing",
   "name": "Drawings & Specs",
   "section": "Engineering",
-  "icon": "\u25ad",
+  "icon": "▭",
   "ref_prefix": "DWG",
   "title_field": "number",
   "pinnable": false,
@@ -27,6 +27,21 @@
       "name": "discipline",
       "label": "Discipline",
       "type": "text"
+    },
+    {
+      "name": "sheet_number",
+      "label": "Sheet #",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Current",
+        "Superseded",
+        "For Review"
+      ]
     }
   ],
   "workflow": {
@@ -46,5 +61,10 @@
       }
     ]
   },
-  "revisable": true
+  "revisable": true,
+  "list_columns": [
+    "discipline",
+    "sheet_number",
+    "revision"
+  ]
 }

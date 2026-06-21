@@ -2,7 +2,7 @@
   "key": "value_engineering",
   "name": "Value Engineering",
   "section": "Preconstruction",
-  "icon": "\u25c6",
+  "icon": "◆",
   "ref_prefix": "VE",
   "title_field": "subject",
   "pinnable": false,
@@ -17,6 +17,22 @@
       "name": "savings",
       "label": "Est. Savings",
       "type": "number"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Proposed",
+        "Under Review",
+        "Accepted",
+        "Rejected"
+      ]
     }
   ],
   "workflow": {
@@ -44,5 +60,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "savings",
+    "status"
+  ]
 }

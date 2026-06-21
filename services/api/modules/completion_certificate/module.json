@@ -2,7 +2,7 @@
   "key": "completion_certificate",
   "name": "Completion Certificates",
   "section": "Closeout",
-  "icon": "\u2713",
+  "icon": "✓",
   "ref_prefix": "CC",
   "title_field": "subject",
   "pinnable": false,
@@ -12,6 +12,31 @@
       "label": "Certificate",
       "type": "text",
       "required": true
+    },
+    {
+      "name": "scope",
+      "label": "Scope",
+      "type": "textarea"
+    },
+    {
+      "name": "date",
+      "label": "Date",
+      "type": "date"
+    },
+    {
+      "name": "certified_by",
+      "label": "Certified By",
+      "type": "text"
+    },
+    {
+      "name": "type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Substantial",
+        "Final",
+        "Partial"
+      ]
     }
   ],
   "workflow": {
@@ -37,5 +62,9 @@
         "party": "Owner"
       }
     ]
-  }
+  },
+  "list_columns": [
+    "type",
+    "date"
+  ]
 }

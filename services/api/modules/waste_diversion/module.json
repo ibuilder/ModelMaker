@@ -2,7 +2,7 @@
   "key": "waste_diversion",
   "name": "Waste Diversion",
   "section": "Sustainability",
-  "icon": "\u267a",
+  "icon": "♺",
   "ref_prefix": "WD",
   "title_field": "material",
   "pinnable": false,
@@ -22,6 +22,11 @@
       "name": "diverted",
       "label": "Diverted %",
       "type": "number"
+    },
+    {
+      "name": "date",
+      "label": "Date",
+      "type": "date"
     }
   ],
   "workflow": {
@@ -40,5 +45,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "material",
+    "tons",
+    "diverted"
+  ]
 }

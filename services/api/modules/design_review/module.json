@@ -2,7 +2,7 @@
   "key": "design_review",
   "name": "Design Reviews",
   "section": "Engineering",
-  "icon": "\u25c9",
+  "icon": "◉",
   "ref_prefix": "DR",
   "title_field": "subject",
   "pinnable": false,
@@ -23,6 +23,28 @@
       "label": "Drawing",
       "type": "reference",
       "module": "drawing"
+    },
+    {
+      "name": "discipline",
+      "label": "Discipline",
+      "type": "select",
+      "options": [
+        "Architectural",
+        "Structural",
+        "MEP",
+        "Civil"
+      ]
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Pending",
+        "In Review",
+        "Approved",
+        "Rejected"
+      ]
     }
   ],
   "workflow": {
@@ -42,5 +64,9 @@
       }
     ]
   },
-  "revisable": true
+  "revisable": true,
+  "list_columns": [
+    "discipline",
+    "status"
+  ]
 }

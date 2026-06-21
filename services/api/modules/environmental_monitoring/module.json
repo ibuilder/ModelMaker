@@ -2,7 +2,7 @@
   "key": "environmental_monitoring",
   "name": "Environmental Monitoring",
   "section": "Sustainability",
-  "icon": "\u25c9",
+  "icon": "◉",
   "ref_prefix": "ENV",
   "title_field": "metric",
   "pinnable": false,
@@ -28,6 +28,28 @@
       "label": "Permit",
       "type": "reference",
       "module": "permit"
+    },
+    {
+      "name": "parameter",
+      "label": "Parameter",
+      "type": "select",
+      "options": [
+        "Noise",
+        "Dust/PM",
+        "Stormwater",
+        "Air",
+        "Vibration"
+      ]
+    },
+    {
+      "name": "unit",
+      "label": "Unit",
+      "type": "text"
+    },
+    {
+      "name": "threshold",
+      "label": "Threshold",
+      "type": "number"
     }
   ],
   "workflow": {
@@ -46,5 +68,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "parameter",
+    "value",
+    "date"
+  ]
 }

@@ -2,7 +2,7 @@
   "key": "safety_violation",
   "name": "Safety Violations",
   "section": "Safety",
-  "icon": "\u2717",
+  "icon": "✗",
   "ref_prefix": "SV",
   "title_field": "description",
   "pinnable": true,
@@ -23,6 +23,26 @@
       "label": "Source observation",
       "type": "reference",
       "module": "observation"
+    },
+    {
+      "name": "severity",
+      "label": "Severity",
+      "type": "select",
+      "options": [
+        "Minor",
+        "Serious",
+        "Willful"
+      ]
+    },
+    {
+      "name": "corrective_action",
+      "label": "Corrective Action",
+      "type": "textarea"
+    },
+    {
+      "name": "due_date",
+      "label": "Due Date",
+      "type": "date"
     }
   ],
   "workflow": {
@@ -41,5 +61,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "severity",
+    "due_date"
+  ]
 }

@@ -2,7 +2,7 @@
   "key": "om_manual",
   "name": "O&M Manuals",
   "section": "Closeout",
-  "icon": "\u25a4",
+  "icon": "▤",
   "ref_prefix": "OM",
   "title_field": "name",
   "pinnable": false,
@@ -23,6 +23,26 @@
       "label": "Submittal",
       "type": "reference",
       "module": "submittal"
+    },
+    {
+      "name": "format",
+      "label": "Format",
+      "type": "select",
+      "options": [
+        "PDF",
+        "Hard Copy",
+        "Both"
+      ]
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Pending",
+        "Submitted",
+        "Accepted"
+      ]
     }
   ],
   "workflow": {
@@ -41,5 +61,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "system",
+    "status"
+  ]
 }

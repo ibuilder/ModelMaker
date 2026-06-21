@@ -2,7 +2,7 @@
   "key": "test_record",
   "name": "Test Records",
   "section": "Quality",
-  "icon": "\u25a3",
+  "icon": "▣",
   "ref_prefix": "TST",
   "title_field": "name",
   "pinnable": false,
@@ -28,6 +28,21 @@
       "label": "Inspection",
       "type": "reference",
       "module": "inspection"
+    },
+    {
+      "name": "test_type",
+      "label": "Test Type",
+      "type": "text"
+    },
+    {
+      "name": "lab",
+      "label": "Lab/Agency",
+      "type": "text"
+    },
+    {
+      "name": "spec_section",
+      "label": "Spec Section",
+      "type": "text"
     }
   ],
   "workflow": {
@@ -46,5 +61,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "test_type",
+    "result",
+    "date"
+  ]
 }

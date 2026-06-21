@@ -17,6 +17,17 @@
       "name": "rate",
       "label": "Rate $/hr",
       "type": "number"
+    },
+    {
+      "name": "unit",
+      "label": "Unit",
+      "type": "select",
+      "options": [
+        "Hour",
+        "Day",
+        "Week",
+        "Month"
+      ]
     }
   ],
   "workflow": {
@@ -35,5 +46,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "unit",
+    "rate"
+  ]
 }

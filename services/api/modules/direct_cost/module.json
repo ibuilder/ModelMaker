@@ -36,6 +36,27 @@
       "label": "Actual Amount",
       "type": "currency",
       "required": true
+    },
+    {
+      "name": "vendor",
+      "label": "Vendor",
+      "type": "text"
+    },
+    {
+      "name": "date",
+      "label": "Date",
+      "type": "date"
+    },
+    {
+      "name": "cost_type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Invoice",
+        "Expense",
+        "Payroll",
+        "Subcontractor"
+      ]
     }
   ],
   "workflow": {
@@ -44,5 +65,10 @@
       "posted"
     ],
     "transitions": []
-  }
+  },
+  "list_columns": [
+    "vendor",
+    "amount",
+    "date"
+  ]
 }

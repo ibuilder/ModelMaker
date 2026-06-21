@@ -2,7 +2,7 @@
   "key": "checklist",
   "name": "Checklists",
   "section": "Field",
-  "icon": "\u2611",
+  "icon": "☑",
   "ref_prefix": "CL",
   "title_field": "name",
   "pinnable": false,
@@ -17,6 +17,26 @@
       "name": "location",
       "label": "Location",
       "type": "text"
+    },
+    {
+      "name": "category",
+      "label": "Category",
+      "type": "text"
+    },
+    {
+      "name": "result",
+      "label": "Result",
+      "type": "select",
+      "options": [
+        "Pass",
+        "Fail",
+        "N/A"
+      ]
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "textarea"
     }
   ],
   "workflow": {
@@ -35,5 +55,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "category",
+    "result"
+  ]
 }

@@ -2,7 +2,7 @@
   "key": "as_built",
   "name": "As-Builts",
   "section": "Closeout",
-  "icon": "\u25ad",
+  "icon": "▭",
   "ref_prefix": "AB",
   "title_field": "number",
   "pinnable": false,
@@ -23,6 +23,22 @@
       "label": "Drawing",
       "type": "reference",
       "module": "drawing"
+    },
+    {
+      "name": "discipline",
+      "label": "Discipline",
+      "type": "select",
+      "options": [
+        "Architectural",
+        "Structural",
+        "MEP",
+        "Civil"
+      ]
+    },
+    {
+      "name": "sheet_count",
+      "label": "# Sheets",
+      "type": "number"
     }
   ],
   "workflow": {
@@ -41,5 +57,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "discipline",
+    "status"
+  ]
 }

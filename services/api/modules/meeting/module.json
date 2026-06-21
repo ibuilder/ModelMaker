@@ -2,7 +2,7 @@
   "key": "meeting",
   "name": "Meetings",
   "section": "Engineering",
-  "icon": "\u2637",
+  "icon": "☷",
   "ref_prefix": "MTG",
   "title_field": "subject",
   "pinnable": false,
@@ -22,6 +22,23 @@
       "name": "minutes",
       "label": "Minutes",
       "type": "textarea"
+    },
+    {
+      "name": "location",
+      "label": "Location",
+      "type": "text"
+    },
+    {
+      "name": "meeting_type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "OAC",
+        "Coordination",
+        "Safety",
+        "Preconstruction",
+        "Progress"
+      ]
     },
     {
       "name": "action_count",
@@ -48,5 +65,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "meeting_type",
+    "date"
+  ]
 }

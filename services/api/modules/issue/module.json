@@ -27,6 +27,21 @@
         "Medium",
         "High"
       ]
+    },
+    {
+      "name": "category",
+      "label": "Type",
+      "type": "text"
+    },
+    {
+      "name": "location",
+      "label": "Location",
+      "type": "text"
+    },
+    {
+      "name": "assignee_name",
+      "label": "Assigned To",
+      "type": "text"
     }
   ],
   "workflow": {
@@ -54,5 +69,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "category",
+    "priority"
+  ]
 }

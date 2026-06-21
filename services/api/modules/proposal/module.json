@@ -29,6 +29,16 @@
       "label": "Source PCO",
       "type": "reference",
       "module": "pco_request"
+    },
+    {
+      "name": "scope",
+      "label": "Scope",
+      "type": "textarea"
+    },
+    {
+      "name": "schedule_days",
+      "label": "Schedule Days",
+      "type": "number"
     }
   ],
   "workflow": {
@@ -74,5 +84,9 @@
       }
     ]
   },
-  "revisable": true
+  "revisable": true,
+  "list_columns": [
+    "amount",
+    "schedule_days"
+  ]
 }

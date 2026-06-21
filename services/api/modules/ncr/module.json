@@ -2,7 +2,7 @@
   "key": "ncr",
   "name": "Non-Conformance Reports",
   "section": "Quality",
-  "icon": "\u26a0",
+  "icon": "⚠",
   "ref_prefix": "NCR",
   "title_field": "subject",
   "pinnable": true,
@@ -34,6 +34,31 @@
       "label": "Source Inspection",
       "type": "reference",
       "module": "inspection"
+    },
+    {
+      "name": "severity",
+      "label": "Severity",
+      "type": "select",
+      "options": [
+        "Minor",
+        "Major",
+        "Critical"
+      ]
+    },
+    {
+      "name": "root_cause",
+      "label": "Root Cause",
+      "type": "textarea"
+    },
+    {
+      "name": "corrective_action",
+      "label": "Corrective Action",
+      "type": "textarea"
+    },
+    {
+      "name": "due_date",
+      "label": "Due Date",
+      "type": "date"
     }
   ],
   "workflow": {
@@ -61,5 +86,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "severity",
+    "disposition",
+    "due_date"
+  ]
 }

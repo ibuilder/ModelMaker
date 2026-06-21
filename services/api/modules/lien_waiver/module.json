@@ -2,7 +2,7 @@
   "key": "lien_waiver",
   "name": "Lien Waivers",
   "section": "Contracts",
-  "icon": "\u2713",
+  "icon": "✓",
   "ref_prefix": "LW",
   "title_field": "vendor",
   "pinnable": false,
@@ -17,6 +17,22 @@
       "name": "amount",
       "label": "Through Amount",
       "type": "currency"
+    },
+    {
+      "name": "waiver_type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Conditional Progress",
+        "Unconditional Progress",
+        "Conditional Final",
+        "Unconditional Final"
+      ]
+    },
+    {
+      "name": "through_date",
+      "label": "Through Date",
+      "type": "date"
     },
     {
       "name": "signature",
@@ -46,5 +62,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "waiver_type",
+    "amount"
+  ]
 }

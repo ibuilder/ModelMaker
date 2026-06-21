@@ -2,7 +2,7 @@
   "key": "inspection",
   "name": "Inspections",
   "section": "Quality",
-  "icon": "\u2713",
+  "icon": "✓",
   "ref_prefix": "INS",
   "title_field": "subject",
   "pinnable": true,
@@ -27,6 +27,38 @@
         "Fail",
         "Conditional"
       ]
+    },
+    {
+      "name": "inspection_type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Pre-Installation",
+        "In-Progress",
+        "Final",
+        "Agency",
+        "Commissioning"
+      ]
+    },
+    {
+      "name": "inspector",
+      "label": "Inspector",
+      "type": "text"
+    },
+    {
+      "name": "date",
+      "label": "Date",
+      "type": "date"
+    },
+    {
+      "name": "agency",
+      "label": "Agency",
+      "type": "text"
+    },
+    {
+      "name": "spec_section",
+      "label": "Spec Section",
+      "type": "text"
     },
     {
       "name": "ncr_count",
@@ -70,5 +102,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "inspection_type",
+    "result",
+    "date"
+  ]
 }

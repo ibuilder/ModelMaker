@@ -2,7 +2,7 @@
   "key": "observation",
   "name": "Safety Observations",
   "section": "Safety",
-  "icon": "\u25ce",
+  "icon": "◎",
   "ref_prefix": "OBS",
   "title_field": "description",
   "pinnable": true,
@@ -26,6 +26,37 @@
       "name": "location",
       "label": "Location",
       "type": "text"
+    },
+    {
+      "name": "category",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Safe",
+        "At-Risk",
+        "Hazard",
+        "Positive"
+      ]
+    },
+    {
+      "name": "severity",
+      "label": "Severity",
+      "type": "select",
+      "options": [
+        "Low",
+        "Medium",
+        "High"
+      ]
+    },
+    {
+      "name": "trade",
+      "label": "Trade",
+      "type": "text"
+    },
+    {
+      "name": "corrective_action",
+      "label": "Corrective Action",
+      "type": "textarea"
     }
   ],
   "workflow": {
@@ -44,5 +75,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "category",
+    "severity",
+    "location"
+  ]
 }

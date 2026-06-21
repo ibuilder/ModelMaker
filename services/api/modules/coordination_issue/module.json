@@ -2,7 +2,7 @@
   "key": "coordination_issue",
   "name": "Coordination Issues",
   "section": "BIM",
-  "icon": "\u2736",
+  "icon": "✶",
   "ref_prefix": "CI",
   "title_field": "subject",
   "pinnable": true,
@@ -28,6 +28,22 @@
       "label": "Raised in meeting",
       "type": "reference",
       "module": "meeting"
+    },
+    {
+      "name": "priority",
+      "label": "Priority",
+      "type": "select",
+      "options": [
+        "Low",
+        "Medium",
+        "High",
+        "Critical"
+      ]
+    },
+    {
+      "name": "location",
+      "label": "Location",
+      "type": "text"
     }
   ],
   "workflow": {
@@ -66,5 +82,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "discipline",
+    "priority"
+  ]
 }

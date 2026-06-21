@@ -2,7 +2,7 @@
   "key": "bid_package",
   "name": "Bid Packages",
   "section": "Preconstruction",
-  "icon": "\u25a6",
+  "icon": "▦",
   "ref_prefix": "BP",
   "title_field": "name",
   "pinnable": false,
@@ -21,6 +21,16 @@
     {
       "name": "budget",
       "label": "Budget",
+      "type": "currency"
+    },
+    {
+      "name": "due_date",
+      "label": "Due Date",
+      "type": "date"
+    },
+    {
+      "name": "estimate",
+      "label": "Estimate",
       "type": "currency"
     },
     {
@@ -48,5 +58,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "trade",
+    "due_date"
+  ]
 }

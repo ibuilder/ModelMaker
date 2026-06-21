@@ -2,7 +2,7 @@
   "key": "commissioning",
   "name": "Commissioning",
   "section": "Closeout",
-  "icon": "\u25c9",
+  "icon": "◉",
   "ref_prefix": "CX",
   "title_field": "system",
   "pinnable": false,
@@ -23,6 +23,11 @@
       "label": "Asset",
       "type": "reference",
       "module": "asset_register"
+    },
+    {
+      "name": "date",
+      "label": "Date",
+      "type": "date"
     }
   ],
   "workflow": {
@@ -48,5 +53,9 @@
         "party": "Owner"
       }
     ]
-  }
+  },
+  "list_columns": [
+    "system",
+    "status"
+  ]
 }

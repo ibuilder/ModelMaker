@@ -23,6 +23,18 @@
       "name": "amount",
       "label": "Amount",
       "type": "currency"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Received",
+        "Under Review",
+        "Shortlisted",
+        "Awarded",
+        "Rejected"
+      ]
     }
   ],
   "workflow": {
@@ -41,5 +53,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "bidder",
+    "amount",
+    "status"
+  ]
 }

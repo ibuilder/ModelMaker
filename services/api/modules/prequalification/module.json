@@ -2,7 +2,7 @@
   "key": "prequalification",
   "name": "Prequalification",
   "section": "Preconstruction",
-  "icon": "\u2713",
+  "icon": "✓",
   "ref_prefix": "PQ",
   "title_field": "company",
   "pinnable": false,
@@ -27,6 +27,28 @@
       "name": "bonding_capacity",
       "label": "Bonding Capacity",
       "type": "number"
+    },
+    {
+      "name": "rating",
+      "label": "Rating",
+      "type": "select",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "Not Qualified"
+      ]
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Invited",
+        "Submitted",
+        "Approved",
+        "Rejected"
+      ]
     }
   ],
   "workflow": {
@@ -54,5 +76,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "trade",
+    "rating",
+    "status"
+  ]
 }

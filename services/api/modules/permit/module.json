@@ -2,7 +2,7 @@
   "key": "permit",
   "name": "Permitting",
   "section": "Engineering",
-  "icon": "\u25a3",
+  "icon": "▣",
   "ref_prefix": "PMT",
   "title_field": "name",
   "pinnable": false,
@@ -22,6 +22,37 @@
       "name": "expires",
       "label": "Expires",
       "type": "date"
+    },
+    {
+      "name": "permit_type",
+      "label": "Type",
+      "type": "text"
+    },
+    {
+      "name": "number",
+      "label": "Permit #",
+      "type": "text"
+    },
+    {
+      "name": "issued_date",
+      "label": "Issued",
+      "type": "date"
+    },
+    {
+      "name": "expiry",
+      "label": "Expiry",
+      "type": "date"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Applied",
+        "Issued",
+        "Expired",
+        "Closed"
+      ]
     }
   ],
   "workflow": {
@@ -40,5 +71,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "permit_type",
+    "status",
+    "expiry"
+  ]
 }

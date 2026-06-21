@@ -19,6 +19,11 @@
       "type": "text"
     },
     {
+      "name": "division",
+      "label": "CSI Division",
+      "type": "text"
+    },
+    {
       "name": "committed",
       "label": "Committed ($)",
       "type": "rollup",
@@ -67,5 +72,8 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "division"
+  ]
 }

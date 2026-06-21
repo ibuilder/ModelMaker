@@ -17,6 +17,15 @@
       "name": "rate",
       "label": "Rate $/hr",
       "type": "number"
+    },
+    {
+      "name": "unit",
+      "label": "Unit",
+      "type": "select",
+      "options": [
+        "Hour",
+        "Day"
+      ]
     }
   ],
   "workflow": {
@@ -35,5 +44,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "trade",
+    "rate"
+  ]
 }

@@ -2,7 +2,7 @@
   "key": "site_logistics",
   "name": "Site Logistics",
   "section": "Field",
-  "icon": "\u25a6",
+  "icon": "▦",
   "ref_prefix": "LOG",
   "title_field": "resource",
   "pinnable": false,
@@ -28,6 +28,23 @@
       "name": "company",
       "label": "Booked By",
       "type": "text"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea"
+    },
+    {
+      "name": "category",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Access",
+        "Crane",
+        "Laydown",
+        "Hoisting",
+        "Traffic"
+      ]
     }
   ],
   "workflow": {
@@ -46,5 +63,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "category",
+    "date"
+  ]
 }

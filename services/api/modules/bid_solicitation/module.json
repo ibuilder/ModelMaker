@@ -2,7 +2,7 @@
   "key": "bid_solicitation",
   "name": "Bid Solicitations (ITB)",
   "section": "Preconstruction",
-  "icon": "\u2709",
+  "icon": "✉",
   "ref_prefix": "ITB",
   "title_field": "name",
   "pinnable": false,
@@ -23,6 +23,22 @@
       "label": "Bid package",
       "type": "reference",
       "module": "bid_package"
+    },
+    {
+      "name": "trade",
+      "label": "Trade",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Sent",
+        "Viewed",
+        "Responded",
+        "Declined"
+      ]
     }
   ],
   "workflow": {
@@ -41,5 +57,9 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "trade",
+    "status"
+  ]
 }

@@ -2,7 +2,7 @@
   "key": "jha",
   "name": "Job Hazard Analyses",
   "section": "Safety",
-  "icon": "\u26a0",
+  "icon": "⚠",
   "ref_prefix": "JHA",
   "title_field": "task",
   "pinnable": false,
@@ -22,6 +22,20 @@
       "name": "controls",
       "label": "Controls",
       "type": "textarea"
+    },
+    {
+      "name": "ppe",
+      "label": "Required PPE",
+      "type": "multiselect",
+      "options": [
+        "Hard Hat",
+        "Eye",
+        "Gloves",
+        "Hi-Vis",
+        "Fall Protection",
+        "Respirator",
+        "Hearing"
+      ]
     }
   ],
   "workflow": {
@@ -40,5 +54,8 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "task"
+  ]
 }

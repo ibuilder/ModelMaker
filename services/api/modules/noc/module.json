@@ -7,16 +7,67 @@
   "title_field": "subject",
   "pinnable": true,
   "fields": [
-    {"name": "subject", "label": "Subject", "type": "text", "required": true},
-    {"name": "description", "label": "Description", "type": "textarea"},
-    {"name": "direction", "label": "Owner Direction", "type": "select", "options": ["Proceed & Pricing", "Pricing Only", "Do Not Proceed"]}
+    {
+      "name": "subject",
+      "label": "Subject",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea"
+    },
+    {
+      "name": "direction",
+      "label": "Owner Direction",
+      "type": "select",
+      "options": [
+        "Proceed & Pricing",
+        "Pricing Only",
+        "Do Not Proceed"
+      ]
+    },
+    {
+      "name": "cost_estimate",
+      "label": "Est. Cost",
+      "type": "currency"
+    },
+    {
+      "name": "schedule_days",
+      "label": "Schedule Days",
+      "type": "number"
+    }
   ],
   "workflow": {
     "initial": "issued",
-    "states": ["issued", "returned", "closed"],
+    "states": [
+      "issued",
+      "returned",
+      "closed"
+    ],
     "transitions": [
-      {"from": "issued", "to": "returned", "action": "return_direction", "party": ["Owner", "OwnersRep"]},
-      {"from": "returned", "to": "closed", "action": "close", "party": ["GC"]}
+      {
+        "from": "issued",
+        "to": "returned",
+        "action": "return_direction",
+        "party": [
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "returned",
+        "to": "closed",
+        "action": "close",
+        "party": [
+          "GC"
+        ]
+      }
     ]
-  }
+  },
+  "list_columns": [
+    "cost_estimate",
+    "schedule_days"
+  ]
 }

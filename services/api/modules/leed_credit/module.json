@@ -2,7 +2,7 @@
   "key": "leed_credit",
   "name": "LEED / Green Credits",
   "section": "Sustainability",
-  "icon": "\u2756",
+  "icon": "❖",
   "ref_prefix": "LEED",
   "title_field": "credit",
   "pinnable": false,
@@ -22,6 +22,19 @@
       "name": "status",
       "label": "Status",
       "type": "text"
+    },
+    {
+      "name": "category",
+      "label": "Category",
+      "type": "select",
+      "options": [
+        "Energy",
+        "Water",
+        "Materials",
+        "Indoor EQ",
+        "Sites",
+        "Innovation"
+      ]
     }
   ],
   "workflow": {
@@ -40,5 +53,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "category",
+    "points",
+    "status"
+  ]
 }

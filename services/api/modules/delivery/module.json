@@ -2,7 +2,7 @@
   "key": "delivery",
   "name": "Deliveries",
   "section": "Field",
-  "icon": "\u25a4",
+  "icon": "▤",
   "ref_prefix": "DEL",
   "title_field": "description",
   "pinnable": false,
@@ -28,6 +28,27 @@
       "label": "Purchase order",
       "type": "reference",
       "module": "commitment"
+    },
+    {
+      "name": "po_number",
+      "label": "PO #",
+      "type": "text"
+    },
+    {
+      "name": "received_by",
+      "label": "Received By",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Expected",
+        "Received",
+        "Damaged",
+        "Rejected"
+      ]
     }
   ],
   "workflow": {
@@ -46,5 +67,10 @@
         ]
       }
     ]
-  }
+  },
+  "list_columns": [
+    "supplier",
+    "date",
+    "status"
+  ]
 }
