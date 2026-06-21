@@ -191,7 +191,9 @@ be measured against, and where we're light. (Categories & products per market re
 ### P3 — external dependency / environment-gated
 - **Code signing** — installers are unsigned (SmartScreen/Gatekeeper warn). Add the
   `WINDOWS_CERTIFICATE` / `APPLE_*` secrets (paid certs) the workflow already supports.
-- **Capacitor / Tauri-mobile** wrapper + responsive layout — needs the mobile toolchain/devices.
+- **Capacitor / Tauri-mobile** wrapper — needs the mobile toolchain/devices/store accounts.
+  (✅ **responsive web layout done** — ≤560px phone breakpoint + ≤820px overlays, so the portal/
+  proforma are already usable in a mobile browser; the native wrapper is the remaining piece.)
 - **Bonsai bridge (M5)** — parametric authoring recipes are written but need Blender + Bonsai-MCP.
 - **RVT→IFC** via Autodesk APS — skeleton only; needs a paid APS account (behind a cost flag).
 
