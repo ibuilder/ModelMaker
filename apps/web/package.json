@@ -15,7 +15,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "copy-wasm": "node scripts/copy-wasm.mjs",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "prebuild:mobile": "node scripts/copy-wasm.mjs",
+    "build:mobile": "tsc --noEmit && vite build --mode mobile",
+    "cap:sync": "cap sync",
+    "mobile:android": "npm run build:mobile && cap sync android && cap open android",
+    "mobile:ios": "npm run build:mobile && cap sync ios && cap open ios"
   },
   "dependencies": {
     "@tauri-apps/plugin-dialog": "^2.7.1",
@@ -29,6 +34,10 @@
     "web-ifc": "0.0.77"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "@types/three": "0.184.1",
     "happy-dom": "^15.11.7",
     "typescript": "5.9.3",

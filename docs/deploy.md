@@ -155,6 +155,26 @@ ships a complete, double-clickable app on its own (it opens the system browser).
   Not enabled by default because `createUpdaterArtifacts` makes the build *require* the signing key —
   so flip it on only once the secret is configured (otherwise the release build fails).
 
+## Mobile apps (Capacitor — iOS / Android)
+The same web build (`dist`) wraps into native iOS/Android apps via Capacitor (`capacitor.config.ts`,
+appId `com.ibuilder.aecbim`). A phone has no local Python backend, so a mobile build must target a
+hosted API.
+
+1. **Point at your API:** edit `apps/web/.env.mobile` → `VITE_API_URL=https://your-cloud-api`
+   (blank = viewer-only offline build; the portal/proforma need the API).
+2. **Build the web + sync:** `npm run build:mobile` then `npx cap sync` (or the one-shot
+   `npm run mobile:android` / `npm run mobile:ios`).
+3. **Add a platform once:** `npx cap add android` / `npx cap add ios` (folders are gitignored;
+   regenerate anytime).
+4. **Build the binary** (your toolchain): Android needs the **Android SDK + JDK** (`cap open android`
+   → Gradle build/APK/AAB); iOS needs **macOS + Xcode** (`cap open ios`).
+5. **Validate on device:** the model viewer uses threaded WASM (web-ifc, SharedArrayBuffer) — confirm
+   it runs in the device WebView before relying on 3D; the portal/proforma/2D work everywhere.
+6. **Store submission:** Apple Developer + Google Play accounts (signing + listings are store-side).
+
+Scaffolding is wired and verified (`cap add android` syncs the web build); the binary build,
+on-device WASM validation, and store accounts are the external pieces.
+
 ## Desktop installers (Tauri) & code signing
 `.github/workflows/desktop.yml` builds Windows / macOS (arm64) / Linux installers. Push a tag
 (`v0.1.0`) for a draft Release; run it manually (Actions → Desktop release → Run workflow) for
