@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" font-family="system-ui,Segoe UI,Roboto,sans-serif">
+  <!-- Interface render (not a raw screenshot): the starter IFC family library — furnish & equip
+       any model (incl. a generated massing) with real, GUID-stable, typed IFC content. -->
+  <rect width="760" height="430" fill="#16171a"/>
+  <text x="24" y="34" fill="#e7e7e7" font-size="17" font-weight="650">Furnish &amp; equip — starter IFC family library</text>
+  <text x="24" y="54" fill="#9aa0a6" font-size="12">16 parametric families · placed as real, typed, GUID-stable IFC elements — even into a generated model</text>
+
+  <!-- LEFT: the picker -->
+  <g transform="translate(24,74)">
+    <rect width="300" height="332" rx="10" fill="#1e1f22" stroke="#2b2d31"/>
+    <text x="14" y="26" fill="#e7e7e7" font-size="12" font-weight="600">＋ Furnish &amp; equip…</text>
+    <text x="14" y="44" fill="#6b7280" font-size="10">Click a point in the model, then pick a family.</text>
+    <!-- category groups -->
+    <g font-size="10.5">
+      <!-- Furniture -->
+      <text x="14" y="70" fill="#4a8cff" font-weight="600">Furniture · IfcFurnitureType</text>
+      <g fill="#cdd4dd"><rect x="14" y="78" width="58" height="20" rx="5" fill="#25272b"/><text x="22" y="92">Desk</text>
+        <rect x="78" y="78" width="58" height="20" rx="5" fill="#25272b"/><text x="86" y="92">Chair</text>
+        <rect x="142" y="78" width="60" height="20" rx="5" fill="#25272b"/><text x="150" y="92">Table</text>
+        <rect x="208" y="78" width="58" height="20" rx="5" fill="#25272b"/><text x="216" y="92">Sofa</text></g>
+      <!-- Sanitary -->
+      <text x="14" y="124" fill="#4a8cff" font-weight="600">Sanitary · IfcSanitaryTerminalType</text>
+      <g fill="#cdd4dd"><rect x="14" y="132" width="58" height="20" rx="5" fill="#25272b"/><text x="22" y="146">Toilet</text>
+        <rect x="78" y="132" width="54" height="20" rx="5" fill="#25272b"/><text x="86" y="146">Sink</text>
+        <rect x="138" y="132" width="68" height="20" rx="5" fill="#25272b"/><text x="146" y="146">Bathtub</text></g>
+      <!-- Appliance -->
+      <text x="14" y="178" fill="#4a8cff" font-weight="600">Appliance · IfcElectricApplianceType</text>
+      <g fill="#cdd4dd"><rect x="14" y="186" width="50" height="20" rx="5" fill="#25272b"/><text x="22" y="200">Fridge</text>
+        <rect x="70" y="186" width="56" height="20" rx="5" fill="#25272b"/><text x="78" y="200">Range</text>
+        <rect x="132" y="186" width="76" height="20" rx="5" fill="#25272b"/><text x="140" y="200">Dishwasher</text></g>
+      <!-- Plant -->
+      <text x="14" y="232" fill="#4a8cff" font-weight="600">Plant · IfcGeographicElementType</text>
+      <g fill="#cdd4dd"><rect x="14" y="240" width="48" height="20" rx="5" fill="#25272b"/><text x="22" y="254">Tree</text>
+        <rect x="68" y="240" width="54" height="20" rx="5" fill="#25272b"/><text x="76" y="254">Shrub</text>
+        <rect x="128" y="240" width="62" height="20" rx="5" fill="#25272b"/><text x="136" y="254">Planter</text></g>
+    </g>
+    <rect x="14" y="276" width="272" height="38" rx="8" fill="#4a8cff"/>
+    <text x="150" y="300" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">⊕ Place selected family</text>
+  </g>
+
+  <!-- RIGHT: building with placed content + what it becomes -->
+  <g transform="translate(0,4)">
+    <ellipse cx="540" cy="300" rx="120" ry="40" fill="#202226"/>
+    <!-- compact stacked massing -->
+    <g>
+      <g><path d="M540 150 L612 186 L540 222 L468 186 Z" fill="#eaeef4"/><path d="M612 186 L540 222 L540 234 L612 198 Z" fill="#aab2bf"/><path d="M468 186 L540 222 L540 234 L468 198 Z" fill="#cdd4dd"/></g>
+      <g><path d="M540 170 L612 206 L540 242 L468 206 Z" fill="#eaeef4"/><path d="M612 206 L540 242 L540 254 L612 218 Z" fill="#aab2bf"/><path d="M468 206 L540 242 L540 254 L468 218 Z" fill="#cdd4dd"/></g>
+      <g><path d="M540 190 L612 226 L540 262 L468 226 Z" fill="#eaeef4"/><path d="M612 226 L540 262 L540 274 L612 238 Z" fill="#aab2bf"/><path d="M468 226 L540 262 L540 274 L468 238 Z" fill="#cdd4dd"/></g>
+      <g><path d="M540 210 L612 246 L540 282 L468 246 Z" fill="#eaeef4"/><path d="M612 246 L540 282 L540 294 L612 258 Z" fill="#aab2bf"/><path d="M468 246 L540 282 L540 294 L468 258 Z" fill="#cdd4dd"/></g>
+    </g>
+    <!-- placed families around it -->
+    <g>
+      <rect x="466" y="276" width="3" height="9" fill="#7a5a3a"/><circle cx="467.5" cy="273" r="8" fill="#3f7d4e"/>
+      <rect x="612" y="276" width="3" height="9" fill="#7a5a3a"/><circle cx="613.5" cy="273" r="8" fill="#3f7d4e"/>
+      <!-- a sofa + chair glyph on the plate -->
+      <g transform="translate(520,250)"><rect x="0" y="4" width="22" height="8" rx="2" fill="#5b6470"/><rect x="0" y="0" width="22" height="5" rx="2" fill="#6b7480"/></g>
+      <g transform="translate(548,256)"><rect x="0" y="2" width="9" height="9" rx="2" fill="#5b6470"/></g>
+    </g>
+  </g>
+
+  <!-- what gets created -->
+  <g transform="translate(360,330)">
+    <rect width="376" height="76" rx="10" fill="#1e1f22" stroke="#2b2d31"/>
+    <text x="16" y="26" fill="#e7e7e7" font-size="12" font-weight="600">Each placement → a real IFC occurrence</text>
+    <text x="16" y="48" fill="#9aa0a6" font-size="10.5">root.create_entity + type.assign_type maps the family geometry onto a</text>
+    <text x="16" y="63" fill="#9aa0a6" font-size="10.5">GUID-stable occurrence · publishes the round-trip · survives re-publish</text>
+  </g>
+  <g stroke="#3a3d42" stroke-width="2" fill="none" marker-end="url(#ah2)"><path d="M326 240 L362 240"/></g>
+  <defs><marker id="ah2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#3a3d42"/></marker></defs>
+</svg>

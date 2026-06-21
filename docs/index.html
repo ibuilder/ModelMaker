@@ -83,6 +83,7 @@
       <span class="pill"><b>Geometry</b> · IfcOpenShell</span>
       <span class="pill"><b>Secure</b> · accounts + project RBAC</span>
       <span class="pill"><b>Interop</b> · Procore + ACC + QuickBooks/Sage + SQL</span>
+      <span class="pill"><b>Generative</b> · zoning → IFC + proforma</span>
       <span class="pill"><b>Financials</b> · CPM + estimating + proforma</span>
       <span class="pill"><b>Desktop</b> · free single-project .exe</span>
       <span class="pill"><b>Deploy</b> · Docker Compose + /metrics</span>
@@ -121,7 +122,7 @@
     <div class="grid">
       <div class="card">
         <h3><span class="ic">🧊</span> BIM viewer + modeling</h3>
-        <p>Streams large models offline (local WASM). Model federation, tree, layers, isolate/ghost, section box, measure, set-origin. Clash + IDS validation + BCF issues (round-trip with Solibri/ACC/BIMcollab); 2D plans/sections/elevations with room tags + element callouts + PDF sheets. In-viewer authoring — walls, slabs, columns, beams, roofs, doors/windows, move/rotate/copy — written back to IFC server-side.</p>
+        <p>Streams large models offline (local WASM). Model federation, tree, layers, isolate/ghost, section box, measure, set-origin. Clash + IDS validation + BCF issues (round-trip with Solibri/ACC/BIMcollab); 2D plans/sections/elevations with room tags + element callouts + PDF sheets. In-viewer authoring — walls, slabs, columns, beams, roofs, doors/windows, move/rotate/copy — written back to IFC server-side. <b>Generative massing</b> from a zoning envelope and a <b>furnish &amp; equip</b> family library round it out.</p>
       </div>
       <div class="card">
         <h3><span class="ic">🏗️</span> GC portal</h3>
@@ -132,6 +133,22 @@
         <p>Sources &amp; uses with interest-reserve circularity, debt sized to LTC/LTV/DSCR/debt-yield, S-curve draws, XIRR/NPV/equity-multiple, a JV waterfall, sensitivity + Monte Carlo risk, an actuals→pay-app bridge, and a multi-deal portfolio. <b>Model→proforma</b> seeds hard cost + rent from the IFC; a <b>construction program portfolio</b> flags cost overruns across projects.</p>
       </div>
     </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>From a lot to a deal — generate the building</h2>
+    <p class="sub">The IFC-native answer to TestFit / Forma feasibility. Enter a municipal zoning
+      envelope (lot, FAR, coverage, setbacks, height limit) and the platform computes the buildable
+      program, <b>generates a real IFC massing model</b>, and solves a <b>starter acquisition
+      proforma</b> — one click, lot → building → underwriting. Because the output is openBIM, the
+      same model flows into the viewer, drawings, takeoff, the estimate and the deal.</p>
+    <img src="img/massing_generate.svg" alt="Generate a building from a zoning envelope: inputs to an IFC massing model and acquisition proforma" style="width:100%;border:1px solid var(--line);border-radius:12px;display:block" />
+    <p class="sub" style="margin:22px 0 12px">Then <b>furnish &amp; equip</b> the model from a starter
+      IFC family library — furniture, sanitary fixtures, appliances, plants — placed as real,
+      GUID-stable, typed IFC content (even into a freshly generated massing).</p>
+    <img src="img/furnish_library.svg" alt="Furnish and equip a model from a starter IFC family library of furniture, sanitary, appliances and plants" style="width:100%;border:1px solid var(--line);border-radius:12px;display:block" />
   </div>
 </section>
 

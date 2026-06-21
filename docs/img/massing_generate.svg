@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" font-family="system-ui,Segoe UI,Roboto,sans-serif">
+  <!-- Interface render (not a raw screenshot): generative massing — a municipal zoning envelope
+       becomes a real IFC model + a solved acquisition proforma. Numbers are an actual solve. -->
+  <rect width="760" height="430" fill="#16171a"/>
+  <text x="24" y="34" fill="#e7e7e7" font-size="17" font-weight="650">Generate a building from zoning</text>
+  <text x="24" y="54" fill="#9aa0a6" font-size="12">Lot + FAR + setbacks + height limit  →  IFC massing model  →  acquisition proforma</text>
+
+  <!-- LEFT: zoning form -->
+  <g transform="translate(24,74)">
+    <rect width="200" height="332" rx="10" fill="#1e1f22" stroke="#2b2d31"/>
+    <text x="14" y="26" fill="#e7e7e7" font-size="12" font-weight="600">🏗️ From zoning</text>
+    <g font-size="11">
+      <g fill="#9aa0a6">
+        <text x="14" y="58">Use type</text><text x="14" y="86">Lot (W × D)</text>
+        <text x="14" y="114">FAR</text><text x="14" y="142">Coverage max</text>
+        <text x="14" y="170">Setbacks F/R/S</text><text x="14" y="198">Height limit</text>
+        <text x="14" y="226">Floor-to-floor</text><text x="14" y="254">Avg unit</text>
+      </g>
+      <g fill="#e7e7e7" text-anchor="end">
+        <text x="186" y="58">Residential</text><text x="186" y="86">60 × 45 m</text>
+        <text x="186" y="114">3.5</text><text x="186" y="142">0.60</text>
+        <text x="186" y="170">6 / 6 / 3 m</text><text x="186" y="198">40 m</text>
+        <text x="186" y="226">3.5 m</text><text x="186" y="254">75 m²</text>
+      </g>
+    </g>
+    <rect x="14" y="276" width="172" height="38" rx="8" fill="#4a8cff"/>
+    <text x="100" y="300" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Generate IFC model + apply</text>
+  </g>
+
+  <!-- CENTER: isometric stacked-plate massing (matches the actual generated geometry) -->
+  <g transform="translate(0,8)">
+    <!-- ground plane -->
+    <path d="M380 366 L515 433 L380 433 L245 433 Z" fill="#1b1c1f"/>
+    <ellipse cx="380" cy="392" rx="150" ry="48" fill="#202226"/>
+    <!-- floor plates, top (i=5) first so lower plates paint in front -->
+    <!-- i=5 by=190 --><g><path d="M380 190 L465 232 L380 274 L295 232 Z" fill="#eaeef4"/><path d="M465 232 L380 274 L380 288 L465 246 Z" fill="#aab2bf"/><path d="M295 232 L380 274 L380 288 L295 246 Z" fill="#cdd4dd"/></g>
+    <!-- i=4 by=212 --><g><path d="M380 212 L465 254 L380 296 L295 254 Z" fill="#eaeef4"/><path d="M465 254 L380 296 L380 310 L465 268 Z" fill="#aab2bf"/><path d="M295 254 L380 296 L380 310 L295 268 Z" fill="#cdd4dd"/></g>
+    <!-- i=3 by=234 --><g><path d="M380 234 L465 276 L380 318 L295 276 Z" fill="#eaeef4"/><path d="M465 276 L380 318 L380 332 L465 290 Z" fill="#aab2bf"/><path d="M295 276 L380 318 L380 332 L295 290 Z" fill="#cdd4dd"/></g>
+    <!-- i=2 by=256 --><g><path d="M380 256 L465 298 L380 340 L295 298 Z" fill="#eaeef4"/><path d="M465 298 L380 340 L380 354 L465 312 Z" fill="#aab2bf"/><path d="M295 298 L380 340 L380 354 L295 312 Z" fill="#cdd4dd"/></g>
+    <!-- i=1 by=278 --><g><path d="M380 278 L465 320 L380 362 L295 320 Z" fill="#eaeef4"/><path d="M465 320 L380 362 L380 376 L465 334 Z" fill="#aab2bf"/><path d="M295 320 L380 362 L380 376 L295 334 Z" fill="#cdd4dd"/></g>
+    <!-- i=0 by=300 --><g><path d="M380 300 L465 342 L380 384 L295 342 Z" fill="#eaeef4"/><path d="M465 342 L380 384 L380 398 L465 356 Z" fill="#aab2bf"/><path d="M295 342 L380 384 L380 398 L295 356 Z" fill="#cdd4dd"/></g>
+    <!-- trees (placed families) -->
+    <g>
+      <rect x="247" y="360" width="3" height="10" fill="#7a5a3a"/><circle cx="248.5" cy="356" r="9" fill="#3f7d4e"/>
+      <rect x="510" y="360" width="3" height="10" fill="#7a5a3a"/><circle cx="511.5" cy="356" r="9" fill="#3f7d4e"/>
+      <rect x="430" y="392" width="3" height="9" fill="#7a5a3a"/><circle cx="431.5" cy="389" r="8" fill="#3f7d4e"/>
+    </g>
+    <text x="380" y="423" fill="#6b7280" font-size="10" text-anchor="middle">IFC4 · GUID-stable · streams as .frag</text>
+  </g>
+
+  <!-- RIGHT: program + proforma results -->
+  <g transform="translate(536,74)">
+    <rect width="200" height="158" rx="10" fill="#1e1f22" stroke="#2b2d31"/>
+    <text x="14" y="24" fill="#e7e7e7" font-size="12" font-weight="600">Buildable program</text>
+    <g font-size="11">
+      <g fill="#9aa0a6"><text x="14" y="50">Floors</text><text x="14" y="74">Height</text><text x="14" y="98">GFA</text><text x="14" y="122">Units</text><text x="14" y="146">Bound by</text></g>
+      <g fill="#e7e7e7" text-anchor="end" font-weight="600">
+        <text x="186" y="50">6</text><text x="186" y="74">21 m</text><text x="186" y="98">101,719 sf</text>
+        <text x="186" y="122">103</text><text x="186" y="146" fill="#4a8cff">coverage</text>
+      </g>
+    </g>
+    <rect y="174" width="200" height="158" rx="10" fill="#1e1f22" stroke="#2b2d31"/>
+    <text x="14" y="198" fill="#e7e7e7" font-size="12" font-weight="600">Acquisition proforma</text>
+    <g font-size="11">
+      <g fill="#9aa0a6"><text x="14" y="224">Total uses</text><text x="14" y="248">Equity</text><text x="14" y="272">Equity IRR</text><text x="14" y="296">Equity multiple</text></g>
+      <g fill="#e7e7e7" text-anchor="end" font-weight="600">
+        <text x="186" y="224">$32.4M</text><text x="186" y="248">$13.0M</text>
+        <text x="186" y="272" fill="#33d17a">16.9%</text><text x="186" y="296" fill="#33d17a">2.46×</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- flow arrows -->
+  <g stroke="#3a3d42" stroke-width="2" fill="none" marker-end="url(#ah)">
+    <path d="M226 240 L262 240"/>
+    <path d="M498 240 L534 240"/>
+  </g>
+  <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#3a3d42"/></marker></defs>
+</svg>

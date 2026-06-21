@@ -44,6 +44,16 @@ and verified** in this repo unless noted:
   move, rotate, copy, per-element Pset edit. **Drafting aids:** grid + corner snap, a 6-face
   section box, a storey-levels overlay. Verified live end-to-end (upload IFC → add wall →
   republish → updated `.frag` + reindex). Desktop GUI authoring is the Blender + Bonsai bridge.
+- **Generative design (zoning → IFC + proforma)** — the IFC-native answer to TestFit/Forma:
+  enter a municipal zoning envelope (lot, FAR, coverage, setbacks, height limit, floor-to-floor)
+  and the platform computes the buildable program (footprint, floor count, GFA, units, **binding
+  constraint**), **generates a real IFC4 massing model** (site → building → storey + floor-plate
+  per level, base quantities), publishes it, and solves a **starter acquisition proforma** in one
+  click. Because the output is openBIM, the generated model flows straight into the viewer,
+  drawings, QTO, the estimate and underwriting — one chain from lot → deal.
+- **Furnish & equip (starter IFC family library)** — a curated 16-family catalog (furniture /
+  sanitary / appliances / plants) generated parametrically, placeable into *any* model (incl. a
+  generated massing) as real, **GUID-stable, typed** IFC occurrences via `type.assign_type`.
 
 ## General Contracting Portal
 
@@ -69,6 +79,10 @@ A construction-management portal on top of the viewer — full writeup in
 
 A development-finance engine for the owner/developer side (the **Finance** workspace):
 
+- **Generate from zoning** — a "🏗️ From zoning" panel turns a lot + zoning envelope into a
+  buildable program, a generated IFC massing model, and a **solved acquisition proforma** in one
+  click (*Estimate yield* previews it stateless; *Generate IFC model + apply* writes the model and
+  adopts the assumptions as the live deal). Lot → building → underwriting, IFC-native.
 - **Sources & uses** with construction-loan **interest-reserve circularity** solved to a fixed point.
 - **S-curve cost draws**, **XIRR / NPV / equity multiple / yield-on-cost**, and a **JV waterfall**
   (pref + promote tiers, American/European, clawback) with nested IRR-hurdle solving.
@@ -81,6 +95,13 @@ A development-finance engine for the owner/developer side (the **Finance** works
 
 ## Recent platform work
 
+- **Generative massing + family library** — `aec_data.massing` turns a zoning envelope into a
+  buildable program + a from-scratch **IFC4** model (`POST /projects/{id}/generate/massing`, plus a
+  stateless `/generate/massing/preview`) and seeds a solved acquisition proforma; `aec_data.families`
+  generates a 16-family starter type library (`GET /families/catalog`) placed via the `add_family`
+  authoring recipe. Both render in the viewer (fixed two web-ifc gotchas surfaced en route: generated
+  models now use **metre** units, and every `IfcProfileDef` carries a `Position` — without it web-ifc
+  silently skips the geometry). Gated by `test_generate` in the CI suite.
 - **4-zone UI** (top chrome + Model/Construction/Finance workspaces + left icon rail + bottom
   settings bar) with a **lazy-loaded 3D viewer** — the ~6 MB three/@thatopen bundle loads only
   when the Model workspace opens, so portal/finance users get a ~16 KB-gzip first load.
@@ -154,6 +175,14 @@ A development-finance engine for the owner/developer side (the **Finance** works
 
 ## Gallery
 
+**Generative design — lot → IFC model → acquisition proforma** (the TestFit/Forma differentiator,
+but openBIM): a zoning envelope generates a real IFC massing you can then furnish from a starter
+family library. (Vector renders of the redesigned UI; numbers are an actual solve.)
+
+| Generate from zoning → IFC + proforma | Furnish & equip (starter IFC family library) |
+|---|---|
+| ![generate from zoning](docs/img/massing_generate.svg) | ![furnish library](docs/img/furnish_library.svg) |
+
 Generated directly from the IFC by the data service (BIM), plus GC schedule charts:
 
 | Dimensioned grid plan | Composed sheet (A3) | North elevation (HLR) | Room tags |
@@ -205,9 +234,10 @@ services/converter/  IFC→.frag (Node) + optional RVT→IFC via APS (paid, flag
 services/api/        FastAPI: BCF, properties, exports, clash/validate, drawings, edit/publish,
                        GC portal (modules, cost, schedule, dashboard)
 services/api/modules/  71 module.json definitions (GC portal — one table each)
-services/data/       IfcOpenShell: index, QTO, COBie, spaces, schedule, clash, IDS, drawings, edit
+services/data/       IfcOpenShell: index, QTO, COBie, spaces, schedule, clash, IDS, drawings, edit,
+                       massing (zoning→IFC), families (starter IFC type library)
 packages/            shared types
-families/            IFC type libraries (versioned)
+families/            IFC type libraries (versioned) — curated/manufacturer content drop-in
 docs/                status, capability matrix, gc-portal, deploy, images
 ```
 
@@ -261,7 +291,10 @@ POST   /projects/{id}/clash                   clash detection (→ BCF clash top
 POST   /projects/{id}/validate                IDS validation
 GET    /projects/{id}/drawings/{plan,section,elevation}.svg
 GET    /projects/{id}/drawings/sheet.{svg,pdf}
-POST   /projects/{id}/edit | /publish         authoring round-trip
+POST   /projects/{id}/edit | /publish         authoring round-trip (recipes incl. add_family)
+POST   /projects/{id}/generate/massing        zoning → IFC massing model + acquisition proforma
+POST   /generate/massing/preview              stateless zoning → program + proforma (no model written)
+GET    /families/catalog                      starter IFC family library (furnish & equip)
 
 # GC portal (full list in docs/gc-portal.md)
 GET    /modules                               module catalog
