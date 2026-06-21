@@ -200,6 +200,24 @@ with TestClient(app) as c:
     # issues browse is an ACC-only concept
     assert c.get(f"/connections/{pc['id']}/acc/projects/p1/issues", headers=BEARER(tok)).status_code == 400
 
+    # --- QuickBooks (accounting/ERP): same adapter pattern (token+realm, read the books) --
+    assert "quickbooks" in c.get("/connections", headers=BEARER(tok)).json()["types"]
+    _conn._qb_get = lambda path, token: {"CompanyInfo": {"CompanyName": "Acme Builders"}}  # companyinfo
+    _conn.qb_accounts = lambda token, realm: [{"Name": "Cost of Goods Sold"}, {"Name": "Job Materials"}]
+    _conn.qb_bills = lambda token, realm: [{"Id": "1", "TotalAmt": 4200.0}]
+    qb = c.post("/connections", headers=BEARER(tok),
+                json={"name": "QBO", "type": "quickbooks",
+                      "config": {"access_token": "qb-tok", "realm_id": "9130350"}}).json()
+    assert qb["config"].get("access_token_set") is True and qb["config"].get("realm_id") == "9130350", qb["config"]
+    qt = c.post(f"/connections/{qb['id']}/test", headers=BEARER(tok)).json()
+    assert qt["status"]["ok"] and "Acme Builders" in qt["status"]["detail"], qt
+    assert qt["info"]["account_count"] == 2, qt["info"]
+    qbb = c.get(f"/connections/{qb['id']}/tables", headers=BEARER(tok)).json()
+    assert qbb["kind"] == "quickbooks" and qbb["account_count"] == 2, qbb
+    bills = c.get(f"/connections/{qb['id']}/quickbooks/bills", headers=BEARER(tok)).json()
+    assert bills["kind"] == "quickbooks-bills" and bills["count"] == 1, bills
+    assert c.get(f"/connections/{qb['id']}/quickbooks/widgets", headers=BEARER(tok)).status_code == 400  # bad entity
+
     print("CONNECTIONS OK - status, masked secrets, test, CRUD, validation, read-only browse/query, "
           "Procore->rfi/submittal/change_event sync (idempotent), field-mapping editor, "
-          "auto-sync schedules + run_due, two-way push, ACC token/project/issue read")
+          "auto-sync schedules + run_due, two-way push, ACC + QuickBooks read")

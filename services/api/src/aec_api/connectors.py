@@ -17,7 +17,7 @@ import re
 import urllib.request
 from typing import Any
 
-TYPES = ("local", "postgres", "supabase", "procore", "acc")
+TYPES = ("local", "postgres", "supabase", "procore", "acc", "quickbooks")
 
 
 def _mask_dsn(dsn: str) -> str:
@@ -270,6 +270,67 @@ def _info_acc(config: dict) -> dict[str, Any]:
         return {}
 
 
+# --- QuickBooks Online (accounting / ERP) --------------------------------------
+# The financial-backbone connector — read the chart of accounts, vendors, and bills so cost data
+# can reconcile against the books. OAuth access token + realm_id (company id). Same adapter shape.
+def _qb_get(path: str, token: str) -> Any:
+    req = urllib.request.Request(f"https://quickbooks.api.intuit.com{path}",
+                                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=8) as r:  # noqa: S310 — fixed Intuit host
+        return json.loads(r.read().decode())
+
+
+def _qb_query(realm: str, token: str, entity: str, limit: int = 50) -> list[dict]:
+    import urllib.parse
+    q = urllib.parse.quote(f"select * from {entity} maxresults {limit}")
+    data = _qb_get(f"/v3/company/{realm}/query?query={q}&minorversion=70", token)
+    return (data.get("QueryResponse") or {}).get(entity, []) or []
+
+
+def _qb_accounts(token: str, realm: str) -> list[dict]:
+    return _qb_query(realm, token, "Account")
+
+
+def _qb_vendors(token: str, realm: str) -> list[dict]:
+    return _qb_query(realm, token, "Vendor")
+
+
+def _qb_bills(token: str, realm: str) -> list[dict]:
+    return _qb_query(realm, token, "Bill")
+
+
+# overridable seams so tests can drive QuickBooks reads without a live Intuit tenant
+qb_accounts = _qb_accounts
+qb_vendors = _qb_vendors
+qb_bills = _qb_bills
+
+
+def _test_quickbooks(config: dict) -> dict[str, Any]:
+    token, realm = (config or {}).get("access_token"), (config.get("realm_id") or "").strip()
+    if not token:
+        return {"ok": False, "detail": "no access token"}
+    if not realm:
+        return {"ok": False, "detail": "no realm_id (QuickBooks company id)"}
+    try:
+        ci = _qb_get(f"/v3/company/{realm}/companyinfo/{realm}?minorversion=70", token)
+        name = ((ci.get("CompanyInfo") or {}).get("CompanyName")) or "connected"
+        return {"ok": True, "detail": f"QuickBooks · {name}"}
+    except Exception as e:                       # noqa: BLE001
+        return {"ok": False, "detail": str(e)[:140]}
+
+
+def _info_quickbooks(config: dict) -> dict[str, Any]:
+    token, realm = config.get("access_token"), (config.get("realm_id") or "").strip()
+    if not (token and realm):
+        return {"hint": "set realm_id (company id) to read the books"} if token else {}
+    try:
+        accts = qb_accounts(token, realm)
+        return {"account_count": len(accts),
+                "accounts": [a.get("Name") for a in accts[:5] if isinstance(a, dict)]}
+    except Exception:                            # noqa: BLE001
+        return {}
+
+
 def _test_procore(config: dict) -> dict[str, Any]:
     token = (config or {}).get("access_token")
     if not token:
@@ -292,6 +353,8 @@ def test(ctype: str, config: dict | None) -> dict[str, Any]:
         return _test_procore(config)
     if ctype == "acc":
         return _test_acc(config)
+    if ctype == "quickbooks":
+        return _test_quickbooks(config)
     return {"ok": False, "detail": f"unknown connection type {ctype!r}"}
 
 
@@ -307,6 +370,8 @@ def info(ctype: str, config: dict | None) -> dict[str, Any]:
             return {}
     if ctype == "acc":
         return _info_acc(config)
+    if ctype == "quickbooks":
+        return _info_quickbooks(config)
     return {}
 
 
@@ -334,6 +399,8 @@ def tables(ctype: str, config: dict | None) -> dict[str, Any]:
         return {"kind": "procore", **info("procore", config)}
     if ctype == "acc":
         return {"kind": "acc", **info("acc", config)}
+    if ctype == "quickbooks":
+        return {"kind": "quickbooks", **info("quickbooks", config)}
     if ctype not in ("local", "postgres", "supabase"):
         return {"error": f"{ctype} is not browsable"}
     from sqlalchemy import inspect

@@ -140,6 +140,27 @@ def acc_issues(cid: str, project_id: str, db: Session = Depends(get_db),
     return {"kind": "acc-issues", "count": len(rows), "issues": rows}
 
 
+@router.get("/connections/{cid}/quickbooks/{entity}")
+def quickbooks_read(cid: str, entity: str, db: Session = Depends(get_db),
+                    _: User = Depends(require_admin_user)):
+    """Read the QuickBooks chart of accounts / vendors / bills (financial-backbone data plane)."""
+    readers = {"accounts": connectors.qb_accounts, "vendors": connectors.qb_vendors, "bills": connectors.qb_bills}
+    if entity not in readers:
+        raise HTTPException(400, f"entity must be one of {sorted(readers)}")
+    c = db.get(Connection, cid)
+    if not c or c.type != "quickbooks":
+        raise HTTPException(400, "QuickBooks browse applies to QuickBooks connections")
+    cfg = c.config or {}
+    token, realm = cfg.get("access_token"), (cfg.get("realm_id") or "").strip()
+    if not (token and realm):
+        raise HTTPException(400, "connection needs an access token + realm_id")
+    try:
+        rows = readers[entity](token, realm)
+    except Exception as e:                        # noqa: BLE001
+        return {"error": str(e).splitlines()[0][:160]}
+    return {"kind": f"quickbooks-{entity}", "count": len(rows), entity: rows}
+
+
 @router.get("/connections/{cid}/mappings")
 def get_mappings(cid: str, db: Session = Depends(get_db), _: User = Depends(require_admin_user)):
     """Editable Procore→module field mapping: per kind, each module field with its default and

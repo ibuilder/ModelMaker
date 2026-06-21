@@ -783,6 +783,8 @@ function connectionsModal() {
     procore: [{ key: "access_token", label: "Access token", secret: true, placeholder: "Procore OAuth access token" }],
     acc: [{ key: "access_token", label: "Access token", secret: true, placeholder: "Autodesk (APS) 3-legged OAuth token" },
           { key: "account_id", label: "Account ID", placeholder: "ACC account / hub GUID (to list projects)" }],
+    quickbooks: [{ key: "access_token", label: "Access token", secret: true, placeholder: "QuickBooks Online OAuth access token" },
+                 { key: "realm_id", label: "Realm / Company ID", placeholder: "QuickBooks company (realm) id" }],
   };
 
   const render = async () => {
@@ -846,7 +848,7 @@ function connectionsModal() {
     form.innerHTML = `<div class="meta" style="font-weight:600;color:var(--text);margin-bottom:6px">Add connection</div>`;
     const nu = document.createElement("input"); nu.placeholder = "name"; nu.className = "portal-filter"; nu.style.cssText = "width:100%;margin-bottom:6px";
     const ty = document.createElement("select"); ty.className = "portal-filter"; ty.style.cssText = "width:100%;margin-bottom:6px";
-    for (const t of ["postgres", "supabase", "procore", "acc"]) { const o = document.createElement("option"); o.value = o.textContent = t; ty.appendChild(o); }
+    for (const t of ["postgres", "supabase", "procore", "acc", "quickbooks"]) { const o = document.createElement("option"); o.value = o.textContent = t; ty.appendChild(o); }
     const fields = document.createElement("div");
     const inputs: Record<string, HTMLInputElement> = {};
     const renderFields = () => {
