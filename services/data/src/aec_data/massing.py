@@ -66,10 +66,22 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study") -> s
     floors = int(metrics["floors"])
     fw, fd, f2f = float(metrics["plate_w"]), float(metrics["plate_d"]), float(metrics["floor_to_floor"])
     plate_area = round(fw * fd, 2)
+    SLAB_T = 0.3   # m — thin floor plate per level: physical (renders) so the massing is visible
+    #              (IfcSpace is forced transparent by the Fragments importer, so spaces alone show empty)
+
+    def rect_profile(m, w, d):
+        # web-ifc REQUIRES IfcProfileDef.Position (ifcopenshell tolerates None, web-ifc skips the
+        # element silently → empty .frag). Always set an origin placement.
+        pos = m.create_entity("IfcAxis2Placement2D",
+                              Location=m.create_entity("IfcCartesianPoint", (0.0, 0.0)),
+                              RefDirection=m.create_entity("IfcDirection", (1.0, 0.0)))
+        return m.create_entity("IfcRectangleProfileDef", ProfileType="AREA", Position=pos, XDim=w, YDim=d)
 
     model = ifcopenshell.api.run("project.create_file", version="IFC4")
     project = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcProject", name=name)
-    ifcopenshell.api.run("unit.assign_unit", model)  # metric SI
+    # METRE length unit (scale 1.0) — all massing geometry/placements below are written in metres;
+    # the default would be MILLIMETRE, which silently shrinks the model 1000x (renders empty).
+    ifcopenshell.api.run("unit.assign_unit", model, length={"is_metric": True, "raw": "METERS"})
     ctx = ifcopenshell.api.run("context.add_context", model, context_type="Model")
     body = ifcopenshell.api.run("context.add_context", model, context_type="Model",
                                 context_identifier="Body", target_view="MODEL_VIEW", parent=ctx)
@@ -89,7 +101,7 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study") -> s
         space.LongName = f"Floor plate {i + 1}"
         matrix = np.eye(4); matrix[2, 3] = elev
         ifcopenshell.api.run("geometry.edit_object_placement", model, product=space, matrix=matrix)
-        profile = model.create_entity("IfcRectangleProfileDef", ProfileType="AREA", XDim=fw, YDim=fd)
+        profile = rect_profile(model, fw, fd)
         rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
                                    profile=profile, depth=f2f)
         ifcopenshell.api.run("geometry.assign_representation", model, product=space, representation=rep)
@@ -98,5 +110,15 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study") -> s
         ifcopenshell.api.run("pset.edit_qto", model, qto=qto,
                              properties={"NetFloorArea": plate_area, "GrossFloorArea": plate_area,
                                          "NetVolume": round(plate_area * f2f, 2), "Height": f2f})
+        # renderable floor plate (IfcSlab) so the massing is visible in the viewer
+        slab = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSlab",
+                                    name=f"Level {i + 1} plate", predefined_type="FLOOR")
+        smat = np.eye(4); smat[2, 3] = elev
+        ifcopenshell.api.run("geometry.edit_object_placement", model, product=slab, matrix=smat)
+        sprofile = rect_profile(model, fw, fd)
+        srep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
+                                    profile=sprofile, depth=SLAB_T)
+        ifcopenshell.api.run("geometry.assign_representation", model, product=slab, representation=srep)
+        ifcopenshell.api.run("spatial.assign_container", model, products=[slab], relating_structure=storey)
     model.write(out_path)
     return out_path

@@ -53,12 +53,24 @@ if _have_ifc:
         model = open_model(path)
         storeys = model.by_type("IfcBuildingStorey")
         spaces = model.by_type("IfcSpace")
+        slabs = model.by_type("IfcSlab")
         assert len(storeys) == m["floors"], (len(storeys), m["floors"])
         assert len(spaces) == m["floors"], (len(spaces), m["floors"])
+        assert len(slabs) == m["floors"], (len(slabs), m["floors"])   # renderable floor plate per level
         assert model.by_type("IfcProject") and model.by_type("IfcSite") and model.by_type("IfcBuilding")
-        # every space has geometry (a representation) so the viewer renders the massing
+        # spaces carry area; slabs (physical) carry the visible geometry the viewer renders
         assert all(s.Representation is not None for s in spaces), "spaces missing geometry"
-        print(f"IFC OK - {len(storeys)} storeys, {len(spaces)} floor-plate spaces, sited + represented")
+        assert all(s.Representation is not None for s in slabs), "slabs missing geometry"
+        # geometry must be at metre scale (regression: default mm units shrank the model 1000x)
+        import ifcopenshell.geom
+        import ifcopenshell.util.unit as _uu
+        assert abs(_uu.calculate_unit_scale(model) - 1.0) < 1e-9, "model must be in metres"
+        sh = ifcopenshell.geom.create_shape(ifcopenshell.geom.settings(), slabs[0])
+        xs = sh.geometry.verts[0::3]
+        span = max(xs) - min(xs)
+        assert span > 5.0, f"slab too small ({span:.3f} m) — unit/scale regression"
+        print(f"IFC OK - {len(storeys)} storeys, {len(spaces)} floor-plate spaces + "
+              f"{len(slabs)} renderable slabs, sited + represented")
     finally:
         os.remove(path)
 else:

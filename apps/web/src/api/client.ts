@@ -726,6 +726,19 @@ export class ApiClient {
     return this.json<{ recipe: string; changed: number | string; published: unknown }>(
       `/projects/${pid}/edit`, { method: "POST", body: JSON.stringify({ recipe, params, publish }) });
   }
+  /** Starter IFC family library (furniture / sanitary / appliances / plants) — generated
+   *  parametrically, so it's placeable into any model incl. a from-scratch massing model. */
+  familyCatalog() {
+    return this.json<{ count: number; categories: Record<string, FamilyItem[]> }>("/families/catalog");
+  }
+  /** Place a starter-library family on a storey (optionally at an [E,N] point in metres), then
+   *  publish the round-trip. Reuses the `add_family` edit recipe. */
+  addFamily(pid: string, family: string, position?: [number, number] | null, storey?: string | null) {
+    const params: Record<string, unknown> = { family };
+    if (position) params.position = position;
+    if (storey) params.storey = storey;
+    return this.editIfc(pid, "add_family", params, true);
+  }
   publish(pid: string) {
     return this.json<{ state: string }>(
       `/projects/${pid}/publish`, { method: "POST", body: JSON.stringify({ reconvert: true }) });
@@ -746,6 +759,9 @@ export class ApiClient {
   }
 }
 
+export interface FamilyItem {
+  key: string; label: string; ifc_class: string; category: string; dims: [number, number, number];
+}
 export interface MassingParams {
   name?: string; use_type?: "residential" | "commercial";
   lot_width?: number | null; lot_depth?: number | null; lot_area?: number | null;

@@ -101,6 +101,26 @@ Quick scan of the field to find where we're behind. Sources:
   5 storeys / 5 represented floor-plate spaces, sited); live HTTP — 50×40 lot, FAR 3, 24 m cap →
   5 floors / 17.5 m / 64,583 sf / 65 units, IFC written + published, $22.0M acquisition proforma solved.
   *Next: parking ratios, multiple massing schemes (compare yield), unit-mix breakdown, real lot polygons.*
+- ✅ **DONE — Starter IFC family/type library (furnish & equip a model).** `aec_data.families`
+  generates a curated catalog parametrically (16 families: furniture / sanitary / appliances /
+  plants — `IfcFurnitureType`, `IfcSanitaryTerminalType`, `IfcElectricApplianceType`,
+  `IfcGeographicElementType`), building each `IfcTypeProduct` with a mapped representation on demand
+  so it's placeable into **any** model incl. a from-scratch massing one. `GET /families/catalog`
+  feeds a "Furnish & equip" picker in the viewer's Authoring tools; the `add_family` edit recipe
+  (`POST /projects/{id}/edit`) find-or-builds the type and places a GUID-stable occurrence at a
+  clicked point, then publishes the round-trip. Placement reuses the existing `place_type`/
+  `type.assign_type` machinery — the library is the *content* layer; richer/real manufacturer IFC
+  content can replace a builder later without changing the contract. Verified: unit test (catalog +
+  build/place/dedup/round-trip) and live (placed Sofa/Tree → real `IfcFurniture`/`IfcGeographicElement`
+  render in the viewer). *Next: glTF prop layer for presentation-only dressing; Bonsai bulk placement.*
+- ✅ **DONE — Renderable massing + web-ifc geometry fix.** Two bugs that made generated geometry
+  invisible: (1) `generate_ifc` used the default **millimetre** unit (model shrank 1000×) — now METRE;
+  (2) `IfcRectangleProfileDef.Position` was null — **web-ifc silently skips** profiles with no Position
+  (ifcopenshell tolerates it), so the `.frag` came out empty. Both fixed in `massing.py` + `families.py`
+  (and a per-level renderable `IfcSlab` floor plate added, since the Fragments importer forces
+  `IfcSpace` transparent). Regression-guarded by a geometry-span assertion in `test_massing`. Verified
+  via the real converter (bare massing 3.3 KB → furnished 5.3 KB) and a viewer screenshot of the
+  stacked massing.
 - ✅ **DONE** — **GC + proforma usable without an IFC.** A "＋ New" toolbar button creates a blank
   project (no model required); the GC portal + development proforma run on `projectId` alone, so the
   whole non-geometry side works cold. Model-derived tools (drawings/clash/energy/authoring/
