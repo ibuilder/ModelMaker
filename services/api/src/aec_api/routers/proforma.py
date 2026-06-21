@@ -102,6 +102,29 @@ def solve_stateless(a: Assumptions):
     return solve(a.model_dump())
 
 
+@router.get("/projects/{pid}/proforma/model-metrics")
+def proforma_model_metrics(pid: str, db: Session = Depends(get_db)):
+    """Metrics from the project's source IFC, so the proforma can underwrite against the real
+    model (areas → hard cost / rent, etc.) instead of hand-keyed numbers. 409 if no source IFC."""
+    from ..deps import source_ifc_path
+    from aec_data.ifc_loader import open_model  # type: ignore
+    from aec_data import drawings as dr
+    from aec_data import spaces as sp
+
+    model = open_model(source_ifc_path(db, pid))
+    rows = sp.space_schedule(model)
+    areas = [r["net_area"] for r in rows if r.get("net_area")]
+    nfa_m2 = round(sum(areas), 1)
+    M2_TO_SF = 10.7639
+    return {
+        "space_count": len(rows),
+        "spaces_with_area": len(areas),
+        "storey_count": len(dr.storey_elevations(model)),
+        "net_floor_area_m2": nfa_m2,
+        "net_floor_area_sf": round(nfa_m2 * M2_TO_SF),
+    }
+
+
 class Axis(BaseModel):
     path: str                       # e.g. "exit.exit_cap" or "cost_lines.1.amount"
     values: list[float]

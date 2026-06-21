@@ -661,6 +661,11 @@ export class ApiClient {
   }
 
   // authoring round-trip (Phase 6)
+  /** Proforma seed metrics derived from the project's source IFC (areas / space + storey counts). */
+  proformaModelMetrics(pid: string) {
+    return this.json<{ space_count: number; spaces_with_area: number; storey_count: number; net_floor_area_m2: number; net_floor_area_sf: number }>(
+      `/projects/${pid}/proforma/model-metrics`);
+  }
   /** Upload an IFC as the project's source model (sets source_ifc + publishes) — what lights up
    *  drawings, clash/IDS, energy, exports, and authoring for the project. */
   async uploadSourceIfc(pid: string, file: File, publish = true) {

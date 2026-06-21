@@ -100,6 +100,7 @@ export class ProformaUI {
     sizingField("Max LTV", "debt.max_ltv", 100, "off");
     sizingField("Min DSCR", "debt.min_dscr", 1, "off");
     this.root.appendChild(form);
+    this.renderModelLink();
     const out = document.createElement("div"); out.id = "pf-out";
     this.root.appendChild(out);
     const sens = document.createElement("div"); sens.id = "pf-sens";
@@ -107,6 +108,42 @@ export class ProformaUI {
     const mc = document.createElement("div"); mc.id = "pf-mc";
     this.root.appendChild(mc);
     this.renderDraws();
+  }
+
+  /** Model → proforma: pull GFA from the project's source IFC and seed hard cost + rent from it,
+   *  so the deal underwrites against the real model instead of hand-keyed numbers. */
+  private renderModelLink() {
+    const host = document.createElement("div"); host.id = "pf-model";
+    host.style.cssText = "margin:8px 0;padding:8px 10px;border:1px dashed var(--line);border-radius:8px";
+    const pid = this.projectId();
+    host.innerHTML = `<div class="section-title" style="margin:0 0 6px">📐 From model</div>`;
+    if (!pid) { host.insertAdjacentHTML("beforeend", `<div class="meta">Open a project to seed the proforma from its IFC.</div>`); this.root.appendChild(host); return; }
+    const btn = document.createElement("button"); btn.className = "tool-btn"; btn.textContent = "Pull model metrics";
+    const body = document.createElement("div"); body.style.marginTop = "6px";
+    btn.onclick = async () => {
+      body.innerHTML = `<span class="meta">reading model…</span>`;
+      let m;
+      try { m = await this.api.proformaModelMetrics(pid); }
+      catch { body.innerHTML = `<div class="meta">No source IFC yet — open an IFC in the Model workspace, then retry.</div>`; return; }
+      const sf = m.net_floor_area_sf;
+      body.innerHTML =
+        `<div class="meta" style="margin-bottom:6px"><b>${sf.toLocaleString()} sf</b> net floor area · ${m.space_count} spaces · ${m.storey_count} storeys</div>` +
+        `<div class="pf-form">` +
+        `<label class="pf-field"><span>Hard cost $/sf</span><input id="pf-hard-rate" type="number" step="any" value="250"></label>` +
+        `<label class="pf-field"><span>Rent $/sf·yr</span><input id="pf-rent-rate" type="number" step="any" value="36"></label>` +
+        `</div><button class="file-btn" id="pf-apply-model" style="margin-top:6px">Apply to proforma</button>`;
+      (body.querySelector("#pf-apply-model") as HTMLButtonElement).onclick = () => {
+        const hard = parseFloat((body.querySelector("#pf-hard-rate") as HTMLInputElement).value) || 0;
+        const rent = parseFloat((body.querySelector("#pf-rent-rate") as HTMLInputElement).value) || 0;
+        set(this.a, "cost_lines.1.amount", Math.round(sf * hard));      // hard cost line
+        set(this.a, "operations.potential_rent_annual", Math.round(sf * rent));
+        this.render();                                                   // refresh the driver inputs
+        void this.solve();
+        this.setStatus(`seeded from model: ${sf.toLocaleString()} sf → hard ${money(sf * hard)}, rent ${money(sf * rent)}/yr`);
+      };
+    };
+    host.append(btn, body);
+    this.root.appendChild(host);
   }
 
   /** Actuals / draw bridge — enter actual-to-date per cost line, re-forecast IRR vs underwritten. */
