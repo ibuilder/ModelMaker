@@ -199,7 +199,19 @@ same-origin API. To build locally: `npm run build:desktop` → `python services/
 
 Generate `APPLE_CERTIFICATE` / `WINDOWS_CERTIFICATE` with `base64 -w0 cert.p12` (Linux) or
 `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx"))` (PowerShell), and add them under
-Settings → Secrets and variables → Actions.
+Settings → Secrets and variables → Actions. The workflow then signs automatically on the next tag —
+**no code change needed** (the import + thumbprint + notarize steps are already wired and guarded so
+unsigned builds stay green until the secrets exist).
+
+**Where to get the certs (the only external piece):**
+- **Windows** — an Authenticode code-signing cert from a CA (DigiCert, Sectigo, SSL.com; OV ≈
+  $200–400/yr). OV still shows a SmartScreen prompt until it earns reputation; an **EV** cert (HSM/
+  token) or **Azure Trusted Signing** (~$10/mo, cloud, no physical token) clears SmartScreen
+  immediately — for those, swap the PFX-import step for the vendor's `signtool`/Trusted-Signing action.
+- **macOS** — Apple Developer Program ($99/yr) → a **Developer ID Application** cert (export `.p12`)
+  + an app-specific password for notarization. Fills all six `APPLE_*` secrets above.
+- **Linux** — `.deb`/`.AppImage` aren't OS-signed; publish SHA-256 checksums (GitHub shows asset
+  digests) and/or GPG-detach-sign if your channel needs it.
 
 ## Observability
 `GET /metrics` exposes Prometheus text (request counts + latency summary by method/route
