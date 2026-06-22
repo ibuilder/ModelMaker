@@ -85,8 +85,12 @@ hand. To carry a *real* tower to turnover it needs to be generated, not hand-pla
   G702/G703 application shows prior work as previous certificates; `POST /cost/lien-waiver` generates
   a lien-waiver record for the current pay app (amount = G702 current payment due). Verified
   (test_closeout: $237,500 waiver, advance rolls this→prev).
-- **Field/mobile capture** *(remaining — separate app effort)* — photo → daily report / punchlist with
-  offline support (the Capacitor scaffold exists). Where GC adoption is won.
+- ✅ **DONE — Field/mobile capture.** A mobile-first quick-capture FAB + bottom-sheet
+  (`apps/web/src/field/field.ts`): snap a photo and file it as a punchlist item / safety observation /
+  progress photo in a couple taps. **Offline-first** — captures (incl. the photo) queue in
+  localStorage and auto-flush on reconnect (and on load), with a queued-count badge. Pairs with the
+  PWA/Capacitor build for installed-app use in the field. Verified live (online create → PL-001;
+  forced-offline capture queued with badge; reconnect auto-synced the observation).
 
 ### D. Turnover completeness
 - ✅ **DONE — Final completion package.** `GET /projects/{id}/closeout/package.zip` bundles the
