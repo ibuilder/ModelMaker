@@ -125,24 +125,24 @@ and ASU.
   drops (verified: 40 m plate 43% vs 16 m plate 77%). Surfaced in the Test Fit compare table (Daylight
   column + ⚠ on deep plates). *Next: make it an optimize objective + sweep plate depth; core-efficiency
   for the elevator/stair core.*
-- **R2 — Construction as a vertical assembly line.** *Building the Empire State*: fast-track, a
-  story-a-day, ~3,500 workers by trade, **just-in-time** steel delivery (no on-site storage),
-  finished 45 days early. Model the schedule as a **takt / line-of-balance flow with production
-  rates** (floors/week per trade), a **JIT delivery/logistics plan** tied to the takt, and **daily
-  crew-by-trade** actuals vs plan (we already capture daily reports + manpower — close the loop).
+- ✅ **DONE — R2 construction as a vertical assembly line.** `takt.plan()` + `POST /schedule/takt`:
+  line-of-balance schedule where trades chase floor-to-floor at a steady takt (days/floor), with a
+  **just-in-time delivery plan**, floors/week ascent rate, duration, and peak crew. *Next: takt UI/
+  chart; tie to daily-report actuals.*
 - ✅ **DONE — R3 structural-system advisor.** `structure.recommend(height, floors, span)` picks the
   system by scale — flat-plate (low) · flat-plate + shear walls (mid) · shear-core + frame (high) ·
   outrigger/tube (supertall) — with rough member sizing (slab ≈ span/30, beam ≈ span/16, columns grow
   with floors, capped 1200 mm), a load-path read, and span/slenderness flags. `POST /structure/
   recommend`; the **generated frame now uses these sizes** (vs the fixed 0.6 m/7.5 m frame) and the
   system shows in the massing result. *Next: per-floor column taper; lateral core geometry.*
-- **R4 — Lean / productivity analytics.** VT lean-construction research (Last Planner): track **Plan
-  Percent Complete (PPC)**, a **constraint/look-ahead log**, **rework**, and **production-rate**
-  actuals vs plan, surfaced on the dashboard — measured improvements in the literature (PPC +13%,
-  rework −22%, forecast +42%). Builds on the CPM + Line-of-Balance we already have.
-- **R5 — Research-grade data & comps.** Ground defaults (cost/sf, rents, cap rates, productivity
-  rates) in citable benchmarks and a **Comparables** record (also feeds underwriting U3), so the
-  numbers are defensible — the PropTech / applied-research direction (NYU Schack).
+- ✅ **DONE — R4 lean / PPC analytics.** A `weekly_plan` (Last Planner) module + `lean.ppc()` +
+  `GET /projects/{id}/lean/ppc`: Plan Percent Complete + ranked reasons for non-completion + a
+  rating (good ≥ 80%). *Next: surface on the dashboard; production-rate actual vs takt.*
+- ✅ **DONE — R5 research-grade data & comps.** `benchmarks.py` + `GET /benchmarks` (citable cost/sf,
+  cap-rate, soft-cost, productivity, PPC ranges) + a `comparable` module for deal comps. *Next: wire
+  benchmark bands into the underwriting guardrails + seed defaults from them.* (superseded:)
+<!--
+  rates) in citable benchmarks and a **Comparables** record. -->
 
 ## C. Lifecycle / construction depth
 - ✅ Field capture (offline), module-log PDFs, closeout package ZIP, auto-TRIR, subject alias.

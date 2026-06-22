@@ -1,0 +1,25 @@
+{
+  "key": "comparable",
+  "name": "Comparables",
+  "section": "Finance",
+  "icon": "≈",
+  "ref_prefix": "CMP",
+  "title_field": "address",
+  "fields": [
+    { "name": "address", "label": "Address / name", "type": "text", "required": true },
+    { "name": "asset_type", "label": "Asset type", "type": "select",
+      "options": ["Multifamily", "Office", "Retail", "Industrial", "Mixed-use", "Specialty"] },
+    { "name": "price", "label": "Sale price", "type": "currency" },
+    { "name": "price_psf", "label": "$/SF", "type": "number" },
+    { "name": "cap_rate", "label": "Cap rate %", "type": "number" },
+    { "name": "rent_psf", "label": "Rent $/SF/yr", "type": "number" },
+    { "name": "sale_date", "label": "Sale date", "type": "date" },
+    { "name": "notes", "label": "Notes", "type": "textarea" }
+  ],
+  "workflow": {
+    "initial": "recorded",
+    "states": ["recorded"],
+    "transitions": []
+  },
+  "list_columns": ["asset_type", "price_psf", "cap_rate"]
+}
