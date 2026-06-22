@@ -64,11 +64,17 @@ hand. To carry a *real* tower to turnover it needs to be generated, not hand-pla
    service core" checkbox. Verified (test_massing: elevator/stair + duct/pipe risers + core walls per
    floor). *Next: connect risers floor-to-floor, add equipment (AHU/pumps), and zone the core.*
 
-### B. Estimating realism
-- Model-based estimate returns a tiny number on a massing model (sparse quantities). Until (A) lands,
-  **fall back to the proforma hard-cost / $-per-sf** when the model has < N structural elements, and
-  surface *which* source was used. Longer-term: **assembly-based estimating** (concrete m³ × $/m³,
-  formwork m², rebar tonnes) off the structural model from (A1).
+### B. Estimating realism ✅ DONE
+- **Assembly-based concrete takeoff.** The estimate now bills the superstructure by **volume**
+  (columns/beams/slabs × $/m³ in place), and `takeoff(force_geometry=True)` computes real area+volume
+  from geometry for every billable element (no cost map or Qto psets needed). On a framed tower the
+  model estimate jumped from a misleading **$5,400** (12 columns × count) to **~$906k** of actual
+  concrete (slabs/beams/columns).
+- **GFA benchmark + recommended source.** `estimate_from_takeoff(gfa_sf=…)` also returns a GFA × $/sf
+  benchmark and a `recommended` source ("model" vs "gfa") + `recommended_total`, so a sparse model
+  surfaces the honest underwriting number instead of a misleadingly tiny total. Verified live
+  (276 elements → $906k model takeoff, $8.0M GFA benchmark, recommends gfa). *Next: formwork m² +
+  rebar tonnes line items; finishes/MEP assemblies; per-CSI rollup into the budget module.*
 
 ### C. Construction depth
 - **Multi-period pay apps** — G702/G703 across draws (period N, retainage release), and **lien
