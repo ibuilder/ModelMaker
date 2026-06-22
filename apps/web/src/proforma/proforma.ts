@@ -302,12 +302,13 @@ export class ProformaUI {
         const r = await this.api.testFitCompare({ plate_w: +wi.value, plate_d: +di.value, floors: +fi.value });
         const rows = r.schemes.map((s) => `<tr${s.name === r.best ? ' style="font-weight:700"' : ""}>`
           + `<th style="text-align:left">${s.name}${s.name === r.best ? " ★" : ""}</th>`
-          + `<td style="text-align:right">${s.total_units}</td><td style="text-align:right">${(s.efficiency * 100).toFixed(0)}%</td>`
+          + `<td style="text-align:right">${s.total_units}</td>`
+          + `<td style="text-align:right"${s.daylight_limited ? ' title="deep plate — dark interior earns no rent"' : ""}>${(s.daylight_efficiency * 100).toFixed(0)}%${s.daylight_limited ? " ⚠" : ""}</td>`
           + `<td style="text-align:right">${s.avg_unit_sf.toLocaleString()}</td><td style="text-align:right">${s.total_nsf.toLocaleString()}</td>`
           + `<td style="text-align:right">${s.parking_stalls}</td></tr>`).join("");
         out.innerHTML = `<table class="sens-table" style="font-size:12px"><tr><th style="text-align:left">Scheme</th>`
-          + `<th>Units</th><th>Eff.</th><th>Avg SF</th><th>NSF</th><th>Stalls</th></tr>${rows}</table>`
-          + `<div class="meta" style="margin-top:4px">Best by units: <b>${r.best}</b></div>`;
+          + `<th>Units</th><th title="rentable ÷ gross, daylight-limited">Daylight</th><th>Avg SF</th><th>Rent. SF</th><th>Stalls</th></tr>${rows}</table>`
+          + `<div class="meta" style="margin-top:4px">Best by units: <b>${r.best}</b> · daylight efficiency = rentable area within ~9 m of a window ÷ gross</div>`;
       } catch { out.innerHTML = `<div class="meta">test-fit unavailable (API offline)</div>`; }
     };
     host.append(run, opt, out); this.root.appendChild(host);

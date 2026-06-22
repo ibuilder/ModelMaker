@@ -24,6 +24,16 @@ assert m["total_nsf"] < m["total_gsf"], m
 assert any(u["cy"] > 0 for u in lay["units"]) and any(u["cy"] < 0 for u in lay["units"]), "double-loaded"
 assert sum(m["mix"].values()) == m["total_units"], m["mix"]
 
+# --- R1: form-follows-finance — daylight-limited leasable depth ----------------
+shallow = tf.layout(60, 16, floors=1)          # 16 m deep: bays ~7 m, within daylight reach
+deep = tf.layout(60, 40, floors=1)             # 40 m deep: bays ~19 m, far beyond daylight
+assert not shallow["daylight_limited"], shallow["leasable_depth"]
+assert deep["daylight_limited"] and deep["core_depth_m"] > 0, deep
+# the deep plate wastes a dark interior core → much lower rentable (daylight) efficiency
+assert deep["metrics"]["daylight_efficiency"] < shallow["metrics"]["daylight_efficiency"] - 0.1, \
+    (deep["metrics"]["daylight_efficiency"], shallow["metrics"]["daylight_efficiency"])
+assert deep["leasable_depth"] == 9.0, deep["leasable_depth"]   # capped at the daylight limit
+
 # --- parking: stalls to ratio --------------------------------------------------
 pk = tf.parking(100, ratio=1.25, kind="structured")
 assert pk["stalls"] == 125 and pk["area_sf"] > 0 and pk["cost"] > 0, pk
@@ -70,7 +80,9 @@ with TestClient(app) as c:
     assert pr.status_code == 200 and pr.json()["summary"]["total_taxes"] == 955_533, pr.text
     assert c.get(f"/projects/{pid}/property").json()["summary"]["purchase_price"] == 15_744_700
 
-print(f"TESTFIT OK - corridor layout {m['units_per_floor']} units/floor @ {m['efficiency']*100:.0f}% eff; "
+print(f"TESTFIT OK - R1 daylight: deep-plate eff {deep['metrics']['daylight_efficiency']*100:.0f}% < "
+      f"shallow {shallow['metrics']['daylight_efficiency']*100:.0f}% (core {deep['core_depth_m']}m); "
+      f"corridor layout {m['units_per_floor']} units/floor @ {m['efficiency']*100:.0f}% eff; "
       f"parking {pk['stalls']} stalls; compare ranks studio>2BR ({a['total_units']}>{b['total_units']}); "
       f"optimize swept {opt['considered']} schemes -> best YoC {opt['best']['yield_on_cost']*100:.1f}%; "
       f"property taxes ${ps['total_taxes']:,} -> opex; endpoints ok")
