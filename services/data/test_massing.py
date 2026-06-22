@@ -90,6 +90,22 @@ if _have_ifc:
             print(f"FRAME OK - {len(cols)} columns + {len(beams)} beams on a {len(gx)}x{len(gy)} grid")
         finally:
             os.remove(fpath)
+
+        # --- unit subdivision (units=True) ----------------------------------
+        fd3, upath = tempfile.mkstemp(suffix=".ifc"); os.close(fd3)
+        try:
+            massing.generate_ifc(m, upath, name="Unitized", units=True)
+            um = open_model(upath)
+            upf = max(1, round(m["units"] / m["floors"]))
+            uspaces = [s for s in um.by_type("IfcSpace")]
+            assert len(uspaces) == upf * m["floors"], (len(uspaces), upf * m["floors"])
+            # every unit space carries a real area
+            import ifcopenshell.util.element as _ue
+            areas = [(_ue.get_pset(s, "Qto_SpaceBaseQuantities") or {}).get("NetFloorArea") for s in uspaces]
+            assert all(a and a > 0 for a in areas), "unit space missing area"
+            print(f"UNITS OK - {len(uspaces)} unit spaces ({upf}/floor x {m['floors']} floors), each with area")
+        finally:
+            os.remove(upath)
     finally:
         os.remove(path)
 else:

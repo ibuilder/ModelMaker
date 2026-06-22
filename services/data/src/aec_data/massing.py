@@ -66,11 +66,13 @@ def gridlines(extent: float, bay: float) -> list[float]:
 
 
 def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
-                 frame: bool = False, bay: float = 7.5) -> str:
-    """Write an IFC4 model: site → building → one storey + floor-plate space + slab per level.
-    With `frame=True`, also generate a concrete structural frame on a ~`bay`-metre column grid —
-    columns at every grid intersection (per floor) and beams along both axes — turning the massing
-    into a real, GUID-stable structural model in one pass."""
+                 frame: bool = False, bay: float = 7.5, units: bool = False) -> str:
+    """Write an IFC4 model: site → building → one storey + slab per level. Each floor gets either a
+    single floor-plate space, or — with `units=True` — the floor subdivided into per-unit IfcSpaces
+    (the proforma's unit count), so areas/COBie/rent are grounded in real apartments. With
+    `frame=True`, also generate a concrete structural frame on a ~`bay`-metre column grid."""
+    import math
+
     import ifcopenshell
     import ifcopenshell.api
     import numpy as np
@@ -78,6 +80,7 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
     floors = int(metrics["floors"])
     fw, fd, f2f = float(metrics["plate_w"]), float(metrics["plate_d"]), float(metrics["floor_to_floor"])
     plate_area = round(fw * fd, 2)
+    units_per_floor = max(1, round(int(metrics.get("units", 0)) / floors)) if units else 0
     SLAB_T = 0.3   # m — thin floor plate per level: physical (renders) so the massing is visible
     #              (IfcSpace is forced transparent by the Fragments importer, so spaces alone show empty)
     COL, BEAM_W, BEAM_D = 0.6, 0.4, 0.6      # concrete column side, beam width, beam depth (m)
@@ -126,6 +129,29 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
         ifcopenshell.api.run("geometry.assign_representation", model, product=beam, representation=rep)
         ifcopenshell.api.run("spatial.assign_container", model, products=[beam], relating_structure=storey)
 
+    def make_space(storey, elev, name, longname, cx, cy, w, d, reference):
+        sp = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSpace", name=name)
+        sp.LongName = longname
+        m = np.eye(4); m[0, 3] = cx; m[1, 3] = cy; m[2, 3] = elev
+        ifcopenshell.api.run("geometry.edit_object_placement", model, product=sp, matrix=m)
+        rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
+                                   profile=rect_profile(model, w, d), depth=f2f)
+        ifcopenshell.api.run("geometry.assign_representation", model, product=sp, representation=rep)
+        ifcopenshell.api.run("aggregate.assign_object", model, products=[sp], relating_object=storey)
+        area = round(w * d, 2)
+        qto = ifcopenshell.api.run("pset.add_qto", model, product=sp, name="Qto_SpaceBaseQuantities")
+        ifcopenshell.api.run("pset.edit_qto", model, qto=qto,
+                             properties={"NetFloorArea": area, "GrossFloorArea": area,
+                                         "NetVolume": round(area * f2f, 2), "Height": f2f})
+        ps = ifcopenshell.api.run("pset.add_pset", model, product=sp, name="Pset_SpaceCommon")
+        ifcopenshell.api.run("pset.edit_pset", model, pset=ps, properties={"Reference": reference})
+        return sp
+
+    def unit_grid(n, w, d):
+        cols = max(1, round(math.sqrt(n * w / d)))
+        rows = max(1, math.ceil(n / cols))
+        return cols, rows
+
     gx = gridlines(fw, bay)
     gy = gridlines(fd, bay)
     for i in range(floors):
@@ -134,20 +160,23 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
                                       name=f"Level {i + 1}")
         storey.Elevation = elev
         ifcopenshell.api.run("aggregate.assign_object", model, products=[storey], relating_object=building)
-        space = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSpace",
-                                     name=f"Level {i + 1} floor plate")
-        space.LongName = f"Floor plate {i + 1}"
-        matrix = np.eye(4); matrix[2, 3] = elev
-        ifcopenshell.api.run("geometry.edit_object_placement", model, product=space, matrix=matrix)
-        profile = rect_profile(model, fw, fd)
-        rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
-                                   profile=profile, depth=f2f)
-        ifcopenshell.api.run("geometry.assign_representation", model, product=space, representation=rep)
-        ifcopenshell.api.run("aggregate.assign_object", model, products=[space], relating_object=storey)
-        qto = ifcopenshell.api.run("pset.add_qto", model, product=space, name="Qto_SpaceBaseQuantities")
-        ifcopenshell.api.run("pset.edit_qto", model, qto=qto,
-                             properties={"NetFloorArea": plate_area, "GrossFloorArea": plate_area,
-                                         "NetVolume": round(plate_area * f2f, 2), "Height": f2f})
+        if units_per_floor:                    # subdivide the floor into per-unit apartments
+            cols, rows = unit_grid(units_per_floor, fw, fd)
+            cw, cd = fw / cols, fd / rows
+            k = 0
+            for r in range(rows):
+                for c in range(cols):
+                    if k >= units_per_floor:
+                        break
+                    k += 1
+                    cx = -fw / 2 + (c + 0.5) * cw
+                    cy = -fd / 2 + (r + 0.5) * cd
+                    # 0.96 leaves a hair of demising-wall gap so units read as separate volumes
+                    make_space(storey, elev, f"L{i + 1} Unit {k:02d}", f"Unit {k:02d}",
+                               cx, cy, cw * 0.96, cd * 0.96, "UNIT")
+        else:
+            make_space(storey, elev, f"Level {i + 1} floor plate", f"Floor plate {i + 1}",
+                       0.0, 0.0, fw, fd, "PLATE")
         # renderable floor plate (IfcSlab) so the massing is visible in the viewer
         slab = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSlab",
                                     name=f"Level {i + 1} plate", predefined_type="FLOOR")

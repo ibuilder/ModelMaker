@@ -45,9 +45,13 @@ hand. To carry a *real* tower to turnover it needs to be generated, not hand-pla
    one click. Verified (test_massing: 175 columns + 290 beams on a 7×5 grid) and visually (a framed
    tower renders columns/beams/slabs across all floors). *Next: size members from spans, two-way
    slab bands, and a proper core (stairs/elevator shafts) instead of a single shear wall.*
-2. **Unit-layout generator** — subdivide each floor plate into real apartments (the corridor + unit
-   mix the proforma already assumes), each an `IfcSpace` with the right area, so areas/COBie/rent are
-   grounded in actual units rather than one plate-sized space per floor.
+2. ✅ **DONE — Unit-layout generator.** `generate_ifc(units=True)` subdivides each floor into the
+   proforma's per-floor unit count — a grid of per-apartment `IfcSpace`s, each with a real
+   `Qto_SpaceBaseQuantities.NetFloorArea` and `Pset_SpaceCommon.Reference="UNIT"`, so areas / COBie /
+   rent are grounded in actual apartments instead of one plate-sized space. Endpoint `units` flag +
+   a "Subdivide floors into units" checkbox. Verified (test_massing: 65 unit spaces, 13/floor × 5
+   floors, each with area). *Next: a real double-loaded corridor + core carve-out, and a unit-mix
+   (studio/1BR/2BR) instead of uniform cells.*
 3. **Envelope** — curtain-wall / facade + windows per the WWR, so energy + elevations are real.
 4. **Core & MEP stubs** — stairs, elevator shafts, risers, and major equipment (`IfcSpace` zones +
    placeholder `IfcFlowTerminal`/`IfcDistributionElement`) so coordination/clash has something to do.

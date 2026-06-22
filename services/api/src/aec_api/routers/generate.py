@@ -49,6 +49,7 @@ class MassingIn(BaseModel):
     avg_unit_m2: float = Field(default=75.0, ge=0)            # for unit count (residential)
     frame: bool = Field(default=False)                        # also generate a concrete structural frame
     bay_m: float = Field(default=7.5, gt=2)                   # column-grid bay spacing (m)
+    units: bool = Field(default=False)                        # subdivide floors into per-unit spaces
     # --- acquisition proforma seed ---
     land_cost: float = Field(default=2_500_000.0, ge=0)
     hard_cost_psf: float = Field(default=225.0, ge=0)         # $/sf GFA
@@ -118,8 +119,9 @@ def generate_massing(pid: str, body: MassingIn, db: Session = Depends(get_db),
 
     _IFC_DIR.joinpath(pid).mkdir(parents=True, exist_ok=True)
     ifc_path = _IFC_DIR / pid / "source.ifc"
-    generate_ifc(metrics, str(ifc_path), name=body.name, frame=body.frame, bay=body.bay_m)
+    generate_ifc(metrics, str(ifc_path), name=body.name, frame=body.frame, bay=body.bay_m, units=body.units)
     metrics["framed"] = body.frame
+    metrics["unitized"] = body.units
     storage.put(f"{pid}/source.ifc", ifc_path.read_bytes())   # durable copy
     p.source_ifc = str(ifc_path)
     db.commit()

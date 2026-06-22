@@ -152,6 +152,11 @@ export class ProformaUI {
     const frameChk = document.createElement("input"); frameChk.type = "checkbox";
     frameWrap.append(frameChk, document.createTextNode("Generate concrete structural frame (columns + beams on a 7.5 m grid)"));
     host.appendChild(frameWrap);
+    const unitWrap = document.createElement("label");
+    unitWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin:4px 0;font-size:13px";
+    const unitChk = document.createElement("input"); unitChk.type = "checkbox";
+    unitWrap.append(unitChk, document.createTextNode("Subdivide floors into units (per-apartment spaces)"));
+    host.appendChild(unitWrap);
 
     const params = (): MassingParams => {
       const p: MassingParams = { use_type: useSel.value as "residential" | "commercial", name: "Massing Study" };
@@ -161,6 +166,7 @@ export class ProformaUI {
         else if (!isNaN(v)) (p as Record<string, unknown>)[key] = v;
       }
       p.frame = frameChk.checked;
+      p.units = unitChk.checked;
       return p;
     };
     const out = document.createElement("div"); out.style.marginTop = "6px";
