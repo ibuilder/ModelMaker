@@ -101,6 +101,7 @@ export class ProformaUI {
     sizingField("Min DSCR", "debt.min_dscr", 1, "off");
     this.root.appendChild(form);
     this.renderMassing();
+    this.renderBudget();
     this.renderModelLink();
     const out = document.createElement("div"); out.id = "pf-out";
     this.root.appendChild(out);
@@ -217,6 +218,83 @@ export class ProformaUI {
     };
     btnRow.append(estBtn, genBtn); host.append(btnRow, out);
     this.root.appendChild(host);
+  }
+
+  /** Developer cost budget: line-item hard/soft/acquisition costs (description × $/unit × qty) with
+   *  per-category contingency, that roll into the proforma's cost_lines. The institutional gap the
+   *  flat cost drivers don't cover. */
+  private renderBudget() {
+    const host = document.createElement("div"); host.id = "pf-budget";
+    host.style.cssText = "margin:8px 0;padding:8px 10px;border:1px dashed var(--line);border-radius:8px";
+    const pid = this.projectId();
+    host.innerHTML = `<div class="section-title" style="margin:0 0 6px">🧱 Cost budget (hard / soft)</div>`;
+    if (!pid) { host.insertAdjacentHTML("beforeend", `<div class="meta">Open a project to build a line-item cost budget.</div>`); this.root.appendChild(host); return; }
+    const body = document.createElement("div"); host.appendChild(body); this.root.appendChild(host);
+    body.innerHTML = `<div class="meta">loading…</div>`;
+
+    const CATS: [string, string][] = [["acquisition", "Acquisition"], ["hard", "Hard costs"], ["soft", "Soft costs"]];
+    void this.api.devBudget(pid).then((resp) => {
+      const lines = resp.budget.lines.slice();
+      const contingency: Record<string, number> = { hard: 0.1, soft: 0.1, acquisition: 0, ...resp.budget.contingency };
+      let timer = 0;
+      const save = () => { clearTimeout(timer); timer = window.setTimeout(() => void this.api.saveDevBudget(pid, { lines, contingency }).then(paint), 500); };
+      const num = (v: string) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+      const paint = (r?: import("../api/client").DevBudgetResponse) => {
+        const sum = r?.summary;
+        body.innerHTML = "";
+        for (const [cat, label] of CATS) {
+          const head = document.createElement("div"); head.className = "section-title"; head.style.cssText = "margin:8px 0 2px;font-size:12px";
+          const subtotal = sum?.categories[cat];
+          head.innerHTML = `${label} <span class="meta" style="font-weight:400">${subtotal ? "· " + money(subtotal.subtotal) + (subtotal.contingency ? " + " + money(subtotal.contingency) + " contingency" : "") : ""}</span>`;
+          body.appendChild(head);
+          const tbl = document.createElement("table"); tbl.className = "sens-table"; tbl.style.fontSize = "12px";
+          tbl.innerHTML = `<tr><th style="text-align:left">Description</th><th>$/unit</th><th>Qty</th><th>Total</th><th></th></tr>`;
+          lines.forEach((ln, i) => {
+            if (ln.category !== cat) return;
+            const tr = document.createElement("tr");
+            const tot = (ln.unit_cost || 0) * (ln.quantity || 1);
+            tr.innerHTML = `<td><input data-i="${i}" data-k="description" value="${(ln.description || "").replace(/"/g, "&quot;")}" style="width:150px"></td>`
+              + `<td><input data-i="${i}" data-k="unit_cost" type="number" step="any" value="${ln.unit_cost || 0}" style="width:90px"></td>`
+              + `<td><input data-i="${i}" data-k="quantity" type="number" step="any" value="${ln.quantity ?? 1}" style="width:60px"></td>`
+              + `<td style="text-align:right">${money(tot)}</td><td><button class="tool-btn" data-rm="${i}" title="Remove">✕</button></td>`;
+            tbl.appendChild(tr);
+          });
+          body.appendChild(tbl);
+          const addRow = document.createElement("div"); addRow.style.cssText = "display:flex;gap:8px;align-items:center;margin:3px 0 2px";
+          const add = document.createElement("button"); add.className = "tool-btn"; add.textContent = "+ line";
+          add.onclick = () => { lines.push({ category: cat as "hard", description: "New line", unit_cost: 0, quantity: 1 }); save(); paint(); };
+          const cw = document.createElement("label"); cw.className = "meta"; cw.style.fontSize = "11px";
+          cw.innerHTML = `contingency % <input type="number" step="any" value="${+(contingency[cat] * 100).toFixed(2)}" style="width:56px">`;
+          (cw.querySelector("input") as HTMLInputElement).oninput = (e) => { contingency[cat] = num((e.target as HTMLInputElement).value) / 100; save(); };
+          addRow.append(add, cw); body.appendChild(addRow);
+        }
+        body.querySelectorAll<HTMLInputElement>("input[data-i]").forEach((inp) => {
+          inp.oninput = () => {
+            const i = +inp.dataset.i!, k = inp.dataset.k!;
+            (lines[i] as unknown as Record<string, unknown>)[k] = k === "description" ? inp.value : num(inp.value);
+            save();
+            if (k !== "description") paint();   // refresh totals
+          };
+        });
+        body.querySelectorAll<HTMLButtonElement>("button[data-rm]").forEach((b) => {
+          b.onclick = () => { lines.splice(+b.dataset.rm!, 1); save(); paint(); };
+        });
+        const foot = document.createElement("div"); foot.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-top:8px";
+        foot.innerHTML = `<b>Total uses ${money(sum?.grand_total ?? 0)}</b>`
+          + `<span class="meta" style="font-size:11px">${sum ? `hard ${(sum.hard_pct * 100).toFixed(0)}% / soft ${(sum.soft_pct * 100).toFixed(0)}%` : ""}</span>`;
+        const apply = document.createElement("button"); apply.className = "file-btn"; apply.textContent = "Apply to proforma";
+        apply.onclick = async () => {
+          const r = await this.api.devBudgetCostLines(pid);
+          (this.a as { cost_lines: unknown[] }).cost_lines = r.cost_lines.map((c) => ({ ...c, start_month: 0, end_month: 0 }));
+          this.render(); void this.solve();
+          this.setStatus(`applied cost budget: ${money(r.summary.grand_total)} total uses`);
+        };
+        const fwrap = document.createElement("div"); fwrap.style.marginTop = "6px"; fwrap.appendChild(apply);
+        body.append(foot, fwrap);
+      };
+      paint(resp);
+    }).catch(() => { body.innerHTML = `<div class="meta">cost budget unavailable (API offline)</div>`; });
   }
 
   /** Model → proforma: pull GFA from the project's source IFC and seed hard cost + rent from it,
