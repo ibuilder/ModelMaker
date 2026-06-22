@@ -64,6 +64,9 @@ and verified** in this repo unless noted:
 - **First-run onboarding + AI assistant** — a skippable welcome + coach-mark tour for new users, and
   an **"Ask AI"** box that answers natural-language questions about a project (open RFIs, overdue,
   cost) grounded in a live snapshot (Claude when keyed; graceful no-key fallback).
+- **Field/mobile capture (offline-first)** — a mobile bottom-sheet quick-capture: snap a photo →
+  punchlist / safety observation / progress photo in a couple taps. Captures queue offline (photo
+  included) and **auto-sync on reconnect** (queued-count badge); pairs with the PWA/Capacitor build.
 - **Turnover** — a one-click **closeout package** (`/closeout/package.zip`: as-built IFC +
   COBie/QTO/spaces + status PDF + closeout manifest), **module-log PDFs** (RFI/submittal/CO
   registers), **multi-period pay apps** (period advance + auto **lien waivers**), **COBie tabs**

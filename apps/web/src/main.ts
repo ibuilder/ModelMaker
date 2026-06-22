@@ -6,6 +6,7 @@ import { ApiClient } from "./api/client";
 import { toast } from "./ui/feedback";
 import { autoCheck, checkForUpdates, currentVersion } from "./ui/update";
 import { maybeWelcome, showWelcome } from "./ui/onboarding";
+import { FieldCapture } from "./field/field";
 import type { Settings, ViewerApp } from "./viewer/app";
 
 // ---- shell DOM + shared state (no three/@thatopen here — those load lazily) --
@@ -1159,6 +1160,8 @@ async function startup() {
   help.className = "tool-btn"; help.style.marginLeft = "6px"; help.textContent = "?"; help.title = "Help & tour";
   help.onclick = () => showWelcome(onboardCtx());
   toolbar.insertBefore(help, statusEl);
+  // field capture (mobile-first quick capture with offline queue) — needs the backend
+  if (!demo) new FieldCapture(api, () => projectId).mount();
   // first run: welcome the user (skippable). Anchors must exist first, so defer a tick.
   setTimeout(() => maybeWelcome(onboardCtx()), 600);
 }
