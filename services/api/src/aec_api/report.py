@@ -125,6 +125,99 @@ def _pct(v) -> str:
     return f"{v * 100:.1f}%" if isinstance(v, (int, float)) else "n/a"
 
 
+def investment_deck_pdf(db: Session, pid: str, project_name: str) -> bytes:
+    """A pitch-deck variant of the investment memo — landscape slides with big numbers (title · the
+    deal in numbers · Sources & Uses · returns · the ask & risks). Same live data as the memo."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import landscape, letter
+    from reportlab.pdfgen import canvas
+
+    from . import ai, dashboard, dev_budget as dvb
+    from .models import Project
+
+    p = db.get(Project, pid)
+    bs = dvb.summarize(p.dev_budget if p and p.dev_budget else dvb.starter_budget())
+    result, _ = _memo_proforma(db, pid)
+    su = (result or {}).get("sources_uses", {})
+    ret = (result or {}).get("returns", {})
+    risk = ai.risk_summary(dashboard.build(db, pid, "GC").get("kpis", {}), None)
+    total_uses = su.get("total_uses") or bs["grand_total"]
+    loan = su.get("loan_amount") or round(total_uses * 0.65)
+    equity = su.get("equity") or round(total_uses - loan)
+
+    buf = io.BytesIO()
+    W, H = landscape(letter)
+    c = canvas.Canvas(buf, pagesize=(W, H))
+    navy = colors.HexColor("#16324f")
+    accent = colors.HexColor("#4a8cff")
+    m = 54
+
+    def slide(title: str):
+        c.setFillColor(navy); c.rect(0, H - 64, W, 64, fill=1, stroke=0)
+        c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 20); c.drawString(m, H - 44, title)
+        c.setFillColor(colors.black)
+
+    def kpi(x: float, y: float, value: str, label: str):
+        c.setFillColor(accent); c.setFont("Helvetica-Bold", 30); c.drawString(x, y, value)
+        c.setFillColor(colors.HexColor("#666")); c.setFont("Helvetica", 12); c.drawString(x, y - 18, label)
+        c.setFillColor(colors.black)
+
+    # 1 — title
+    c.setFillColor(navy); c.rect(0, 0, W, H, fill=1, stroke=0)
+    c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 13)
+    c.drawString(m, H - 120, "CONFIDENTIAL INVESTMENT OPPORTUNITY")
+    c.setFont("Helvetica-Bold", 40); c.drawString(m, H - 175, (project_name or pid)[:42])
+    c.setFont("Helvetica", 16); c.drawString(m, H - 210, "Real-estate development — equity offering")
+    c.setFont("Helvetica", 11); c.drawString(m, 50, datetime.now(timezone.utc).strftime("Prepared %B %d, %Y · generated from live project data"))
+    c.showPage()
+
+    # 2 — the deal in numbers
+    slide("The deal in numbers")
+    kpi(m, H - 160, _money(total_uses), "Total project cost")
+    kpi(m + 300, H - 160, _money(equity), "Equity required")
+    kpi(m, H - 270, _pct(ret.get("equity_irr")) if result else "—", "Equity IRR")
+    kpi(m + 300, H - 270, f"{ret.get('equity_multiple', '—')}x" if result else "—", "Equity multiple")
+    kpi(m, H - 380, _pct(ret.get("yield_on_cost")) if result else "—", "Yield on cost")
+    kpi(m + 300, H - 380, f"{bs['hard_pct'] * 100:.0f}% / {bs['soft_pct'] * 100:.0f}%", "Hard / soft split")
+    if not result:
+        c.setFont("Helvetica-Oblique", 11); c.setFillColor(colors.HexColor("#999"))
+        c.drawString(m, 50, "Save a proforma scenario to populate returns.")
+    c.showPage()
+
+    # 3 — sources & uses
+    slide("Sources & Uses")
+    y = H - 110; c.setFont("Helvetica-Bold", 14); c.drawString(m, y + 6, "USES"); c.drawString(W / 2 + m / 2, y + 6, "SOURCES")
+    c.setFont("Helvetica", 13)
+    uses = [("Acquisition", bs["categories"]["acquisition"]["subtotal"]), ("Hard costs", bs["categories"]["hard"]["subtotal"]),
+            ("Soft costs", bs["categories"]["soft"]["subtotal"]), ("Contingency", sum(bs["categories"][x]["contingency"] for x in bs["categories"]))]
+    for label, amt in uses:
+        if amt:
+            c.drawString(m, y, label); c.drawRightString(W / 2 - m / 2, y, _money(amt)); y -= 22
+    c.setFont("Helvetica-Bold", 13); c.drawString(m, y, "Total uses"); c.drawRightString(W / 2 - m / 2, y, _money(total_uses))
+    y = H - 110 - 22; c.setFont("Helvetica", 13)
+    for label, amt in [(f"Senior debt ({_pct(loan / total_uses) if total_uses else 'n/a'})", loan), ("Equity", equity)]:
+        c.drawString(W / 2 + m / 2, y, label); c.drawRightString(W - m, y, _money(amt)); y -= 22
+    c.showPage()
+
+    # 4 — returns + the ask
+    slide("Returns & the ask")
+    if result:
+        kpi(m, H - 160, _pct(ret.get("project_irr")), "Project IRR")
+        kpi(m + 300, H - 160, _pct(ret.get("equity_irr")), "Equity IRR")
+        kpi(m, H - 270, f"{ret.get('equity_multiple', '—')}x", "Equity multiple")
+        kpi(m + 300, H - 270, _money(ret.get("npv")), "NPV")
+    c.setFont("Helvetica-Bold", 16); c.setFillColor(navy)
+    c.drawString(m, H - 360, f"The ask: {_money(equity)} of equity for a {_money(total_uses)} project.")
+    c.setFillColor(colors.black); c.setFont("Helvetica", 12); ry = H - 400
+    c.drawString(m, ry, "Key risks:"); ry -= 20
+    for r in risk.get("risks", [])[:4]:
+        c.drawString(m + 12, ry, f"• [{r['level'].upper()}] {r['text']}"[:110]); ry -= 18
+    c.setFont("Helvetica-Oblique", 8); c.drawString(m, 30, "AEC BIM Platform — generated from live project data · Confidential")
+    c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
 def investment_memo_pdf(db: Session, pid: str, project_name: str) -> bytes:
     """A confidential investment memorandum composed from live project data: executive summary,
     Sources & Uses, the hard/soft cost budget, returns, and a risk read. Returns scenario figures
