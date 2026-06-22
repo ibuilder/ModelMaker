@@ -16,9 +16,16 @@ import time
 
 _PBKDF2_ROUNDS = 200_000
 # token signing secret — set AEC_AUTH_SECRET (or AEC_API_KEY) in prod; dev default is insecure
+_DEV_SECRET = "dev-insecure-secret"
 _SECRET = (os.environ.get("AEC_AUTH_SECRET") or os.environ.get("AEC_API_KEY")
-           or "dev-insecure-secret").encode()
+           or _DEV_SECRET).encode()
 _TOKEN_TTL = 7 * 24 * 3600   # 7 days
+
+
+def secret_is_default() -> bool:
+    """True when no signing secret is configured (tokens are signed with the public dev default,
+    so they're forgeable). Production must set AEC_AUTH_SECRET; main.py refuses to start otherwise."""
+    return _SECRET == _DEV_SECRET.encode()
 
 
 def hash_password(password: str) -> str:
