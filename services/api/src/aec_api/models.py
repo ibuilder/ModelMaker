@@ -27,6 +27,8 @@ class Project(Base):
     origin: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     # server-side path to the source IFC, used by the data-export endpoints (guide §8)
     source_ifc: Mapped[str | None] = mapped_column(String, nullable=True)
+    # developer cost budget: line-item hard/soft/acquisition costs + contingencies (dev_budget.py)
+    dev_budget: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     topics: Mapped[list["Topic"]] = relationship(back_populates="project", cascade="all, delete-orphan")

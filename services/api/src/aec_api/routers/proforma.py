@@ -102,6 +102,50 @@ def solve_stateless(a: Assumptions):
     return solve(a.model_dump())
 
 
+@router.get("/projects/{pid}/dev-budget")
+def get_dev_budget(pid: str, db: Session = Depends(get_db)):
+    """The project's developer cost budget (line-item hard/soft/acquisition + contingencies) plus a
+    computed summary. Returns a starter budget if none is saved yet."""
+    from .. import dev_budget as dvb
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    budget = p.dev_budget or dvb.starter_budget()
+    return {"budget": budget, "summary": dvb.summarize(budget)}
+
+
+class DevBudgetIn(BaseModel):
+    lines: list[dict] = Field(default_factory=list)
+    contingency: dict[str, float] = Field(default_factory=dict)
+
+
+@router.put("/projects/{pid}/dev-budget")
+def put_dev_budget(pid: str, body: DevBudgetIn, db: Session = Depends(get_db)):
+    """Save the developer cost budget; returns the recomputed summary."""
+    from .. import dev_budget as dvb
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    budget = body.model_dump()
+    p.dev_budget = budget
+    db.commit()
+    return {"budget": budget, "summary": dvb.summarize(budget)}
+
+
+@router.get("/projects/{pid}/dev-budget/cost-lines")
+def dev_budget_cost_lines(pid: str, db: Session = Depends(get_db)):
+    """The budget rolled into proforma cost_lines (the seed the Finance view applies)."""
+    from .. import dev_budget as dvb
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    budget = p.dev_budget or dvb.starter_budget()
+    return {"cost_lines": dvb.to_cost_lines(budget), "summary": dvb.summarize(budget)}
+
+
 @router.get("/projects/{pid}/proforma/model-metrics")
 def proforma_model_metrics(pid: str, db: Session = Depends(get_db)):
     """Metrics from the project's source IFC, so the proforma can underwrite against the real

@@ -714,6 +714,17 @@ export class ApiClient {
     return this.json<{ project_duration: number; activity_count: number; critical_count: number; has_cycle: boolean; critical_path: string[]; activities: { ref: string | null; name: string; duration: number; es: number; ef: number; total_float: number; critical: boolean }[] }>(
       `/projects/${pid}/schedule/cpm`);
   }
+  /** Developer cost budget (line-item hard/soft/acquisition + contingencies) + computed summary. */
+  devBudget(pid: string) {
+    return this.json<DevBudgetResponse>(`/projects/${pid}/dev-budget`);
+  }
+  saveDevBudget(pid: string, budget: { lines: DevBudgetLine[]; contingency: Record<string, number> }) {
+    return this.json<DevBudgetResponse>(`/projects/${pid}/dev-budget`, { method: "PUT", body: JSON.stringify(budget) });
+  }
+  devBudgetCostLines(pid: string) {
+    return this.json<{ cost_lines: { category: string; name: string; amount: number; curve: string }[]; summary: DevBudgetSummary }>(
+      `/projects/${pid}/dev-budget/cost-lines`);
+  }
   /** Proforma seed metrics derived from the project's source IFC (areas / space + storey counts). */
   proformaModelMetrics(pid: string) {
     return this.json<{ space_count: number; spaces_with_area: number; storey_count: number; net_floor_area_m2: number; net_floor_area_sf: number }>(
@@ -765,6 +776,22 @@ export class ApiClient {
   }
 }
 
+export interface DevBudgetLine {
+  category: "acquisition" | "hard" | "soft";
+  description: string; unit_cost: number; quantity: number; cost_code?: string | null;
+}
+export interface DevBudgetCategory {
+  subtotal: number; contingency: number; contingency_pct: number; total: number;
+  lines: { description: string; unit_cost: number; quantity: number; total: number; cost_code?: string | null }[];
+}
+export interface DevBudgetSummary {
+  categories: Record<string, DevBudgetCategory>;
+  grand_total: number; hard_pct: number; soft_pct: number; line_count: number;
+}
+export interface DevBudgetResponse {
+  budget: { lines: DevBudgetLine[]; contingency: Record<string, number> };
+  summary: DevBudgetSummary;
+}
 export interface FamilyItem {
   key: string; label: string; ifc_class: string; category: string; dims: [number, number, number];
 }
