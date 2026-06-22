@@ -108,6 +108,39 @@ defaults, and guardrails that make the IRR credible. Grounded in CRE practice:
 - **U6 — Tie Test Fit optimize to the live proforma** (vs the proxy) so generative yield-on-cost
   uses the real cost budget + underwritten NOI.
 
+## R. Built-world techniques (research-grounded)  ★ next major theme
+Lessons from the literature on how tall buildings are actually financed and built — to make the
+generative + construction sides reflect real practice, not just geometry. Sources: Carol Willis,
+[*Form Follows Finance*](https://archive.org/details/formfollowsfinan0000will) and
+[*Building the Empire State*](https://wwnorton.com/books/Building-the-Empire-State/)
+([Skyscraper Museum](https://skyscraper.org/empire-state-building-construction/)); Mario Salvadori,
+[*Why Buildings Stand Up*](https://wwnorton.com/books/Why-Buildings-Stand-Up); and CM/real-estate
+research at [VT Myers-Lawson](https://mlsoc.vt.edu/research.html) (lean construction),
+[NYU Schack / PropTech](https://www.sps.nyu.edu/homepage/academics/executive-education/schack-institute-of-real-estate.html),
+and ASU.
+
+- **R1 — Form follows finance (the generative driver).** Willis: skyscraper form is a *financial*
+  product — set by rentable area, daylight, and code, not aesthetics. Make massing **finance-optimal**:
+  a **leasable-depth / daylight constraint** (historically ~25–30 ft from a window to the core),
+  **core-efficiency** (rentable ÷ gross) as an objective, and zoning-envelope + setback-driven form.
+  Wire it into Test Fit's optimize so the highest **rentable-yield** scheme wins (not just max FAR).
+- **R2 — Construction as a vertical assembly line.** *Building the Empire State*: fast-track, a
+  story-a-day, ~3,500 workers by trade, **just-in-time** steel delivery (no on-site storage),
+  finished 45 days early. Model the schedule as a **takt / line-of-balance flow with production
+  rates** (floors/week per trade), a **JIT delivery/logistics plan** tied to the takt, and **daily
+  crew-by-trade** actuals vs plan (we already capture daily reports + manpower — close the loop).
+- **R3 — Structural-system advisor.** Salvadori: systems are chosen by span, height, and load path.
+  Replace the fixed 0.6 m / 7.5 m frame with a **height/span-aware system selector** (steel moment
+  frame · concrete flat-plate · braced/shear-core · outrigger for supertall) + rough member sizing
+  and a load-path sanity check — so the generated structure is plausible for the building's scale.
+- **R4 — Lean / productivity analytics.** VT lean-construction research (Last Planner): track **Plan
+  Percent Complete (PPC)**, a **constraint/look-ahead log**, **rework**, and **production-rate**
+  actuals vs plan, surfaced on the dashboard — measured improvements in the literature (PPC +13%,
+  rework −22%, forecast +42%). Builds on the CPM + Line-of-Balance we already have.
+- **R5 — Research-grade data & comps.** Ground defaults (cost/sf, rents, cap rates, productivity
+  rates) in citable benchmarks and a **Comparables** record (also feeds underwriting U3), so the
+  numbers are defensible — the PropTech / applied-research direction (NYU Schack).
+
 ## C. Lifecycle / construction depth
 - ✅ Field capture (offline), module-log PDFs, closeout package ZIP, auto-TRIR, subject alias.
 - **C1 — Multi-period pay apps** (draws across periods, retainage release) + auto lien waivers.
