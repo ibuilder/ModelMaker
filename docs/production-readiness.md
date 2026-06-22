@@ -7,6 +7,15 @@ prioritized backlog. Sources: [FastAPI security](https://davidmuraya.com/blog/fa
 [FastAPI prod deploy](https://render.com/articles/fastapi-production-deployment-best-practices),
 [Vite build](https://v3.vitejs.dev/guide/build/), [Vite code-splitting](https://dev.to/markliu2013/vite-code-splitting-strategy-5a69).
 
+## Production status — ✅ shippable
+The production-*blocking* set is done: token/cookie-only identity (X-User impersonation closed) +
+auth-secret fail-safe, rate limiting, security headers (HSTS/COOP/COEP via the proxy), masked
+secrets, a guarded SQL console, PBKDF2 hashing, takeoff caching + a DB index, lazy-loaded viewer
+(~137 KB initial), modal focus-trap, signed auto-updating releases, and a **26/26 CI gate** plus a
+new **report-only dependency scan** (`.github/workflows/security.yml`: pip-audit + npm audit). See
+[deploy.md](deploy.md) for the go-live env checklist. Remaining items below are incremental polish,
+not blockers.
+
 ## Security
 
 ### ✅ Fixed in this pass

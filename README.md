@@ -92,26 +92,49 @@ A construction-management portal on top of the viewer — full writeup in
   3D model; clicking selects the element and opens the record. Same GUID keys geometry,
   BCF, and GC records.
 
-## Real-Estate Development Proforma
+## Real-Estate Development & Feasibility (Finance workspace)
 
-A development-finance engine for the owner/developer side (the **Finance** workspace):
+A developer/owner platform that goes **lot → building → deal → investor package**, all IFC-native.
 
-- **Generate from zoning** — a "🏗️ From zoning" panel turns a lot + zoning envelope into a
-  buildable program, a generated IFC massing model, and a **solved acquisition proforma** in one
-  click (*Estimate yield* previews it stateless; *Generate IFC model + apply* writes the model and
-  adopts the assumptions as the live deal). Lot → building → underwriting, IFC-native.
+**Generative design & Test Fit** (TestFit-style, but openBIM — every fit is a real IFC model):
+- **Generate from zoning** — lot + zoning envelope (FAR, setbacks, height, coverage) → a buildable
+  program + a from-scratch **IFC4** model (structural frame, per-unit spaces, facade + windows,
+  service core) + a solved acquisition proforma, one click. Real **lot polygons** (shoelace area).
+- **Test Fit** — fit a unit mix on a **double-loaded corridor** (real units + corridor), a **parking
+  solver** (stalls/unit → count/area/cost), **scheme compare** (units/efficiency/NSF/parking ranked),
+  and **generative optimize** that sweeps unit-mix × parking and ranks by **yield-on-cost** ("find the
+  deal that pencils"). `POST /test-fit/{compare,optimize}`.
+
+**Developer cost portal** — the institutional underwriting facets:
+- **Line-item hard/soft cost budgets** (description × $/unit × qty + per-category contingency) that
+  roll into the proforma cost tree.
+- **Sources & Uses** — grouped uses vs sized senior debt (LTC capped by LTV/DSCR/debt-yield) + equity.
+- **Property & tax assumptions** — parcel/areas/purchase + tax table → OPEX; per-SF ratios.
+- **Specialty assets** — on-site **energy** (solar/wind/battery/rainwater → capex + energy offset) and
+  **vertical-farm/PFAL** (tower count → produce revenue + lighting opex), flowing into the deal.
+- **Investment memo (PDF)** — a confidential memorandum (exec summary, S&U, cost budget, returns,
+  risk) generated from live project data: the "presentation with financials."
+
+**Underwriting engine:**
 - **Sources & uses** with construction-loan **interest-reserve circularity** solved to a fixed point.
-- **S-curve cost draws**, **XIRR / NPV / equity multiple / yield-on-cost**, and a **JV waterfall**
-  (pref + promote tiers, American/European, clawback) with nested IRR-hurdle solving.
-- **Debt sizing** to the lesser of LTC / LTV / DSCR / debt-yield; **sensitivity** two-variable
-  data tables and **Monte Carlo** risk (P5–P95, P[IRR ≥ target], histogram).
-- **Actuals/draws bridge** that re-forecasts IRR and generates AIA G702/G703 pay apps from the
-  *same* cost tree the deal was underwritten on.
-- **Multi-deal portfolio** roll-up (true XIRR across combined cash flows) and **LP-shared**
-  read-only scenario access.
+- **S-curve draws**, **XIRR / NPV / equity multiple / yield-on-cost**, a **JV waterfall** (pref +
+  promote tiers, American/European, clawback), **debt sizing** (LTC/LTV/DSCR/debt-yield), **sensitivity**
+  tables and **Monte Carlo** risk.
+- **Actuals/draws bridge** → re-forecast IRR + AIA G702/G703 pay apps off the *same* cost tree.
+- **Multi-deal portfolio** roll-up (true XIRR) and **LP-shared** read-only scenarios.
 
 ## Recent platform work
 
+- **Developer portal + Test Fit** — line-item hard/soft **cost budgets**, **Sources & Uses**,
+  **property/tax** assumptions, **specialty assets** (on-site energy + vertical-farm revenue), an
+  **investment-memo PDF**, plus **Test Fit** (corridor unit-mix layout, parking solver, scheme
+  compare, generative yield-on-cost optimize) and **real lot polygons** — see the
+  "Real-Estate Development & Feasibility" section. Each backed by tests in the CI gate.
+- **AI assistant** — natural-language **"Ask AI"** over a live project snapshot (Claude when keyed,
+  graceful rules fallback) alongside AI risk summaries + AI-drafted RFIs.
+- **Accounts & onboarding** — **SSO** (Google / Microsoft / Procore), a no-admin free-tier model,
+  first-run **welcome + skippable tour**, and **field capture** (offline photo → punchlist/observation,
+  syncs on reconnect) for the mobile/jobsite path.
 - **Generative massing + family library** — `aec_data.massing` turns a zoning envelope into a
   buildable program + a from-scratch **IFC4** model (`POST /projects/{id}/generate/massing`, plus a
   stateless `/generate/massing/preview`) and seeds a solved acquisition proforma; `aec_data.families`

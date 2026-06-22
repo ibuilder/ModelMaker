@@ -92,7 +92,18 @@ a11y pass. Plus: mobile (Capacitor) build hardening; RVT→IFC (APS) polish.
 
 ---
 
-## Near-term execution order
-**B2 Sources & Uses** → **B3 property/tax assumptions** → **A1 unit-mix configurator** →
-**A3 parking solver** → **A4 yield compare** → **A5 generative targets**. Each ships independently
-behind tests + a release.
+## Status & what's left
+The headline themes are **shipped** (v0.1.14): generative design + **Test Fit** (A1/A3/A4/A5/A6),
+the **developer/finance portal** (B1 budgets · B2 Sources & Uses · B3 property/tax · B4 specialty ·
+B5 investment memo), the full **lifecycle** (acquisition→turnover), **AI assistant**, **SSO**, and
+the production-blocking hardening (see [production-readiness.md](production-readiness.md) — now
+shippable). 26/26 CI gate + a report-only dependency scan.
+
+Remaining = incremental depth (not blockers), in rough priority:
+1. **Test Fit depth** — A2 egress/travel-distance, parking as real IFC geometry, true polygon-offset
+   footprint on the parcel; tie optimize's yield-on-cost to the live proforma vs the proxy.
+2. **Developer** — B6 pitch-deck (slide) variant of the memo; market/timeline sections.
+3. **Construction** — C1 multi-period pay-app accounting + lien waivers; C2 COBie field-enrichment;
+   C3 4D sequencing.
+4. **Platform** — main.ts account/connections split; dashboard JSON-extraction perf; Redis-backed
+   rate limits (multi-worker); a11y pass; mobile (Capacitor) build hardening; RVT→IFC (APS) polish.
