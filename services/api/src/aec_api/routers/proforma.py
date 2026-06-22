@@ -160,6 +160,22 @@ def put_specialty(pid: str, body: dict, db: Session = Depends(get_db)):
     return {"params": body, "summary": sp.summarize(body), "deltas": sp.to_proforma_deltas(body)}
 
 
+@router.get("/projects/{pid}/sources-uses")
+def get_sources_uses(pid: str, ltc: float = 0.65, rate: float = 0.075,
+                     construction_months: int = 18, lp_pct: float = 0.9,
+                     db: Session = Depends(get_db)):
+    """Sources & Uses built from the project's cost budget — grouped Uses (acquisition/hard/soft/
+    contingency + construction-loan interest) vs sized Sources (senior debt by LTC + LP/GP equity)."""
+    from .. import dev_budget as dvb, sources_uses as su
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    summary = dvb.summarize(p.dev_budget or dvb.starter_budget())
+    params = {"ltc": ltc, "rate": rate, "construction_months": construction_months, "lp_pct": lp_pct}
+    return su.build(summary, params)
+
+
 @router.get("/projects/{pid}/investment-memo.pdf")
 def investment_memo(pid: str, db: Session = Depends(get_db)):
     """Confidential investment memorandum (PDF) composed from live project data — executive summary,

@@ -56,6 +56,20 @@ with TestClient(app) as c:
     clr = c.get(f"/projects/{pid}/dev-budget/cost-lines").json()
     assert round(sum(x["amount"] for x in clr["cost_lines"]), 2) == s["grand_total"], clr
 
+    # --- Sources & Uses (built from the budget) ------------------------------
+    from aec_api import sources_uses as su  # noqa: E402
+    sub = su.build(s, {"ltc": 0.65, "rate": 0.075, "construction_months": 18, "lp_pct": 0.9})
+    assert sub["balanced"] and sub["total_uses"] == sub["total_sources"], sub
+    assert sub["total_uses"] > s["grand_total"], "financing interest should add to uses"
+    assert sub["debt"] + sub["equity"] == sub["total_sources"]
+    assert abs(sub["ltc"] - 0.65) < 0.02 and sub["binding_constraint"] == "LTC", sub
+    # DSCR cap can bind below LTC when NOI is tight
+    capped = su.build(s, {"ltc": 0.65, "rate": 0.075, "min_dscr": 1.25, "noi": 500_000})
+    assert capped["debt"] < sub["debt"] and capped["binding_constraint"] == "DSCR", capped
+    # endpoint
+    sue = c.get(f"/projects/{pid}/sources-uses").json()
+    assert sue["balanced"] and sue["total_uses"] == sue["total_sources"], sue
+
     # --- investment memo PDF -------------------------------------------------
     # no scenario yet → memo still renders (capital stack from the budget)
     m1 = c.get(f"/projects/{pid}/investment-memo.pdf")
@@ -75,4 +89,5 @@ with TestClient(app) as c:
 
 print(f"DEV-BUDGET OK - line totals + per-category contingency + grand ${s['grand_total']:,.0f}; "
       f"hard {s['hard_pct']*100:.0f}% / soft {s['soft_pct']*100:.0f}%; cost_lines reconcile; "
-      f"persisted via API; investment-memo PDF renders (no-scenario + with-scenario)")
+      f"persisted via API; Sources & Uses balances (debt+equity=uses); "
+      f"investment-memo PDF renders (no-scenario + with-scenario)")

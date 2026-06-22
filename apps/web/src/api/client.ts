@@ -725,6 +725,12 @@ export class ApiClient {
     return this.json<{ cost_lines: { category: string; name: string; amount: number; curve: string }[]; summary: DevBudgetSummary }>(
       `/projects/${pid}/dev-budget/cost-lines`);
   }
+  /** Sources & Uses built from the project's cost budget (grouped uses vs sized debt + equity). */
+  sourcesUses(pid: string) {
+    return this.json<{ uses: { label: string; amount: number }[]; sources: { label: string; amount: number }[];
+      total_uses: number; total_sources: number; ltc: number; debt: number; equity: number;
+      binding_constraint: string; balanced: boolean }>(`/projects/${pid}/sources-uses`);
+  }
   /** Specialty assets (on-site energy + vertical-farm/PFAL) params + computed summary + deltas. */
   specialty(pid: string) {
     return this.json<SpecialtyResponse>(`/projects/${pid}/specialty`);

@@ -102,6 +102,7 @@ export class ProformaUI {
     this.root.appendChild(form);
     this.renderMassing();
     this.renderBudget();
+    this.renderSourcesUses();
     this.renderSpecialty();
     this.renderModelLink();
     const out = document.createElement("div"); out.id = "pf-out";
@@ -219,6 +220,31 @@ export class ProformaUI {
     };
     btnRow.append(estBtn, genBtn); host.append(btnRow, out);
     this.root.appendChild(host);
+  }
+
+  /** Sources & Uses: the capital plan from the cost budget — grouped uses vs sized debt + equity. */
+  private renderSourcesUses() {
+    const host = document.createElement("div"); host.id = "pf-su";
+    host.style.cssText = "margin:8px 0;padding:8px 10px;border:1px dashed var(--line);border-radius:8px";
+    const pid = this.projectId();
+    host.innerHTML = `<div class="section-title" style="margin:0 0 6px">🏦 Sources &amp; Uses</div>`;
+    if (!pid) { host.insertAdjacentHTML("beforeend", `<div class="meta">Open a project to see the capital plan.</div>`); this.root.appendChild(host); return; }
+    const body = document.createElement("div"); body.innerHTML = `<div class="meta">loading…</div>`;
+    host.appendChild(body); this.root.appendChild(host);
+    void this.api.sourcesUses(pid).then((su) => {
+      const rows = (items: { label: string; amount: number }[]) =>
+        items.map((i) => `<tr><th style="text-align:left;font-weight:400">${i.label}</th><td style="text-align:right">${money(i.amount)}</td></tr>`).join("");
+      body.innerHTML =
+        `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">`
+        + `<div><div class="section-title" style="font-size:12px;margin:0 0 2px">Uses</div>`
+        + `<table class="sens-table" style="font-size:12px">${rows(su.uses)}`
+        + `<tr style="font-weight:700"><th style="text-align:left">Total uses</th><td style="text-align:right">${money(su.total_uses)}</td></tr></table></div>`
+        + `<div><div class="section-title" style="font-size:12px;margin:0 0 2px">Sources</div>`
+        + `<table class="sens-table" style="font-size:12px">${rows(su.sources)}`
+        + `<tr style="font-weight:700"><th style="text-align:left">Total sources</th><td style="text-align:right">${money(su.total_sources)}</td></tr></table></div>`
+        + `</div>`
+        + `<div class="meta" style="margin-top:6px">${(su.ltc * 100).toFixed(0)}% LTC · debt sized by ${su.binding_constraint} · ${su.balanced ? "✓ balanced" : "⚠ unbalanced"}</div>`;
+    }).catch(() => { body.innerHTML = `<div class="meta">Sources &amp; Uses unavailable — build a cost budget first.</div>`; });
   }
 
   /** Specialty assets: on-site energy (solar/wind/battery/rainwater) + vertical-farm (PFAL) tower
