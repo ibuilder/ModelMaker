@@ -86,6 +86,9 @@ with TestClient(app) as c:
     assert sc.status_code == 201, sc.text
     m2 = c.get(f"/projects/{pid}/investment-memo.pdf")
     assert m2.status_code == 200 and m2.content[:4] == b"%PDF", m2.status_code
+    # pitch-deck (slide) variant renders too
+    dk = c.get(f"/projects/{pid}/investment-deck.pdf")
+    assert dk.status_code == 200 and dk.content[:4] == b"%PDF" and len(dk.content) > 1500, (dk.status_code, len(dk.content))
 
 print(f"DEV-BUDGET OK - line totals + per-category contingency + grand ${s['grand_total']:,.0f}; "
       f"hard {s['hard_pct']*100:.0f}% / soft {s['soft_pct']*100:.0f}%; cost_lines reconcile; "

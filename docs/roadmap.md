@@ -102,7 +102,8 @@ shippable). 26/26 CI gate + a report-only dependency scan.
 Remaining = incremental depth (not blockers), in rough priority:
 1. **Test Fit depth** — A2 egress/travel-distance, parking as real IFC geometry, true polygon-offset
    footprint on the parcel; tie optimize's yield-on-cost to the live proforma vs the proxy.
-2. **Developer** — B6 pitch-deck (slide) variant of the memo; market/timeline sections.
+2. **Developer** — ✅ B6 pitch-deck (slide) variant shipped (`/investment-deck.pdf` + 📊 button);
+   next: market/timeline sections, property photos.
 3. **Construction** — C1 multi-period pay-app accounting + lien waivers; C2 COBie field-enrichment;
    C3 4D sequencing.
 4. **Platform** — main.ts account/connections split; dashboard JSON-extraction perf; Redis-backed

@@ -217,6 +217,20 @@ def investment_memo(pid: str, db: Session = Depends(get_db)):
                     headers={"Content-Disposition": f'inline; filename="investment-memo-{pid[:8]}.pdf"'})
 
 
+@router.get("/projects/{pid}/investment-deck.pdf")
+def investment_deck(pid: str, db: Session = Depends(get_db)):
+    """Pitch-deck (slide) variant of the investment memo — landscape, big numbers, the ask."""
+    from fastapi import Response
+    from .. import report
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    pdf = report.investment_deck_pdf(db, pid, p.name)
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="pitch-deck-{pid[:8]}.pdf"'})
+
+
 @router.get("/projects/{pid}/dev-budget/cost-lines")
 def dev_budget_cost_lines(pid: str, db: Session = Depends(get_db)):
     """The budget rolled into proforma cost_lines (the seed the Finance view applies)."""

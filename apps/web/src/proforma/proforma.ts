@@ -485,7 +485,10 @@ export class ProformaUI {
         const memo = document.createElement("button"); memo.className = "tool-btn"; memo.style.marginLeft = "6px";
         memo.textContent = "📄 Investment memo (PDF)"; memo.title = "Open a confidential investment memorandum generated from this project";
         memo.onclick = () => window.open(this.api.url(`/projects/${pid}/investment-memo.pdf`), "_blank");
-        const fwrap = document.createElement("div"); fwrap.style.marginTop = "6px"; fwrap.append(apply, memo);
+        const deck = document.createElement("button"); deck.className = "tool-btn"; deck.style.marginLeft = "6px";
+        deck.textContent = "📊 Pitch deck (PDF)"; deck.title = "Open a slide-style pitch deck generated from this project";
+        deck.onclick = () => window.open(this.api.url(`/projects/${pid}/investment-deck.pdf`), "_blank");
+        const fwrap = document.createElement("div"); fwrap.style.marginTop = "6px"; fwrap.append(apply, memo, deck);
         body.append(foot, fwrap);
       };
       paint(resp);
