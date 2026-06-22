@@ -122,6 +122,20 @@ if _have_ifc:
                   f"energy WWR {e['areas_m2']['window_wall_ratio']}, UA {e['ua_w_per_k']['total']} W/K")
         finally:
             os.remove(epath)
+
+        # --- service core + MEP risers (core=True) --------------------------
+        fd5, cpath = tempfile.mkstemp(suffix=".ifc"); os.close(fd5)
+        try:
+            massing.generate_ifc(m, cpath, name="Cored", core=True)
+            cm = open_model(cpath)
+            assert len(cm.by_type("IfcTransportElement")) == m["floors"], "elevator per floor"
+            assert len(cm.by_type("IfcStair")) == m["floors"], "stair per floor"
+            assert len(cm.by_type("IfcDuctSegment")) == m["floors"], "supply riser per floor"
+            assert len(cm.by_type("IfcPipeSegment")) == m["floors"], "plumbing riser per floor"
+            assert len(cm.by_type("IfcWall")) == 4 * m["floors"], "core walls"
+            print(f"CORE OK - elevator/stair + duct/pipe risers + core walls across {m['floors']} floors")
+        finally:
+            os.remove(cpath)
     finally:
         os.remove(path)
 else:

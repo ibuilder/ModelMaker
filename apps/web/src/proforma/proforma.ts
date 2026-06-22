@@ -162,6 +162,11 @@ export class ProformaUI {
     const envChk = document.createElement("input"); envChk.type = "checkbox";
     envWrap.append(envChk, document.createTextNode("Wrap in facade + windows (envelope @ 40% WWR)"));
     host.appendChild(envWrap);
+    const coreWrap = document.createElement("label");
+    coreWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin:4px 0;font-size:13px";
+    const coreChk = document.createElement("input"); coreChk.type = "checkbox";
+    coreWrap.append(coreChk, document.createTextNode("Add service core (elevator + stair + MEP risers)"));
+    host.appendChild(coreWrap);
 
     const params = (): MassingParams => {
       const p: MassingParams = { use_type: useSel.value as "residential" | "commercial", name: "Massing Study" };
@@ -173,6 +178,7 @@ export class ProformaUI {
       p.frame = frameChk.checked;
       p.units = unitChk.checked;
       p.envelope = envChk.checked;
+      p.core = coreChk.checked;
       return p;
     };
     const out = document.createElement("div"); out.style.marginTop = "6px";

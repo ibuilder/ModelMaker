@@ -52,6 +52,7 @@ class MassingIn(BaseModel):
     units: bool = Field(default=False)                        # subdivide floors into per-unit spaces
     envelope: bool = Field(default=False)                     # wrap floors in facade walls + windows
     wwr: float = Field(default=0.4, gt=0, le=0.95)            # window-to-wall ratio
+    core: bool = Field(default=False)                         # service core: shafts + stair + MEP risers
     # --- acquisition proforma seed ---
     land_cost: float = Field(default=2_500_000.0, ge=0)
     hard_cost_psf: float = Field(default=225.0, ge=0)         # $/sf GFA
@@ -122,10 +123,11 @@ def generate_massing(pid: str, body: MassingIn, db: Session = Depends(get_db),
     _IFC_DIR.joinpath(pid).mkdir(parents=True, exist_ok=True)
     ifc_path = _IFC_DIR / pid / "source.ifc"
     generate_ifc(metrics, str(ifc_path), name=body.name, frame=body.frame, bay=body.bay_m,
-                 units=body.units, envelope=body.envelope, wwr=body.wwr)
+                 units=body.units, envelope=body.envelope, wwr=body.wwr, core=body.core)
     metrics["framed"] = body.frame
     metrics["unitized"] = body.units
     metrics["enclosed"] = body.envelope
+    metrics["cored"] = body.core
     storage.put(f"{pid}/source.ifc", ifc_path.read_bytes())   # durable copy
     p.source_ifc = str(ifc_path)
     db.commit()

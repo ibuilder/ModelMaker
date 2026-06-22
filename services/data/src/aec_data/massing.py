@@ -67,7 +67,7 @@ def gridlines(extent: float, bay: float) -> list[float]:
 
 def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
                  frame: bool = False, bay: float = 7.5, units: bool = False,
-                 envelope: bool = False, wwr: float = 0.4) -> str:
+                 envelope: bool = False, wwr: float = 0.4, core: bool = False) -> str:
     """Write an IFC4 model: site → building → one storey + slab per level. Each floor gets either a
     single floor-plate space, or — with `units=True` — the floor subdivided into per-unit IfcSpaces
     (the proforma's unit count), so areas/COBie/rent are grounded in real apartments. With
@@ -156,6 +156,22 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
         rows = max(1, math.ceil(n / cols))
         return cols, rows
 
+    def add_box(cls, storey, elev, cx, cy, w, d, h, predefined=None, name=None):
+        """A vertical box element (cx,cy plan centre, extruded up by h) — for cores/MEP stubs."""
+        kw = {"predefined_type": predefined} if predefined else {}
+        try:
+            el = ifcopenshell.api.run("root.create_entity", model, ifc_class=cls,
+                                      name=name or cls.replace("Ifc", ""), **kw)
+        except Exception:                        # noqa: BLE001 — invalid predefined enum for this class
+            el = ifcopenshell.api.run("root.create_entity", model, ifc_class=cls, name=name or cls.replace("Ifc", ""))
+        m = np.eye(4); m[0, 3] = cx; m[1, 3] = cy; m[2, 3] = elev
+        ifcopenshell.api.run("geometry.edit_object_placement", model, product=el, matrix=m)
+        rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
+                                   profile=rect_profile(model, w, d), depth=h)
+        ifcopenshell.api.run("geometry.assign_representation", model, product=el, representation=rep)
+        ifcopenshell.api.run("spatial.assign_container", model, products=[el], relating_structure=storey)
+        return el
+
     def add_planar(cls, storey, elev, x1, y1, x2, y2, length_frac, depth, height, psets=None):
         """A vertical planar element (wall/window) along the x1y1->x2y2 edge: a rectangular profile
         (edge length × `depth`) extruded up by `height`, centred on the edge and rotated to it."""
@@ -238,5 +254,23 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
                     win.OverallHeight = max(0.3, f2f * float(wwr))
                 except Exception:                # noqa: BLE001 — attributes are optional
                     pass
+
+        if core:                               # service core: shafts + stair + MEP risers
+            cw, cd = min(7.0, fw * 0.4), min(5.0, fd * 0.5)
+            ccx, ccy = 0.0, fd / 2 - cd / 2 - 1.0    # core to the rear, off the facade
+            half_w, half_d = cw / 2, cd / 2
+            for (x1, y1, x2, y2) in [(ccx - half_w, ccy - half_d, ccx + half_w, ccy - half_d),
+                                     (ccx + half_w, ccy + half_d, ccx - half_w, ccy + half_d),
+                                     (ccx + half_w, ccy - half_d, ccx + half_w, ccy + half_d),
+                                     (ccx - half_w, ccy + half_d, ccx - half_w, ccy - half_d)]:
+                add_planar("IfcWall", storey, elev, x1, y1, x2, y2, 1.0, 0.2, f2f,
+                           psets={"Pset_WallCommon": {"IsExternal": False, "LoadBearing": True}})
+            add_box("IfcTransportElement", storey, elev, ccx - 1.4, ccy, 2.0, 2.4, f2f,
+                    predefined="ELEVATOR", name="Elevator")
+            add_box("IfcStair", storey, elev, ccx + 1.6, ccy, 2.6, cd * 0.8, f2f, name="Stair")
+            add_box("IfcDuctSegment", storey, elev, ccx - half_w + 0.4, ccy + half_d - 0.4,
+                    0.5, 0.5, f2f, name="Supply riser")
+            add_box("IfcPipeSegment", storey, elev, ccx + half_w - 0.4, ccy + half_d - 0.4,
+                    0.3, 0.3, f2f, name="Plumbing riser")
     model.write(out_path)
     return out_path
