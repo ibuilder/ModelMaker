@@ -77,18 +77,23 @@ hand. To carry a *real* tower to turnover it needs to be generated, not hand-pla
   rebar tonnes line items; finishes/MEP assemblies; per-CSI rollup into the budget module.*
 
 ### C. Construction depth
-- **Multi-period pay apps** — G702/G703 across draws (period N, retainage release), and **lien
-  waivers** auto-generated per pay app.
-- **Logs to PDF** — RFI log, submittal log, and the change-order log as printable registers.
-- **Field/mobile capture** — photo → daily report / punchlist with offline support (the Capacitor
-  scaffold exists). This is where GC adoption is won.
+- ✅ **DONE — Logs to PDF.** `GET /projects/{id}/modules/{key}/log.pdf` renders any module as a
+  printable register (RFI log, submittal log, change-order log, …) from the same engine —
+  ref/title/status/assignee. Verified (test_closeout).
+- **Multi-period pay apps** *(remaining)* — G702/G703 across draws (period N, retainage release) +
+  **lien waivers** auto-generated per pay app. (The single-period G702/G703 + SOV bridge already work;
+  this is the multi-draw accounting layer.)
+- **Field/mobile capture** *(remaining — separate app effort)* — photo → daily report / punchlist with
+  offline support (the Capacitor scaffold exists). Where GC adoption is won.
 
 ### D. Turnover completeness
-- **COBie should include the asset register + commissioning + warranty data**, not just spaces — the
-  closeout modules already capture it; wire it into the COBie export.
-- **Final completion package** — one ZIP: as-builts (IFC + drawings), O&M manuals, warranties, asset
-  register, completion certificate, final pay app.
-- **Warranty tracking** — start/expiry dates + reminders.
+- ✅ **DONE — Final completion package.** `GET /projects/{id}/closeout/package.zip` bundles the
+  as-built IFC, COBie / QTO / space-schedule workbooks, the status-report PDF, and a JSON manifest of
+  the closeout records (commissioning, O&M, warranties, as-builts, asset register, completion
+  certificate, punchlist). Verified (test_closeout: ZIP contents + manifest).
+- **COBie field enrichment** *(remaining)* — fold the asset register + commissioning + warranty data
+  into the COBie workbook tabs (today the package ships them as a separate manifest alongside COBie).
+- **Warranty tracking** *(remaining)* — start/expiry dates + reminders.
 
 ### E. Cross-cutting consistency ✅ DONE
 - ✅ **`subject` is now a universal title alias.** Modules name their title field differently
