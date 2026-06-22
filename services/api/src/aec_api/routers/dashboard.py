@@ -76,9 +76,15 @@ def safety_metrics(pid: str, hours: float | None = None, db: Session = Depends(g
         except (TypeError, ValueError):
             pass
     if hours is None:                              # derive man-hours from the logs if not supplied
-        def _sum(key, field):
-            return sum(float((x.get("data") or {}).get(field) or 0) for x in me.list_records(db, key, pid, limit=1_000_000))
-        hours = _sum("timesheet", "hours") + _sum("manpower_log", "hours")
+        SHIFT = 8.0                                # standard crew shift when a log gives headcount, not hours
+        hours = sum(float((x.get("data") or {}).get("hours") or 0)
+                    for x in me.list_records(db, "timesheet", pid, limit=1_000_000))
+        for x in me.list_records(db, "manpower_log", pid, limit=1_000_000):
+            d = x.get("data") or {}
+            h = float(d.get("hours") or 0)
+            if not h:                              # crew count × an 8h shift = man-hours for the day
+                h = float(d.get("count") or d.get("headcount") or 0) * SHIFT
+            hours += h
     trir = round(recordable * 200000 / hours, 2) if hours else None
     dart = round(lost_time * 200000 / hours, 2) if hours else None
     return {"incident_count": len(incs), "by_class": by_class, "recordable_count": recordable,

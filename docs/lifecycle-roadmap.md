@@ -90,13 +90,14 @@ hand. To carry a *real* tower to turnover it needs to be generated, not hand-pla
   register, completion certificate, final pay app.
 - **Warranty tracking** — start/expiry dates + reminders.
 
-### E. Cross-cutting consistency
-- **Module title-field inconsistency.** Modules use different required title fields — `subject`
-  (rfi/cor), `title` (submittal/as_built), `name` (om_manual/warranty/asset_register), `number`
-  (as_built), `system` (commissioning). Standardize on a primary title field (or add an alias the
-  create endpoint accepts) so integrations/scripts don't have to special-case each module.
-- **Safety TRIR/DART** reads as `None` until man-hours exist — auto-derive hours from timesheets +
-  manpower logs so the metric populates without separate entry.
+### E. Cross-cutting consistency ✅ DONE
+- ✅ **`subject` is now a universal title alias.** Modules name their title field differently
+  (`title`/`name`/`number`/`system`); `create_record` fills it from `subject` when absent, so
+  callers/scripts/integrations don't special-case each module. Verified (subject → om_manual `name`,
+  as_built `number`, commissioning `system`).
+- ✅ **Safety TRIR/DART auto-derives man-hours.** When `hours` isn't passed, hours = timesheet hours +
+  manpower-log (`count`/`headcount` × an 8h shift), so TRIR/DART populate from normal field logging.
+  Verified (20-crew log → 160 man-hours → TRIR computed).
 
 ## The artifact
 The end-to-end run saves the final model to **`samples/maple_tower.ifc`** — IFC4, metre-scale,
