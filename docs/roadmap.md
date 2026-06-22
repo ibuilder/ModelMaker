@@ -119,11 +119,12 @@ research at [VT Myers-Lawson](https://mlsoc.vt.edu/research.html) (lean construc
 [NYU Schack / PropTech](https://www.sps.nyu.edu/homepage/academics/executive-education/schack-institute-of-real-estate.html),
 and ASU.
 
-- **R1 — Form follows finance (the generative driver).** Willis: skyscraper form is a *financial*
-  product — set by rentable area, daylight, and code, not aesthetics. Make massing **finance-optimal**:
-  a **leasable-depth / daylight constraint** (historically ~25–30 ft from a window to the core),
-  **core-efficiency** (rentable ÷ gross) as an objective, and zoning-envelope + setback-driven form.
-  Wire it into Test Fit's optimize so the highest **rentable-yield** scheme wins (not just max FAR).
+- ✅ **DONE — R1 form follows finance (daylight-limited leasable depth).** `test_fit.layout()` caps
+  leasable depth at a daylight limit (~9 m / 25–30 ft from a window); space deeper earns no rent, so a
+  too-deep plate loses rentable area to a dark core and its **daylight efficiency (rentable ÷ gross)**
+  drops (verified: 40 m plate 43% vs 16 m plate 77%). Surfaced in the Test Fit compare table (Daylight
+  column + ⚠ on deep plates). *Next: make it an optimize objective + sweep plate depth; core-efficiency
+  for the elevator/stair core.*
 - **R2 — Construction as a vertical assembly line.** *Building the Empire State*: fast-track, a
   story-a-day, ~3,500 workers by trade, **just-in-time** steel delivery (no on-site storage),
   finished 45 days early. Model the schedule as a **takt / line-of-balance flow with production

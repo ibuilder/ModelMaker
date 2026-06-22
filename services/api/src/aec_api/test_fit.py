@@ -20,48 +20,52 @@ DEFAULT_MIX = [
 
 
 def layout(plate_w: float, plate_d: float, floors: int = 1, unit_types: list[dict] | None = None,
-           corridor_w: float = 1.8, efficiency_target: float = 0.85) -> dict[str, Any]:
-    """Double-loaded corridor fit on a plate_w × plate_d (m) plate. Returns placed units (metres,
-    centred at plate origin), corridor, and yield metrics (units, NSF/GSF, efficiency, mix)."""
+           corridor_w: float = 1.8, max_lease_depth_m: float = 9.0) -> dict[str, Any]:
+    """Double-loaded corridor fit on a plate_w × plate_d (m) plate. R1 (Willis, *Form Follows
+    Finance*): leasable depth is daylight-limited — space deeper than `max_lease_depth_m` (~25–30 ft)
+    from a window earns no rent, so a too-deep plate loses rentable area to a dark interior core.
+    Returns placed units (metres) + yield metrics incl. **daylight efficiency** (rentable ÷ gross)."""
     types = unit_types or DEFAULT_MIX
     total_pct = sum(t.get("mix_pct", 0) for t in types) or 1.0
-    bay_d = max(2.5, (plate_d - corridor_w) / 2)          # unit depth per side (m)
-    bay_d_sf = bay_d / 1  # depth in m; unit width derived from target area below
+    bay_d = max(2.5, (plate_d - corridor_w) / 2)          # geometric depth per side (m)
+    lease_d = min(bay_d, max_lease_depth_m)               # daylight-limited *leasable* depth (m)
     units: list[dict] = []
     by_type: dict[str, int] = {t["name"]: 0 for t in types}
 
-    # build a repeating sequence of unit *widths* weighted by mix; tile each side along X
+    # unit widths sized so width × leasable-depth ≈ target SF; tile each side along X
     seq: list[tuple[str, float]] = []
     for t in types:
-        w_m = max(2.5, (float(t["target_sf"]) / M2_TO_SF) / bay_d)   # width so width×depth = target SF
-        n = max(1, round((t.get("mix_pct", 0) / total_pct) * 12))    # weight in a 12-slot cycle
+        w_m = max(2.5, (float(t["target_sf"]) / M2_TO_SF) / lease_d)
+        n = max(1, round((t.get("mix_pct", 0) / total_pct) * 12))
         seq += [(t["name"], w_m)] * n
     if not seq:
         seq = [("Unit", 8.0)]
 
-    for side, y_sign in (("N", 1), ("S", -1)):
+    for _side, y_sign in (("N", 1), ("S", -1)):
         x = -plate_w / 2
         i = 0
-        cy = y_sign * (corridor_w / 2 + bay_d / 2)
+        cy = y_sign * (plate_d / 2 - lease_d / 2)          # units pulled to the facade (daylight)
         while True:
             name, w_m = seq[i % len(seq)]
             if x + w_m > plate_w / 2 + 0.01:
                 break
             units.append({"name": name, "cx": round(x + w_m / 2, 2), "cy": round(cy, 2),
-                          "w": round(w_m, 2), "d": round(bay_d, 2)})
+                          "w": round(w_m, 2), "d": round(lease_d, 2)})
             by_type[name] = by_type.get(name, 0) + 1
             x += w_m
             i += 1
 
     units_per_floor = len(units)
     total_units = units_per_floor * max(1, floors)
-    nsf_floor = sum(u["w"] * u["d"] for u in units) * M2_TO_SF
+    nsf_floor = sum(u["w"] * u["d"] for u in units) * M2_TO_SF   # rentable (daylight-aware)
     gsf_floor = plate_w * plate_d * M2_TO_SF
+    core_depth = round(max(0.0, plate_d - 2 * lease_d - corridor_w), 2)   # dark non-rentable strip
     by_type_total = {k: v * max(1, floors) for k, v in by_type.items()}
     return {
         "units": units,                                  # one floor's placed rects (metres)
         "corridor": {"w": corridor_w, "length": round(plate_w, 2)},
-        "bay_depth": round(bay_d, 2),
+        "bay_depth": round(bay_d, 2), "leasable_depth": round(lease_d, 2),
+        "daylight_limited": bay_d > max_lease_depth_m + 0.01, "core_depth_m": core_depth,
         "metrics": {
             "units_per_floor": units_per_floor,
             "total_units": total_units,
@@ -70,6 +74,7 @@ def layout(plate_w: float, plate_d: float, floors: int = 1, unit_types: list[dic
             "total_nsf": round(nsf_floor * max(1, floors)),
             "total_gsf": round(gsf_floor * max(1, floors)),
             "efficiency": round(nsf_floor / gsf_floor, 3) if gsf_floor else 0.0,
+            "daylight_efficiency": round(nsf_floor / gsf_floor, 3) if gsf_floor else 0.0,
             "avg_unit_sf": round(nsf_floor / units_per_floor) if units_per_floor else 0,
             "mix": by_type_total,
         },
@@ -146,6 +151,7 @@ def compare(plate_w: float, plate_d: float, floors: int, schemes: list[dict]) ->
         out.append({
             "name": sc.get("name", "Scheme"),
             "total_units": m["total_units"], "efficiency": m["efficiency"],
+            "daylight_efficiency": m["daylight_efficiency"], "daylight_limited": lay["daylight_limited"],
             "total_nsf": m["total_nsf"], "total_gsf": m["total_gsf"],
             "avg_unit_sf": m["avg_unit_sf"], "mix": m["mix"],
             "parking_stalls": pk["stalls"], "parking_area_sf": pk["area_sf"],
