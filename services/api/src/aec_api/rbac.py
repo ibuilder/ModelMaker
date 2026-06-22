@@ -22,6 +22,11 @@ from .models import ProjectMember
 ROLE_ORDER = {"viewer": 0, "reviewer": 1, "editor": 2, "admin": 3}
 RBAC_ON = os.environ.get("AEC_RBAC") == "1"
 API_KEY = os.environ.get("AEC_API_KEY")
+# The dev `X-User` header lets you act as any user without a token — convenient in dev, but an
+# impersonation hole in production. It is honored only when RBAC is off (dev/local) or explicitly
+# trusted via AEC_TRUST_XUSER=1 (used by the test suite). In production (RBAC on, flag unset) the
+# only trusted identity is a signed bearer token / cookie / API key.
+TRUST_XUSER = os.environ.get("AEC_TRUST_XUSER") == "1"
 # Single-operator desktop build (AEC_LOCAL_MODE=1): the local user owns the one site, so there
 # is no login and admin-only features (connections, settings, schedules) live in Settings,
 # ungated. The Pro/cloud build leaves this off and keeps the account + admin gates.
@@ -59,7 +64,10 @@ def current_user(x_user: str | None = Header(default=None),
         sub = auth.verify_token(aec_token)
         if sub:
             return _resolve_active(db, sub)
-    return x_user or "dev"
+    # no signed identity: trust the dev X-User header only in dev/test, never in production
+    if not RBAC_ON or TRUST_XUSER:
+        return x_user or "dev"
+    return "anonymous"          # non-member → no project role → 403 on protected routes
 
 
 def role_for(db: Session, project_id: str, user: str) -> str | None:

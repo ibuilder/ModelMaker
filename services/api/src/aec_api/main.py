@@ -46,6 +46,16 @@ async def _autosync_loop() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    # Production safety: tokens signed with the public dev secret are forgeable. Warn loudly when
+    # RBAC is on, and hard-fail when AEC_REQUIRE_SECRET=1 (set this in real deployments).
+    from . import auth, rbac
+    if auth.secret_is_default():
+        msg = ("AEC_AUTH_SECRET is not set — auth tokens are signed with a public dev secret and "
+               "are forgeable. Set AEC_AUTH_SECRET to a strong random value.")
+        if os.environ.get("AEC_REQUIRE_SECRET") == "1":
+            raise RuntimeError("refusing to start: " + msg)
+        if rbac.RBAC_ON:
+            logging.getLogger("aec").critical("SECURITY: %s", msg)
     task = asyncio.create_task(_autosync_loop()) if os.environ.get("AEC_AUTOSYNC", "1") == "1" else None
     try:
         yield

@@ -4,6 +4,7 @@ import os
 os.environ["DATABASE_URL"] = "sqlite:///./test_dash.db"
 os.environ["STORAGE_DIR"] = "./test_storage"
 os.environ["AEC_RBAC"] = "1"
+os.environ["AEC_TRUST_XUSER"] = "1"  # tests act as users via X-User
 
 for f in ("./test_dash.db",):
     if os.path.exists(f):

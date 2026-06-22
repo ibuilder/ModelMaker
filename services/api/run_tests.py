@@ -19,13 +19,13 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 TESTS = ["test_proforma", "test_cost", "test_modules", "test_dashboard",
          "test_rbac", "test_auth", "test_connections", "test_presence", "test_serving", "test_api",
-         "test_evidence_gate", "test_cpm", "test_estimate", "test_bidding", "test_safety", "test_portfolio", "test_templates", "test_versions", "test_generate", "test_sso", "test_ai", "test_closeout"]
+         "test_evidence_gate", "test_cpm", "test_estimate", "test_bidding", "test_safety", "test_portfolio", "test_templates", "test_versions", "test_generate", "test_sso", "test_ai", "test_closeout", "test_security"]
 
 
 def main() -> int:
     # api src + the data service src (analysis/export bridge), mirroring the runtime image
     pp = os.pathsep.join([str(HERE / "src"), str(HERE.parent / "data" / "src")])
-    base = {**os.environ, "PYTHONPATH": pp}
+    base = {**os.environ, "PYTHONPATH": pp, "AEC_TRUST_XUSER": "1"}
     results: list[tuple[str, bool, float]] = []
     for t in TESTS:
         if not (HERE / f"{t}.py").exists():

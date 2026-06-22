@@ -2,6 +2,7 @@
 import os
 
 os.environ["AEC_RBAC"] = "1"  # must be set before importing the app
+os.environ["AEC_TRUST_XUSER"] = "1"  # tests act as users via X-User
 os.environ["DATABASE_URL"] = "sqlite:///./rbac_test.db"
 os.environ["STORAGE_DIR"] = "./test_storage"
 for f in ("./rbac_test.db",):

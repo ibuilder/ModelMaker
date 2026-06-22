@@ -5,6 +5,7 @@ import os
 os.environ["DATABASE_URL"] = "sqlite:///./test_mod.db"
 os.environ["STORAGE_DIR"] = "./test_storage"
 os.environ["AEC_RBAC"] = "1"  # enforce roles + party gates
+os.environ["AEC_TRUST_XUSER"] = "1"  # tests act as users via X-User
 
 for f in ("./test_mod.db",):
     if os.path.exists(f):
