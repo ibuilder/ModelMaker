@@ -52,7 +52,12 @@ hand. To carry a *real* tower to turnover it needs to be generated, not hand-pla
    a "Subdivide floors into units" checkbox. Verified (test_massing: 65 unit spaces, 13/floor × 5
    floors, each with area). *Next: a real double-loaded corridor + core carve-out, and a unit-mix
    (studio/1BR/2BR) instead of uniform cells.*
-3. **Envelope** — curtain-wall / facade + windows per the WWR, so energy + elevations are real.
+3. ✅ **DONE — Envelope.** `generate_ifc(envelope=True, wwr=…)` wraps each floor in perimeter
+   facade `IfcWall`s (IsExternal) + ribbon `IfcWindow`s at the window-to-wall ratio. The energy model
+   reads the real exterior-wall + glazing areas (UA, EUI, WWR) and elevations show an enclosure.
+   Endpoint `envelope`/`wwr` + a "Wrap in facade + windows" checkbox. Verified (test_massing: 20
+   walls + 20 windows; energy WWR 0.36, UA 6318 W/K) and visually (the developed tower renders facade
+   + ribbon windows). *Next: real curtain-wall mullions, punched vs. ribbon options, spandrel/shading.*
 4. **Core & MEP stubs** — stairs, elevator shafts, risers, and major equipment (`IfcSpace` zones +
    placeholder `IfcFlowTerminal`/`IfcDistributionElement`) so coordination/clash has something to do.
 

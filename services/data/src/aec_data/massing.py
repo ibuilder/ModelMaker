@@ -66,11 +66,15 @@ def gridlines(extent: float, bay: float) -> list[float]:
 
 
 def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
-                 frame: bool = False, bay: float = 7.5, units: bool = False) -> str:
+                 frame: bool = False, bay: float = 7.5, units: bool = False,
+                 envelope: bool = False, wwr: float = 0.4) -> str:
     """Write an IFC4 model: site → building → one storey + slab per level. Each floor gets either a
     single floor-plate space, or — with `units=True` — the floor subdivided into per-unit IfcSpaces
     (the proforma's unit count), so areas/COBie/rent are grounded in real apartments. With
-    `frame=True`, also generate a concrete structural frame on a ~`bay`-metre column grid."""
+    `frame=True`, also generate a concrete structural frame on a ~`bay`-metre column grid. With
+    `envelope=True`, wrap each floor in perimeter facade walls + ribbon windows at the given
+    window-to-wall ratio `wwr` — so elevations show an enclosure and the energy model has real
+    exterior-wall + glazing areas."""
     import math
 
     import ifcopenshell
@@ -152,6 +156,25 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
         rows = max(1, math.ceil(n / cols))
         return cols, rows
 
+    def add_planar(cls, storey, elev, x1, y1, x2, y2, length_frac, depth, height, psets=None):
+        """A vertical planar element (wall/window) along the x1y1->x2y2 edge: a rectangular profile
+        (edge length × `depth`) extruded up by `height`, centred on the edge and rotated to it."""
+        length = math.hypot(x2 - x1, y2 - y1) or 1.0
+        ang = math.atan2(y2 - y1, x2 - x1)
+        c, s = math.cos(ang), math.sin(ang)
+        mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+        el = ifcopenshell.api.run("root.create_entity", model, ifc_class=cls, name=cls.replace("Ifc", ""))
+        m = np.array([[c, -s, 0, mx], [s, c, 0, my], [0, 0, 1, elev], [0, 0, 0, 1]], dtype=float)
+        ifcopenshell.api.run("geometry.edit_object_placement", model, product=el, matrix=m)
+        rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
+                                   profile=rect_profile(model, length * length_frac, depth), depth=height)
+        ifcopenshell.api.run("geometry.assign_representation", model, product=el, representation=rep)
+        ifcopenshell.api.run("spatial.assign_container", model, products=[el], relating_structure=storey)
+        for pset_name, props in (psets or {}).items():
+            ps = ifcopenshell.api.run("pset.add_pset", model, product=el, name=pset_name)
+            ifcopenshell.api.run("pset.edit_pset", model, pset=ps, properties=props)
+        return el
+
     gx = gridlines(fw, bay)
     gy = gridlines(fd, bay)
     for i in range(floors):
@@ -198,5 +221,22 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
             for x in gx:                       # beams along Y
                 for j in range(len(gy) - 1):
                     add_beam(storey, elev, x, gy[j], x, gy[j + 1])
+
+        if envelope:                           # perimeter facade walls + ribbon windows per floor
+            hw, hd = fw / 2, fd / 2
+            edges = [(-hw, -hd, hw, -hd), (hw, hd, -hw, hd),     # front, back (along X)
+                     (hw, -hd, hw, hd), (-hw, hd, -hw, -hd)]      # right, left (along Y)
+            sill = f2f * 0.1
+            for (x1, y1, x2, y2) in edges:
+                add_planar("IfcWall", storey, elev, x1, y1, x2, y2, 1.0, 0.2, f2f,
+                           psets={"Pset_WallCommon": {"IsExternal": True, "LoadBearing": False}})
+                win = add_planar("IfcWindow", storey, elev + sill, x1, y1, x2, y2, 0.9, 0.05,
+                                 max(0.3, f2f * float(wwr)))
+                length = math.hypot(x2 - x1, y2 - y1) or 1.0
+                try:
+                    win.OverallWidth = length * 0.9
+                    win.OverallHeight = max(0.3, f2f * float(wwr))
+                except Exception:                # noqa: BLE001 — attributes are optional
+                    pass
     model.write(out_path)
     return out_path

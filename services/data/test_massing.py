@@ -106,6 +106,22 @@ if _have_ifc:
             print(f"UNITS OK - {len(uspaces)} unit spaces ({upf}/floor x {m['floors']} floors), each with area")
         finally:
             os.remove(upath)
+
+        # --- envelope (facade walls + windows feed the energy model) --------
+        fd4, epath = tempfile.mkstemp(suffix=".ifc"); os.close(fd4)
+        try:
+            massing.generate_ifc(m, epath, name="Enclosed", envelope=True, wwr=0.4)
+            em = open_model(epath)
+            assert len(em.by_type("IfcWall")) == 4 * m["floors"], len(em.by_type("IfcWall"))
+            assert len(em.by_type("IfcWindow")) == 4 * m["floors"], len(em.by_type("IfcWindow"))
+            from aec_data import energy
+            e = energy.analyze_file(epath)
+            assert e["areas_m2"]["window"] > 0 and e["areas_m2"]["exterior_wall_net"] > 0, e["areas_m2"]
+            assert e["ua_w_per_k"]["total"] > 0, e["ua_w_per_k"]
+            print(f"ENVELOPE OK - {len(em.by_type('IfcWall'))} walls + {len(em.by_type('IfcWindow'))} windows; "
+                  f"energy WWR {e['areas_m2']['window_wall_ratio']}, UA {e['ua_w_per_k']['total']} W/K")
+        finally:
+            os.remove(epath)
     finally:
         os.remove(path)
 else:
