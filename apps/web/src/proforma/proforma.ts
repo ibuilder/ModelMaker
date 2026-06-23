@@ -187,6 +187,15 @@ export class ProformaUI {
     }
     host.appendChild(grid);
 
+    // shape: box (zoning massing) or a monolithic / earth dome (hemisphere by radius)
+    const domeWrap = document.createElement("label");
+    domeWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin:4px 0;font-size:13px";
+    const domeChk = document.createElement("input"); domeChk.type = "checkbox";
+    const domeR = document.createElement("input"); domeR.type = "number"; domeR.step = "0.5"; domeR.value = "8";
+    domeR.style.cssText = "width:60px"; domeR.title = "Dome radius (m)";
+    domeWrap.append(domeChk, document.createTextNode("Earth / monolithic dome (hemisphere, radius m:"), domeR, document.createTextNode(")"));
+    host.appendChild(domeWrap);
+
     // structural frame option — turns the massing into a real concrete frame (columns + beams)
     const frameWrap = document.createElement("label");
     frameWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin:4px 0;font-size:13px";
@@ -226,6 +235,7 @@ export class ProformaUI {
       p.envelope = envChk.checked;
       p.core = coreChk.checked;
       if (corrChk.checked) { p.units = true; p.unit_layout = "corridor"; }
+      if (domeChk.checked) { p.shape = "dome"; p.dome_radius = parseFloat(domeR.value) || 8; }
       return p;
     };
     const out = document.createElement("div"); out.style.marginTop = "6px";

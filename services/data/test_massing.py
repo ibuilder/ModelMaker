@@ -172,6 +172,22 @@ if _have_ifc:
         print("TAKEOFF CACHE OK - cache hit on repeat, invalidated on mtime change")
     finally:
         os.remove(path)
+
+    # --- earth dome: hemispherical shell renders + carries floor area ----
+    dfd, dpath = tempfile.mkstemp(suffix=".ifc"); os.close(dfd)
+    try:
+        massing.generate_dome_ifc(dpath, name="Earth Dome", radius=8.0)
+        dm = open_model(dpath)
+        assert len(dm.by_type("IfcRoof")) == 1 and len(dm.by_type("IfcTriangulatedFaceSet")) == 1, "dome shell"
+        assert len(dm.by_type("IfcSlab")) == 1 and len(dm.by_type("IfcSpace")) == 1, "floor + interior"
+        sh = ifcopenshell.geom.create_shape(ifcopenshell.geom.settings(), dm.by_type("IfcRoof")[0])
+        xs = sh.geometry.verts[0::3]
+        assert abs((max(xs) - min(xs)) - 16.0) < 0.5, f"dome span ~2r ({max(xs)-min(xs):.1f})"
+        met = massing.dome_metrics(8.0)
+        assert met["floors"] == 1 and abs(met["footprint_m2"] - 201.06) < 1, met   # π·8²
+        print(f"DOME OK - hemispherical shell ({len(sh.geometry.verts)//3} verts) + floor + interior; {met['buildable_gfa_sf']} sf")
+    finally:
+        os.remove(dpath)
 else:
     print("IFC round-trip SKIPPED (ifcopenshell not importable in this interpreter)")
 

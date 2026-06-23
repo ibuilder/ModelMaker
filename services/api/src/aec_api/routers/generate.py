@@ -34,6 +34,8 @@ class MassingIn(BaseModel):
     """Zoning envelope (metres) + acquisition assumptions for the starter proforma."""
     name: str = "Massing Study"
     use_type: str = "residential"          # residential | commercial
+    shape: str = "box"                     # box | dome (monolithic / earth dome house)
+    dome_radius: float = Field(default=8.0, gt=0)   # hemisphere radius (m), for shape="dome"
     # --- zoning envelope ---
     lot_width: float | None = Field(default=None, gt=0)
     lot_depth: float | None = Field(default=None, gt=0)
@@ -112,11 +114,32 @@ def generate_massing(pid: str, body: MassingIn, db: Session = Depends(get_db),
                      actor: str = Depends(require_role("editor"))):
     """Generate an IFC massing model from a zoning envelope, set it as the project's source IFC,
     publish it (off-thread), and return the buildable program + a starter acquisition proforma."""
-    from aec_data.massing import compute_massing, generate_ifc  # type: ignore
+    from aec_data.massing import compute_massing, dome_metrics, generate_dome_ifc, generate_ifc  # type: ignore
 
     p = db.get(Project, pid)
     if not p:
         raise HTTPException(404, "project not found")
+
+    _IFC_DIR.joinpath(pid).mkdir(parents=True, exist_ok=True)
+    ifc_path = _IFC_DIR / pid / "source.ifc"
+
+    if body.shape == "dome":
+        # monolithic / earth dome — hemispherical shell (no zoning math; sized by radius)
+        metrics = dome_metrics(body.dome_radius, body.efficiency, body.avg_unit_m2)
+        generate_dome_ifc(str(ifc_path), name=body.name, radius=body.dome_radius)
+        metrics["framed"] = metrics["unitized"] = metrics["enclosed"] = metrics["cored"] = False
+        metrics["structure"] = {"system": "Monolithic dome shell", "rationale":
+                                "A thin reinforced shell carries load in compression — no separate frame."}
+        storage.put(f"{pid}/source.ifc", ifc_path.read_bytes())
+        p.source_ifc = str(ifc_path)
+        db.commit()
+        audit.record(db, action="ifc.generate", actor=actor, method="POST",
+                     path=f"/projects/{pid}/generate/massing", detail=metrics)
+        db.commit()
+        _publish_bg(pid)
+        return {"metrics": metrics, "proforma": _proforma_seed(body, metrics),
+                "source_ifc": str(ifc_path), "publish": "running"}
+
     try:
         metrics = compute_massing(body.model_dump())
     except ValueError as e:
@@ -129,8 +152,6 @@ def generate_massing(pid: str, body: MassingIn, db: Session = Depends(get_db),
     members = {"slab_m": mm["slab"] / 1000, "column_m": mm["column"] / 1000,
                "beam_depth_m": mm["beam_depth"] / 1000, "beam_width_m": max(0.3, mm["beam_depth"] / 1000 * 0.6)}
 
-    _IFC_DIR.joinpath(pid).mkdir(parents=True, exist_ok=True)
-    ifc_path = _IFC_DIR / pid / "source.ifc"
     generate_ifc(metrics, str(ifc_path), name=body.name, frame=body.frame, bay=body.bay_m,
                  units=body.units, envelope=body.envelope, wwr=body.wwr, core=body.core,
                  unit_layout=body.unit_layout, members=members)

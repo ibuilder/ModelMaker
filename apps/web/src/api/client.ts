@@ -862,6 +862,7 @@ export interface MassingParams {
   efficiency?: number; avg_unit_m2?: number;
   frame?: boolean; bay_m?: number; units?: boolean; envelope?: boolean; wwr?: number; core?: boolean;
   unit_layout?: "grid" | "corridor";
+  shape?: "box" | "dome"; dome_radius?: number;
   land_cost?: number; hard_cost_psf?: number; rent_per_unit_month?: number; rent_psf_year?: number;
   exit_cap?: number; ltc?: number; rate?: number;
 }
