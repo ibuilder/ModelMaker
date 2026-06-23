@@ -56,6 +56,18 @@ with TestClient(app) as c:
     assert g7["line6_total_earned_less_retainage"] == 570000.0
     assert g7["line9_balance_to_finish_incl_retainage"] == round(1075000 - 570000, 2), g7
 
+    # ---- C1: retainage release (final app) — held retainage becomes due -----
+    g7r = c.get(f"/projects/{pid}/cost/g702", params={"app_no": 3, "release_retainage": True}).json()
+    assert g7r["retainage_released"] is True and g7r["line5_retainage"] == 0.0, g7r
+    assert g7r["line8_current_payment_due"] > g7["line8_current_payment_due"], "released retainage adds to due"
+
+    # ---- C1: multi-period roll-forward — this → prev, next period starts fresh
+    adv = c.post(f"/projects/{pid}/cost/advance-period").json()
+    assert adv["lines_advanced"] == 2, adv          # two lines had completed_this > 0
+    g3b = c.get(f"/projects/{pid}/cost/g703").json()
+    assert g3b["totals"]["this"] == 0.0, "completed_this reset after advancing"
+    assert g3b["totals"]["prev"] == 550000.0, "prior + this rolled into prev (stored stays separate)"
+
     # ---- Cost Summary -------------------------------------------------------
     s = c.get(f"/projects/{pid}/cost/summary").json()
     assert s["budget"] == 1075000.0, s            # SOV + approved CO

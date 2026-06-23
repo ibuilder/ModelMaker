@@ -24,9 +24,16 @@ def g703(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role(
 
 
 @router.get("/projects/{pid}/cost/g702")
-def g702(pid: str, app_no: int = 1, period: str | None = None,
+def g702(pid: str, app_no: int = 1, period: str | None = None, release_retainage: bool = False,
          db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
-    return cost.g702(db, pid, app_no, period)
+    return cost.g702(db, pid, app_no, period, release_retainage)
+
+
+@router.post("/projects/{pid}/cost/advance-period")
+def advance_period(pid: str, db: Session = Depends(get_db), user: str = Depends(require_role("editor"))):
+    """Close the current pay period (C1) — roll each SOV line's completed-this into completed-previous
+    so the next pay application starts a fresh period."""
+    return cost.advance_period(db, pid, user)
 
 
 @router.get("/projects/{pid}/cost/summary")

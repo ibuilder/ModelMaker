@@ -63,15 +63,17 @@ def g703(db: Session, pid: str) -> dict[str, Any]:
     return {"lines": lines, "totals": tot}
 
 
-def g702(db: Session, pid: str, app_no: int = 1, period: str | None = None) -> dict[str, Any]:
-    """AIA G702 Application & Certificate for Payment (lines 1-9)."""
+def g702(db: Session, pid: str, app_no: int = 1, period: str | None = None,
+         release_retainage: bool = False) -> dict[str, Any]:
+    """AIA G702 Application & Certificate for Payment (lines 1-9). `release_retainage` (final app):
+    the previously-held retainage is released — retainage held → 0 and the held amount becomes due."""
     sov = g703(db, pid)
     t = sov["totals"]
     original = t["scheduled"]
     co = change_order_total(db, pid)
     contract_to_date = round(original + co, 2)
     completed = t["completed"]
-    retainage = t["retainage"]
+    retainage = 0.0 if release_retainage else t["retainage"]
     earned_less_retainage = round(completed - retainage, 2)
     # previous certificates ≈ prior-period earned less retainage (from "completed_prev")
     prev = t["prev"]
@@ -80,7 +82,7 @@ def g702(db: Session, pid: str, app_no: int = 1, period: str | None = None) -> d
     current_due = round(earned_less_retainage - previous_certificates, 2)
     balance_to_finish = round(contract_to_date - earned_less_retainage, 2)
     return {
-        "application_no": app_no, "period": period,
+        "application_no": app_no, "period": period, "retainage_released": release_retainage,
         "line1_original_contract_sum": original,
         "line2_net_change_orders": co,
         "line3_contract_sum_to_date": contract_to_date,
@@ -91,6 +93,23 @@ def g702(db: Session, pid: str, app_no: int = 1, period: str | None = None) -> d
         "line8_current_payment_due": current_due,
         "line9_balance_to_finish_incl_retainage": balance_to_finish,
     }
+
+
+def advance_period(db: Session, pid: str, actor: str = "system") -> dict[str, Any]:
+    """Multi-period roll-forward (C1): close the current pay period — each SOV line's completed-this
+    rolls into completed-previous so the next application starts fresh, the way successive AIA pay
+    apps accumulate. Returns the count of lines advanced."""
+    from . import modules as me
+    n = 0
+    for r in _records(db, "sov", pid):
+        d = r["data"]
+        this = _n(d.get("completed_this"))
+        if this:
+            new_prev = round(_n(d.get("completed_prev")) + this, 2)
+            me.update_record(db, "sov", pid, r["id"],
+                             {"completed_prev": new_prev, "completed_this": 0}, actor, "GC")
+            n += 1
+    return {"lines_advanced": n}
 
 
 _RATE_LOOKUP = {  # tm line type -> (rate module, name field)
