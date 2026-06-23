@@ -799,6 +799,15 @@ export class ApiClient {
     if (storey) params.storey = storey;
     return this.editIfc(pid, "add_family", params, true);
   }
+  /** Import external IFC type content (manufacturer / 3rd-party families) from an uploaded IFC into
+   *  the project; imported types then appear in the place-family picker. */
+  async importFamilies(pid: string, file: File, publish = true) {
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(this.url(`/projects/${pid}/families/import?publish=${publish}`), {
+      method: "POST", body: fd, headers: this.authHeaders() });
+    if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || `import -> ${res.status}`); }
+    return res.json() as Promise<{ imported: { guid: string; name: string; ifc_class: string }[]; count: number; publish?: string }>;
+  }
   publish(pid: string) {
     return this.json<{ state: string }>(
       `/projects/${pid}/publish`, { method: "POST", body: JSON.stringify({ reconvert: true }) });

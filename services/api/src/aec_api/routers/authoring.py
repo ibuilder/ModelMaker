@@ -67,6 +67,35 @@ def family_catalog(_: str = Depends(current_user)):
     return {"count": len(items), "categories": cats}
 
 
+@router.post("/projects/{pid}/families/import")
+async def import_families(pid: str, file: UploadFile = File(...), publish: bool = False,
+                          db: Session = Depends(get_db),
+                          actor: str = Depends(require_role("editor"))):
+    """Import external IFC **type content** (manufacturer / 3rd-party families) from an uploaded IFC
+    into the project's source IFC, saving a new version. Imported types become placeable via the
+    place-family picker (GET /projects/{id}/types). GUIDs of existing elements are preserved."""
+    from aec_data import families  # type: ignore
+    from aec_data.ifc_loader import open_model  # type: ignore
+
+    p = _project(db, pid)
+    data = await file.read()
+    model = open_model(p.source_ifc)
+    imported = families.import_types_from_ifc(model, data)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    base_stem = re.sub(r"(_\d{14,20})+$", "", Path(p.source_ifc).stem)
+    out_path = str(Path(p.source_ifc).with_name(f"{base_stem}_{stamp}.ifc"))
+    model.write(out_path)
+    p.source_ifc = out_path
+    result = {"imported": imported, "count": len(imported)}
+    audit.record(db, action="ifc.import_families", actor=actor, method="POST",
+                 path=f"/projects/{pid}/families/import", detail=result)
+    db.commit()
+    if publish and imported:           # only worth a reconvert if something actually came in
+        _publish_bg(pid)
+        result["publish"] = "running"
+    return result
+
+
 @router.post("/projects/{pid}/edit")
 def edit(pid: str, recipe: str = Body(...), params: dict = Body(default={}),
          publish: bool = Body(default=False), db: Session = Depends(get_db),

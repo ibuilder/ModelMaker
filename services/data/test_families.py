@@ -78,14 +78,45 @@ if _have_ifc:
         except ValueError:
             pass
 
+        # --- import external IFC type content (manufacturer/3rd-party families) ------------------
+        import ifcopenshell
+        import ifcopenshell.api
+        lib = ifcopenshell.file(schema="IFC4")
+        ifcopenshell.api.run("root.create_entity", lib, ifc_class="IfcProject", name="Vendor lib")
+        ifcopenshell.api.run("unit.assign_unit", lib)
+        lctx = ifcopenshell.api.run("context.add_context", lib, context_type="Model")
+        lbody = ifcopenshell.api.run("context.add_context", lib, context_type="Model",
+                                     context_identifier="Body", target_view="MODEL_VIEW", parent=lctx)
+        for nm in ("Acme Task Chair", "Acme Desk 1600"):
+            vt = ifcopenshell.api.run("root.create_entity", lib, ifc_class="IfcFurnitureType", name=nm)
+            vpos = lib.create_entity("IfcAxis2Placement2D", Location=lib.create_entity("IfcCartesianPoint", (0., 0.)),
+                                     RefDirection=lib.create_entity("IfcDirection", (1., 0.)))
+            vpr = lib.create_entity("IfcRectangleProfileDef", ProfileType="AREA", Position=vpos, XDim=0.6, YDim=0.6)
+            vrep = ifcopenshell.api.run("geometry.add_profile_representation", lib, context=lbody, profile=vpr, depth=0.9)
+            ifcopenshell.api.run("geometry.assign_representation", lib, product=vt, representation=vrep)
+        ifcopenshell.api.run("root.create_entity", lib, ifc_class="IfcFurnitureType")  # nameless → skipped
+
+        types_before = len(model.by_type("IfcTypeProduct"))
+        imp = families.import_types_from_ifc(model, lib)
+        assert len(imp) == 2, imp                                  # 2 named types, nameless skipped
+        assert {i["name"] for i in imp} == {"Acme Task Chair", "Acme Desk 1600"}, imp
+        assert all(i["guid"] and i["ifc_class"] == "IfcFurnitureType" for i in imp), imp
+        assert len(model.by_type("IfcTypeProduct")) == types_before + 2, "imported types added"
+        # an imported type is placeable via the normal place_type flow (by its GUID)
+        from aec_data.edit import place_type
+        gimp = place_type(model, imp[0]["guid"], None, [4.0, 4.0])
+        assert gimp, "imported family not placeable"
+        # re-importing is idempotent (dedup by class+name)
+        assert families.import_types_from_ifc(model, lib) == [], "re-import should add nothing"
+
         # round-trips through a write/read
         out_fd, out = tempfile.mkstemp(suffix=".ifc"); os.close(out_fd)
         try:
             model.write(out)
             rt = open_model(out)
-            assert len(rt.by_type("IfcFurniture")) == 5, len(rt.by_type("IfcFurniture"))
+            assert len(rt.by_type("IfcFurniture")) == 6, len(rt.by_type("IfcFurniture"))
             print(f"FAMILIES OK - {len(cat)} catalog entries; placed occurrences + a parametric variant "
-                  f"({len(rt.by_type('IfcTypeProduct')) - before_types} new types) into a generated model, round-tripped")
+                  f"+ imported 2 external types ({len(rt.by_type('IfcTypeProduct')) - before_types} new types), round-tripped")
         finally:
             os.remove(out)
     finally:

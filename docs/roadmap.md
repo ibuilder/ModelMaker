@@ -184,8 +184,11 @@ material info). Grounded in: [IfcMaterial layer sets](https://forums.buildingsma
   U-value and schedules. ✅ **Family library** also expanded — [families.py](../services/data/src/aec_data/families.py)
   now offers 37 placeable types across Furniture / Sanitary / Appliance / **Lighting / MEP / Structural /
   Transport** / Plant, each **parametric**: a `dims` override places a distinctly-named, correctly-sized
-  **type variant** (Revit-style type families); new classes carry palette colours. *Next: **import of
-  external IFC type content** (drop in manufacturer/3rd-party IFC families).*
+  **type variant** (Revit-style type families); new classes carry palette colours. ✅ **Import of
+  external IFC type content** also shipped — `families.import_types_from_ifc` copies every
+  IfcTypeProduct (with geometry) from an uploaded manufacturer/3rd-party IFC into the project via
+  `project.append_asset` (deduped, then placeable); exposed at `POST /projects/{id}/families/import`
+  and as *"⇪ Import IFC families…"* in the authoring panel. **M3 is complete.**
 - ✅ **DONE (M4 start) — computational graph** (Dynamo/Hypar-style, zero-touch). `compute_graph.py`
   exposes the pure engines as **nodes** (params→input ports, dict return→output ports) + an executor:
   `GET /compute/nodes` (palette) and `POST /compute/graph` run a {nodes, edges} graph in dependency
