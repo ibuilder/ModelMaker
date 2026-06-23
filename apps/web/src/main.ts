@@ -161,14 +161,24 @@ for (const it of RAIL_ITEMS) {
 
 const WORKSPACES: { key: string; label: string }[] = [
   { key: "model", label: "Model" }, { key: "drawings", label: "Drawings" },
+  { key: "studio", label: "Studio" },
   { key: "construction", label: "Construction" }, { key: "finance", label: "Finance" },
 ];
+let studioUI: import("./studio/nodeEditor").NodeEditor | null = null;
+async function openStudioTab() {
+  if (!studioUI) {
+    const { NodeEditor } = await import("./studio/nodeEditor");   // lazy — only when Studio is opened
+    studioUI = new NodeEditor($("panel-studio"), api, setStatus);
+  }
+  await studioUI.mount();
+}
 let currentWs = "model";
 function setWorkspace(key: string) {
   currentWs = key;
   document.querySelectorAll(".ws-btn").forEach((b) => b.classList.toggle("active", (b as HTMLElement).dataset.ws === key));
   document.querySelectorAll(".workspace").forEach((w) => w.classList.toggle("active", w.id === `ws-${key}`));
   if (key === "drawings") openDrawingsTab();
+  if (key === "studio") void openStudioTab();
   if (key === "construction") openPortalTab();
   if (key === "finance") openProformaTab();
   if (key === "model") void ensureViewer().then((v) => v.onModelShown());   // lazy-load the 3D app
@@ -202,10 +212,10 @@ document.querySelectorAll<HTMLButtonElement>(".fintab").forEach((t) => {
 interface PersonaCfg { ws: string[] | null; rail: string[] | null; home: string; }
 const PERSONAS: Record<string, PersonaCfg> = {
   all:           { ws: null, rail: null, home: "model" },
-  developer:     { ws: ["finance", "model", "drawings", "construction"], rail: ["issues", "tools", "tree"], home: "finance" },
+  developer:     { ws: ["finance", "model", "studio", "drawings", "construction"], rail: ["issues", "tools", "tree"], home: "finance" },
   gc:            { ws: ["construction", "model", "drawings", "finance"], rail: ["tree", "layers", "issues", "tools"], home: "construction" },
-  architect:     { ws: ["model", "drawings", "construction"], rail: ["tree", "layers", "issues", "tools"], home: "model" },
-  engineer:      { ws: ["model", "drawings"], rail: ["tree", "layers", "tools", "issues"], home: "model" },
+  architect:     { ws: ["model", "studio", "drawings", "construction"], rail: ["tree", "layers", "issues", "tools"], home: "model" },
+  engineer:      { ws: ["model", "studio", "drawings"], rail: ["tree", "layers", "tools", "issues"], home: "model" },
   subcontractor: { ws: ["construction", "model", "drawings"], rail: ["issues", "tools"], home: "construction" },
 };
 const personaSel = document.getElementById("persona") as HTMLSelectElement;

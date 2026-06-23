@@ -812,6 +812,15 @@ export class ApiClient {
     return this.json<{ state: string }>(
       `/projects/${pid}/publish`, { method: "POST", body: JSON.stringify({ reconvert: true }) });
   }
+  /** Computational-graph (M4) node palette — each node's input/output ports for the visual editor. */
+  computeNodes() {
+    return this.json<{ nodes: ComputeNodeSpec[] }>("/compute/nodes");
+  }
+  /** Run a {nodes, edges} compute graph; returns each node's outputs + the execution order. */
+  runGraph(graph: ComputeGraph) {
+    return this.json<{ order: string[]; results: Record<string, Record<string, unknown>>; node_count: number }>(
+      "/compute/graph", { method: "POST", body: JSON.stringify(graph) });
+  }
   publishStatus(pid: string) {
     return this.json<{ state: "idle" | "running" | "done" | "error"; detail?: Record<string, unknown> }>(
       `/projects/${pid}/publish/status`);
@@ -862,6 +871,15 @@ export interface SpecialtyResponse {
 }
 export interface FamilyItem {
   key: string; label: string; ifc_class: string; category: string; dims: [number, number, number];
+}
+export interface ComputeNodeSpec {
+  key: string; label: string; category: string; doc: string;
+  inputs: { name: string; default: number | string | null }[];
+  outputs: string[];
+}
+export interface ComputeGraph {
+  nodes: { id: string; type: string; params: Record<string, number | string> }[];
+  edges: { from: string; from_port: string; to: string; to_port: string }[];
 }
 export interface MassingParams {
   name?: string; use_type?: "residential" | "commercial";

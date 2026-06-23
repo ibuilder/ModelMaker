@@ -460,3 +460,39 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
   #panel-portal, #ws-construction { overflow-x: auto; }
   .result-card { max-height: 88vh; }
 }
+
+/* ---- Studio: visual computational node graph (M4) ------------------------- */
+.studio { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.studio-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.studio-body { flex: 1; display: flex; min-height: 0; }
+.studio-palette { width: 190px; border-right: 1px solid var(--line); overflow-y: auto; padding: 8px; background: var(--panel2); }
+.studio-pal-cat { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 10px 2px 4px; }
+.studio-pal-node { display: block; width: 100%; text-align: left; margin: 3px 0; padding: 6px 8px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--control); color: var(--text); cursor: pointer; font-size: 12px; }
+.studio-pal-node:hover { background: var(--control-hover); border-color: var(--accent); }
+.studio-canvas { flex: 1; overflow: auto; position: relative; background:
+  radial-gradient(var(--line) 1px, transparent 1px) 0 0 / 22px 22px; }
+.studio-content { position: relative; width: 2600px; height: 1700px; }
+.studio-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.studio-edge { fill: none; stroke: var(--accent); stroke-width: 2; opacity: .8; pointer-events: stroke; cursor: pointer; }
+.studio-edge:hover { stroke-width: 3.5; opacity: 1; }
+.studio-node { position: absolute; width: 220px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: 0 4px 16px #0006; font-size: 12px; }
+.studio-node-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; cursor: grab;
+  padding: 6px 8px; background: var(--accent-soft); border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; font-weight: 600; }
+.studio-node-head:active { cursor: grabbing; }
+.studio-x { border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; }
+.studio-x:hover { color: var(--text); }
+.studio-row { display: flex; align-items: center; gap: 6px; padding: 3px 8px; position: relative; }
+.studio-row-out { justify-content: flex-end; }
+.studio-port-label { color: var(--muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.studio-row-out .studio-port-label { flex: 0 0 auto; }
+.studio-field { width: 64px; background: var(--control); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; }
+.studio-field:disabled { opacity: .5; }
+.studio-out-val { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: auto; }
+.studio-dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--accent); background: var(--panel); cursor: pointer; flex: 0 0 auto; }
+.studio-dot-in { margin-left: -13px; }
+.studio-dot-out { margin-right: -13px; background: var(--accent); }
+.studio-dot:hover { transform: scale(1.3); }
+.studio-dot.active { background: #ffb000; border-color: #ffb000; }
+.studio-status { padding: 6px 12px; border-top: 1px solid var(--line); background: var(--panel); }
