@@ -10,9 +10,11 @@ from aec_data import families, massing  # noqa: E402
 
 # --- catalog contract --------------------------------------------------------
 cat = families.catalog()
-assert len(cat) >= 12, len(cat)
+assert len(cat) >= 25, len(cat)
 cats = {c["category"] for c in cat}
-assert {"Furniture", "Sanitary", "Appliance", "Plant"} <= cats, cats
+assert {"Furniture", "Sanitary", "Appliance", "Plant",
+        "Lighting", "MEP", "Structural"} <= cats, cats
+assert len({c["key"] for c in cat}) == len(cat), "catalog keys must be unique"
 for c in cat:
     assert c["key"] and c["label"] and c["ifc_class"].startswith("Ifc") and len(c["dims"]) == 3, c
 
@@ -56,13 +58,33 @@ if _have_ifc:
         assert len(model.by_type("IfcTypeProduct")) == before_types + 5, "desk type should be reused"
         assert len(model.by_type("IfcFurniture")) == 3, "second desk occurrence"
 
+        # --- parametric type variant: a custom-sized desk is a NEW, distinctly-named type --------
+        gv = families.add_family(model, "desk", position=[7.0, 7.0], dims=[2.0, 0.8, 0.75])
+        assert gv, "parametric desk returned no GUID"
+        assert len(model.by_type("IfcTypeProduct")) == before_types + 6, "sized variant is a new type"
+        variant = ue.get_type(next(e for e in model.by_type("IfcFurniture") if e.GlobalId == gv))
+        assert variant.Name == "Desk 2×0.8×0.75 m", variant.Name        # Revit-style sized name
+        # the variant's geometry is actually 2.0 m wide (parametric sizing took effect)
+        import ifcopenshell.geom
+        sh = ifcopenshell.geom.create_shape(ifcopenshell.geom.settings(),
+                                            next(e for e in model.by_type("IfcFurniture") if e.GlobalId == gv))
+        xs = sh.geometry.verts[0::3]
+        assert abs((max(xs) - min(xs)) - 2.0) < 0.05, f"variant width {max(xs)-min(xs):.3f} m ≠ 2.0"
+        # re-placing the same size reuses the variant; bad dims are rejected
+        families.add_family(model, "desk", position=[8.0, 8.0], dims=[2.0, 0.8, 0.75])
+        assert len(model.by_type("IfcTypeProduct")) == before_types + 6, "same-size variant reused"
+        try:
+            families.add_family(model, "desk", dims=[0, 1, 1]); assert False, "expected ValueError"
+        except ValueError:
+            pass
+
         # round-trips through a write/read
         out_fd, out = tempfile.mkstemp(suffix=".ifc"); os.close(out_fd)
         try:
             model.write(out)
             rt = open_model(out)
-            assert len(rt.by_type("IfcFurniture")) == 3
-            print(f"FAMILIES OK - {len(cat)} catalog entries; placed 6 occurrences "
+            assert len(rt.by_type("IfcFurniture")) == 5, len(rt.by_type("IfcFurniture"))
+            print(f"FAMILIES OK - {len(cat)} catalog entries; placed occurrences + a parametric variant "
                   f"({len(rt.by_type('IfcTypeProduct')) - before_types} new types) into a generated model, round-tripped")
         finally:
             os.remove(out)
