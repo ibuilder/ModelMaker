@@ -46,6 +46,10 @@ class LocalBackend:
     def size(self, key: str) -> int:
         return self._p(key).stat().st_size
 
+    def version(self, key: str) -> str:
+        st = self._p(key).stat()
+        return f'"{st.st_size:x}-{int(st.st_mtime):x}"'   # cheap, changes whenever the file is rewritten
+
     def get_range(self, key: str, start: int, end: int) -> bytes:
         with open(self._p(key), "rb") as fh:
             fh.seek(start)
@@ -91,6 +95,10 @@ class S3Backend:
     def size(self, key: str) -> int:
         return self.client.head_object(Bucket=self.bucket, Key=key)["ContentLength"]
 
+    def version(self, key: str) -> str:
+        h = self.client.head_object(Bucket=self.bucket, Key=key)
+        return (h.get("ETag") or f'"{h["ContentLength"]:x}"').strip('"').join('""')
+
     def get_range(self, key: str, start: int, end: int) -> bytes:
         obj = self.client.get_object(Bucket=self.bucket, Key=key, Range=f"bytes={start}-{end}")
         return obj["Body"].read()
@@ -131,6 +139,15 @@ def delete(key: str) -> None:
 
 def size(key: str) -> int:
     return backend().size(key)
+
+
+def version(key: str) -> str:
+    """A cheap content validator (ETag value) — changes when the object is rewritten."""
+    b = backend()
+    try:
+        return b.version(key)              # type: ignore[attr-defined]
+    except AttributeError:
+        return f'"{b.size(key):x}"'        # fallback: size only
 
 
 def path(key: str) -> Path:

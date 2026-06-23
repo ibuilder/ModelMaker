@@ -12,13 +12,22 @@ _RANGE = re.compile(r"bytes=(\d*)-(\d*)")
 
 
 def range_response(request: Request, key: str, media_type: str,
-                   filename: str | None = None, disposition: str = "inline") -> Response:
+                   filename: str | None = None, disposition: str = "inline",
+                   immutable: bool = True) -> Response:
     if not storage.exists(key):
         raise HTTPException(404, f"not found: {key}")
     total = storage.size(key)
-    headers = {"Accept-Ranges": "bytes", "Cache-Control": "public, max-age=31536000, immutable"}
+    etag = storage.version(key)
+    # `immutable` for assets that never change at a URL; otherwise revalidate so a republished model
+    # (stable URL, new bytes) is refetched — a 304 keeps re-opens instant *and* correct.
+    cache = "public, max-age=31536000, immutable" if immutable else "public, max-age=0, must-revalidate"
+    headers = {"Accept-Ranges": "bytes", "Cache-Control": cache, "ETag": etag}
     if filename:
         headers["Content-Disposition"] = f'{disposition}; filename="{filename}"'
+
+    inm = request.headers.get("if-none-match") or request.headers.get("If-None-Match")
+    if inm and etag in [t.strip() for t in inm.split(",")]:   # conditional GET → 304, no body re-sent
+        return Response(status_code=304, headers=headers)
 
     rng = request.headers.get("range") or request.headers.get("Range")
     if rng:

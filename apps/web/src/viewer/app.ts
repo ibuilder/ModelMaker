@@ -16,7 +16,7 @@ import { OriginTool } from "../tools/origin";
 import { buildTree } from "../tree/tree";
 import { PinOverlay, restoreCamera } from "../pins/pins";
 import { type ApiClient, type ElementProps, type Topic } from "../api/client";
-import { toast, withLoading } from "../ui/feedback";
+import { fetchArrayBufferWithProgress, setLoadingLabel, toast, withLoading } from "../ui/feedback";
 import { showResult, kvTable, metricGrid, resultNote } from "../ui/result";
 
 /** View options the settings bar owns (in main) and the viewer applies. */
@@ -207,9 +207,13 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   }
   async function loadSample(file: string, label: string) {
     await withLoading(container, `loading ${label}`, async () => {
-      const res = await fetch(import.meta.env.BASE_URL + file.replace(/^\//, ""));   // respect the deploy base
-      if (!res.ok) throw new Error(`${label} not found`);
-      await loader.loadFragments(await res.arrayBuffer(), nextId(label));
+      const mb = (n: number) => (n / 1048576).toFixed(1);
+      const buffer = await fetchArrayBufferWithProgress(
+        import.meta.env.BASE_URL + file.replace(/^\//, ""), {},   // respect the deploy base
+        (loaded, total) => setLoadingLabel(container,
+          `downloading ${label} ${Math.round(loaded / total * 100)}% (${mb(loaded)}/${mb(total)} MB)`));
+      setLoadingLabel(container, "preparing geometry…");
+      await loader.loadFragments(buffer, nextId(label));
       await fitToModels();
       notify(`loaded ${label}`, "success");
     });
@@ -595,18 +599,25 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   }
   async function loadProjectModel(): Promise<boolean> {
     if (!projectId) return false;
-    try {
-      const res = await fetch(api.url(`/projects/${projectId}/model.frag`), { headers: api.authHeaders() });
-      if (!res.ok) return false;
+    return (await withLoading(container, "loading model", async () => {
+      const mb = (n: number) => (n / 1048576).toFixed(1);
+      let buffer: ArrayBuffer;
+      try {
+        buffer = await fetchArrayBufferWithProgress(
+          api.url(`/projects/${projectId}/model.frag`), { headers: api.authHeaders() },
+          (loaded, total) => setLoadingLabel(container,
+            `downloading model ${Math.round(loaded / total * 100)}% (${mb(loaded)}/${mb(total)} MB)`));
+      } catch { return false; }                 // no published model yet
       await loader.disposeAll();
       modelLabels.clear();
       const id = `project-${projectId}`;
       modelLabels.set(id, ctx.projectName || "project");
-      await loader.loadFragments(await res.arrayBuffer(), id);
+      setLoadingLabel(container, "preparing geometry…");
+      await loader.loadFragments(buffer, id);
       refreshFederation();
       await fitToModels();
       return true;
-    } catch { return false; }
+    })) ?? false;
   }
   function screenToGround(e: MouseEvent): THREE.Vector3 | null {
     const dom = viewer.world.renderer!.three.domElement;
