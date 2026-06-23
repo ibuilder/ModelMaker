@@ -1,6 +1,11 @@
 # AEC BIM Platform + GC Portal
 
 [![CI](https://github.com/ibuilder/ModelMaker/actions/workflows/ci.yml/badge.svg)](https://github.com/ibuilder/ModelMaker/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ibuilder/ModelMaker?label=release&color=4a8cff)](https://github.com/ibuilder/ModelMaker/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ibuilder/ModelMaker/total?color=33d17a)](https://github.com/ibuilder/ModelMaker/releases)
+![Platforms](https://img.shields.io/badge/desktop-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-555)
+![IFC-native](https://img.shields.io/badge/IFC-native-4a8cff)
+[![Live demo](https://img.shields.io/badge/demo-in%20browser-33d17a)](https://ibuilder.github.io/ModelMaker/app/)
 
 A standalone, open, web-based **BIM viewer + data + coordination platform** for AEC firms,
 built on the IfcOpenShell / That Open (Fragments) ecosystem, **plus a general-contracting
@@ -20,6 +25,8 @@ drives) — no proprietary format, no per-seat license.
 📄 **Project page:** [ibuilder.github.io/ModelMaker](https://ibuilder.github.io/ModelMaker/) — overview + how to run it.
 🧊 **Live viewer demo:** [ibuilder.github.io/ModelMaker/app/](https://ibuilder.github.io/ModelMaker/app/) — the BIM viewer running in-browser (no backend) on bundled sample models.
 
+![Generate a building from a zoning envelope, then underwrite the deal](docs/img/generate-build.gif)
+
 ## The whole lifecycle, on one model
 
 The market is a patchwork of point tools — feasibility in one, BIM in another, construction
@@ -27,6 +34,18 @@ management in a third. This spans **acquisition → turnover** on a single IFC-k
 competitors each cover only one slice:
 
 ![Lifecycle coverage — one IFC model spans acquisition, feasibility, design, preconstruction, construction and turnover](docs/img/lifecycle.svg)
+
+| Capability | **This** | Procore | Autodesk Forma¹ | TestFit | ARGUS / proforma |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Feasibility + underwriting (proforma, S&U, memo) | ✅ | – | partial | – | ✅ |
+| Generative massing + Test Fit | ✅ | – | ✅ | ✅ | – |
+| BIM authoring + clash/IDS | ✅ | view | ✅ | – | – |
+| Construction mgmt (RFIs, COs, pay apps, 4D) | ✅ | ✅ | ✅ | – | – |
+| Turnover (COBie, as-built, closeout) | ✅ | ✅ | ✅ | – | – |
+| IFC-native / open / self-hostable | ✅ | – | – | – | – |
+| Free desktop app · no per-seat license | ✅ | – | – | – | – |
+
+<sub>¹ Autodesk Construction Cloud was rebranded **Autodesk Forma** in 2026. Comparison reflects typical product scope; competitors are strong within their slice — the difference is *whole-lifecycle on one open model*.</sub>
 
 ## What it does (vs. Bonsai / Revit / Navisworks)
 
