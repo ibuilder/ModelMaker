@@ -20,6 +20,14 @@ drives) — no proprietary format, no per-seat license.
 📄 **Project page:** [ibuilder.github.io/ModelMaker](https://ibuilder.github.io/ModelMaker/) — overview + how to run it.
 🧊 **Live viewer demo:** [ibuilder.github.io/ModelMaker/app/](https://ibuilder.github.io/ModelMaker/app/) — the BIM viewer running in-browser (no backend) on bundled sample models.
 
+## The whole lifecycle, on one model
+
+The market is a patchwork of point tools — feasibility in one, BIM in another, construction
+management in a third. This spans **acquisition → turnover** on a single IFC-keyed model, where
+competitors each cover only one slice:
+
+![Lifecycle coverage — one IFC model spans acquisition, feasibility, design, preconstruction, construction and turnover](docs/img/lifecycle.svg)
+
 ## What it does (vs. Bonsai / Revit / Navisworks)
 
 Full mapping in [docs/capability-matrix.md](docs/capability-matrix.md). Highlights, all **built
