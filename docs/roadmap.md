@@ -163,11 +163,14 @@ material info). Grounded in: [IfcMaterial layer sets](https://forums.buildingsma
   IfcMaterial + IfcSurfaceStyle colour per element class to generated/dome models (concrete, glazing,
   steel, vegetation…), so models carry real material data and render in colour. *Next: a material
   editor + per-project palette.*
-- ✅ **DONE (M2 start) — render mode.** A viewer toolbar **render mode** (◓): a directional **sun
+- ✅ **DONE (M2) — render mode + PBR.** A viewer toolbar **render mode** (◓): a directional **sun
   with soft (PCF) shadows**, hemisphere sky/ground fill + a fill light, **ACES tone mapping** & sRGB
-  output, and a shadow-catching ground plane — toggled on demand (flat shading stays the cheap
-  default), re-applied as new models load. *Next: PBR `MeshStandardMaterial` + environment/IBL map,
-  a sun/shadow study by date/location, and a Matterport-style first-person walkthrough.*
+  output, and a shadow-catching ground plane. A **PBR pass** upgrades plain lit surfaces to
+  `MeshStandardMaterial` (roughness/metalness, keeps the M1 IFC colours) lit by an **IBL studio
+  environment** (RoomEnvironment via PMREM) for soft ambient + reflections — Fragments' own
+  `ShaderMaterial` meshes are deliberately left untouched (they carry engine render hooks). Toggled
+  on demand (flat stays the cheap default), reversible, re-applied as new models load. *Next: a
+  sun/shadow study by date/location, and a Matterport-style first-person walkthrough.*
 - **M3 — Family & material depth** (Revit-parity): **IfcMaterialLayerSet** wall/floor/roof assemblies
   (e.g. plasterboard · stud · plasterboard), an expanded parametric **family library** with materials,
   and **import of external IFC type content**.
