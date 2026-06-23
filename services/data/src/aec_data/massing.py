@@ -85,7 +85,8 @@ def gridlines(extent: float, bay: float) -> list[float]:
 def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
                  frame: bool = False, bay: float = 7.5, units: bool = False,
                  envelope: bool = False, wwr: float = 0.4, core: bool = False,
-                 unit_layout: str = "grid", members: dict | None = None) -> str:
+                 unit_layout: str = "grid", members: dict | None = None,
+                 parking: int = 0) -> str:
     """Write an IFC4 model: site → building → one storey + slab per level. Each floor gets either a
     single floor-plate space, or — with `units=True` — the floor subdivided into per-unit IfcSpaces
     (the proforma's unit count), so areas/COBie/rent are grounded in real apartments. With
@@ -309,6 +310,26 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
                     0.5, 0.5, f2f, name="Supply riser")
             add_box("IfcPipeSegment", storey, elev, ccx + half_w - 0.4, ccy + half_d - 0.4,
                     0.3, 0.3, f2f, name="Plumbing riser")
+    if parking:                                  # A2 — surface parking lot as real IfcSpace stalls
+        STALL_W, STALL_D, AISLE = 2.5, 5.0, 7.0  # standard stall (m) + two-way drive aisle
+        pstorey = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcBuildingStorey",
+                                       name="Site Parking")
+        pstorey.Elevation = 0.0
+        ifcopenshell.api.run("aggregate.assign_object", model, products=[pstorey], relating_object=building)
+        per_row = max(1, int(fw // STALL_W))      # stalls per row across the building width
+        y0 = fd / 2 + 6.0                         # lot begins beyond the rear setback
+        placed, row = 0, 0
+        n = int(parking)
+        while placed < n and row < 60:            # a module = two stall rows back-to-back + an aisle
+            base = y0 + row * (2 * STALL_D + AISLE)
+            for ry in (base + STALL_D / 2, base + STALL_D + AISLE + STALL_D / 2):
+                x = -fw / 2 + STALL_W / 2
+                col = 0
+                while placed < n and col < per_row:
+                    make_space(pstorey, 0.0, f"Stall {placed + 1:03d}", f"Parking {placed + 1:03d}",
+                               x, ry, STALL_W * 0.94, STALL_D * 0.94, "PARKING")
+                    x += STALL_W; col += 1; placed += 1
+            row += 1
     from . import material_layers, materials
     materials.apply_palette(model)               # real IFC materials + surface colours (M1)
     material_layers.apply_layer_sets(model)      # Revit-style layered assemblies on walls/slabs/roofs (M3)

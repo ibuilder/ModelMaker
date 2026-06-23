@@ -42,6 +42,16 @@ assert not eg_one["compliant"] and any("two means" in f for f in eg_one["flags"]
 eg_far = tf.egress(400, 120, n_stairs=2, sprinklered=False)   # huge plate → travel exceeds limit
 assert not eg_far["compliant"] and any("travel distance" in f for f in eg_far["flags"]), eg_far
 assert shallow["egress"]["stairs"] == 2, shallow["egress"]    # layout surfaces egress
+# deeper IBC checks: occupant load, required egress width, min exits, exit separation
+assert eg_ok["occupant_load_per_floor"] == 39 and eg_ok["min_exits_required"] == 2, eg_ok
+assert eg_ok["provided_egress_width_mm"] >= eg_ok["required_egress_width_mm"], eg_ok
+assert len(eg_ok["checks"]) == 4 and all(c["ok"] for c in eg_ok["checks"]), eg_ok
+# an assembly hall (1.4 m²/occ) on a big plate trips occupant-load → ≥3 exits + width flags
+eg_assembly = tf.egress(60, 40, n_stairs=2, sprinklered=True, occupancy="assembly")
+assert eg_assembly["occupant_load_per_floor"] > 1000 and eg_assembly["min_exits_required"] == 4, eg_assembly
+assert not eg_assembly["compliant"] and any("means of egress" in f for f in eg_assembly["flags"]), eg_assembly
+# narrow remoteness: a single stair fails exit separation too
+assert any("apart" in f for f in eg_one["flags"]) or not eg_one["compliant"], eg_one
 
 # --- parking: stalls to ratio --------------------------------------------------
 pk = tf.parking(100, ratio=1.25, kind="structured")

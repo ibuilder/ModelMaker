@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.35 — Test Fit depth (A2 egress + real parking geometry)
+- **Deeper egress / life-safety check (A2)** — `test_fit.egress` now screens the big four IBC fails:
+  max travel distance, **occupant load** & required **egress width**, minimum **number of exits**, and
+  **exit separation** (½ diagonal / ⅓ sprinklered) — with per-check detail + flags (e.g. an assembly
+  hall trips ≥4 exits). Back-compatible with the prior keys.
+- **Parking as real IFC geometry** — `generate(..., parking=N)` lays out a surface lot of `N`
+  IfcSpace `PARKING` stalls (2.5×5 m + drive aisles) on a dedicated *Site Parking* storey, each with
+  area QTOs. Exposed on the generate API + a "Surface parking stalls" field in the proforma form.
+
 ## v0.1.34 — import external IFC families (M3) + visual node editor (M4 complete)
 - **Import IFC type content** — bring manufacturer / 3rd-party families into a project from any IFC:
   `families.import_types_from_ifc` copies every IfcTypeProduct (with geometry) in via

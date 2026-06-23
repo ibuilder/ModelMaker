@@ -155,6 +155,23 @@ if _have_ifc:
         finally:
             os.remove(lpath)
 
+        # --- surface parking lot as real IfcSpace stalls (A2) ----------------
+        pfd, ppath = tempfile.mkstemp(suffix=".ifc"); os.close(pfd)
+        try:
+            massing.generate_ifc(m, ppath, name="Parked", parking=40)
+            pm = open_model(ppath)
+            import ifcopenshell.util.element as _ue2
+            stalls = [s for s in pm.by_type("IfcSpace")
+                      if (_ue2.get_pset(s, "Pset_SpaceCommon") or {}).get("Reference") == "PARKING"]
+            assert len(stalls) == 40, len(stalls)
+            assert any(st.Name == "Site Parking" for st in pm.by_type("IfcBuildingStorey")), "parking storey"
+            # each stall carries a real area (~2.5×5 m × 0.94²)
+            areas = [(_ue2.get_pset(s, "Qto_SpaceBaseQuantities") or {}).get("NetFloorArea") for s in stalls]
+            assert all(a and 9 < a < 13 for a in areas), areas[:3]
+            print(f"PARKING OK - {len(stalls)} stalls as IfcSpace(PARKING) on a Site Parking storey, each with area")
+        finally:
+            os.remove(ppath)
+
         # --- service core + MEP risers (core=True) --------------------------
         fd5, cpath = tempfile.mkstemp(suffix=".ifc"); os.close(fd5)
         try:
