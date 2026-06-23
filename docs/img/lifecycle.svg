@@ -1,0 +1,78 @@
+<svg viewBox="0 0 960 470" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <linearGradient id="span" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a6fd8"/><stop offset="1" stop-color="#4a8cff"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="470" fill="#16171a"/>
+
+  <text x="24" y="40" fill="#e7e7e7" font-size="22" font-weight="650">One model, the whole lifecycle</text>
+  <text x="24" y="64" fill="#9aa0a6" font-size="13.5">Every record keys off the IFC GlobalId — geometry, costs, schedule and issues stay in sync from acquisition to turnover.</text>
+
+  <!-- unifying platform bar spanning all phases -->
+  <rect x="24" y="86" width="912" height="44" rx="10" fill="url(#span)"/>
+  <text x="44" y="113" fill="#ffffff" font-size="14.5" font-weight="650">AEC BIM Platform</text>
+  <text x="180" y="113" fill="#eaf1ff" font-size="13">one IFC-keyed model · open / self-hosted · no per-seat license</text>
+  <text x="916" y="113" fill="#ffffff" font-size="13" text-anchor="end" font-weight="600">acquisition → turnover</text>
+
+  <!-- 6 phase columns -->
+  <g>
+    <!-- col template repeated; x = 24 + i*154 -->
+    <!-- Phase 1 Acquisition -->
+    <g transform="translate(24,150)">
+      <rect width="142" height="290" rx="9" fill="#1e1f22" stroke="#2b2d31"/>
+      <text x="16" y="34" font-size="17">📍</text>
+      <text x="16" y="62" fill="#e7e7e7" font-size="13.5" font-weight="650">Acquisition</text>
+      <line x1="16" y1="74" x2="126" y2="74" stroke="#2b2d31"/>
+      <text x="16" y="96" fill="#cfd3d8" font-size="11"><tspan x="16" dy="0">Zoning → massing,</tspan><tspan x="16" dy="14">Test Fit, property</tspan><tspan x="16" dy="14">&amp; tax, comps</tspan></text>
+      <text x="16" y="250" fill="#7f868d" font-size="10"><tspan x="16" dy="0" fill="#9aa0a6">point tools</tspan><tspan x="16" dy="14">TestFit · Forma</tspan><tspan x="16" dy="13">site · CoStar</tspan></text>
+    </g>
+    <!-- Phase 2 Feasibility -->
+    <g transform="translate(178,150)">
+      <rect width="142" height="290" rx="9" fill="#1e1f22" stroke="#2b2d31"/>
+      <text x="16" y="34" font-size="17">💲</text>
+      <text x="16" y="62" fill="#e7e7e7" font-size="13.5" font-weight="650">Feasibility</text>
+      <line x1="16" y1="74" x2="126" y2="74" stroke="#2b2d31"/>
+      <text x="16" y="96" fill="#cfd3d8" font-size="11"><tspan x="16" dy="0">Proforma, S&amp;U,</tspan><tspan x="16" dy="14">budgets, specialty,</tspan><tspan x="16" dy="14">memo + pitch deck</tspan></text>
+      <text x="16" y="250" fill="#7f868d" font-size="10"><tspan x="16" dy="0" fill="#9aa0a6">point tools</tspan><tspan x="16" dy="14">ARGUS · Northspyre</tspan><tspan x="16" dy="13">· Built · Excel</tspan></text>
+    </g>
+    <!-- Phase 3 Design -->
+    <g transform="translate(332,150)">
+      <rect width="142" height="290" rx="9" fill="#1e1f22" stroke="#2b2d31"/>
+      <text x="16" y="34" font-size="17">🧊</text>
+      <text x="16" y="62" fill="#e7e7e7" font-size="13.5" font-weight="650">Design</text>
+      <line x1="16" y1="74" x2="126" y2="74" stroke="#2b2d31"/>
+      <text x="16" y="96" fill="#cfd3d8" font-size="11"><tspan x="16" dy="0">Generative IFC,</tspan><tspan x="16" dy="14">authoring, drawings,</tspan><tspan x="16" dy="14">clash + IDS</tspan></text>
+      <text x="16" y="250" fill="#7f868d" font-size="10"><tspan x="16" dy="0" fill="#9aa0a6">point tools</tspan><tspan x="16" dy="14">Revit · Forma</tspan><tspan x="16" dy="13">· Bentley</tspan></text>
+    </g>
+    <!-- Phase 4 Preconstruction -->
+    <g transform="translate(486,150)">
+      <rect width="142" height="290" rx="9" fill="#1e1f22" stroke="#2b2d31"/>
+      <text x="16" y="34" font-size="17">📐</text>
+      <text x="16" y="62" fill="#e7e7e7" font-size="13.5" font-weight="650">Precon</text>
+      <line x1="16" y1="74" x2="126" y2="74" stroke="#2b2d31"/>
+      <text x="16" y="96" fill="#cfd3d8" font-size="11"><tspan x="16" dy="0">Estimating, takeoff,</tspan><tspan x="16" dy="14">bid leveling,</tspan><tspan x="16" dy="14">CPM + takt</tspan></text>
+      <text x="16" y="250" fill="#7f868d" font-size="10"><tspan x="16" dy="0" fill="#9aa0a6">point tools</tspan><tspan x="16" dy="14">WinEst · Bluebeam</tspan><tspan x="16" dy="13">· STACK · P6</tspan></text>
+    </g>
+    <!-- Phase 5 Construction -->
+    <g transform="translate(640,150)">
+      <rect width="142" height="290" rx="9" fill="#1e1f22" stroke="#2b2d31"/>
+      <text x="16" y="34" font-size="17">🏗️</text>
+      <text x="16" y="62" fill="#e7e7e7" font-size="13.5" font-weight="650">Construction</text>
+      <line x1="16" y1="74" x2="126" y2="74" stroke="#2b2d31"/>
+      <text x="16" y="96" fill="#cfd3d8" font-size="11"><tspan x="16" dy="0">RFIs, submittals,</tspan><tspan x="16" dy="14">COs, pay apps,</tspan><tspan x="16" dy="14">4D, field, safety</tspan></text>
+      <text x="16" y="250" fill="#7f868d" font-size="10"><tspan x="16" dy="0" fill="#9aa0a6">point tools</tspan><tspan x="16" dy="14">Procore · Forma</tspan><tspan x="16" dy="13">Build · Aconex</tspan></text>
+    </g>
+    <!-- Phase 6 Turnover -->
+    <g transform="translate(794,150)">
+      <rect width="142" height="290" rx="9" fill="#1e1f22" stroke="#2b2d31"/>
+      <text x="16" y="34" font-size="17">✅</text>
+      <text x="16" y="62" fill="#e7e7e7" font-size="13.5" font-weight="650">Turnover</text>
+      <line x1="16" y1="74" x2="126" y2="74" stroke="#2b2d31"/>
+      <text x="16" y="96" fill="#cfd3d8" font-size="11"><tspan x="16" dy="0">Punchlist, COBie,</tspan><tspan x="16" dy="14">as-built, O&amp;M,</tspan><tspan x="16" dy="14">closeout package</tspan></text>
+      <text x="16" y="250" fill="#7f868d" font-size="10"><tspan x="16" dy="0" fill="#9aa0a6">point tools</tspan><tspan x="16" dy="14">handover /</tspan><tspan x="16" dy="13">CAFM tools</tspan></text>
+    </g>
+  </g>
+
+  <text x="480" y="462" fill="#33d17a" font-size="12.5" text-anchor="middle" font-weight="600">Competitors cover a slice. This covers the lifecycle — on one open model.</text>
+</svg>
