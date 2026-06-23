@@ -129,8 +129,15 @@ if _have_ifc:
             e = energy.analyze_file(epath)
             assert e["areas_m2"]["window"] > 0 and e["areas_m2"]["exterior_wall_net"] > 0, e["areas_m2"]
             assert e["ua_w_per_k"]["total"] > 0, e["ua_w_per_k"]
+            # M3: Revit-style layered assemblies on walls + slabs (IfcMaterialLayerSet + usage)
+            lsets = em.by_type("IfcMaterialLayerSet")
+            usages = em.by_type("IfcMaterialLayerSetUsage")
+            assert len(lsets) >= 2 and len(em.by_type("IfcMaterialLayer")) >= 6, (len(lsets),)
+            # every wall + slab carries a layer-set usage (4 walls/floor + 1 slab/floor)
+            assert len(usages) == (4 + 1) * m["floors"], (len(usages), m["floors"])
             print(f"ENVELOPE OK - {len(em.by_type('IfcWall'))} walls + {len(em.by_type('IfcWindow'))} windows; "
-                  f"energy WWR {e['areas_m2']['window_wall_ratio']}, UA {e['ua_w_per_k']['total']} W/K")
+                  f"energy WWR {e['areas_m2']['window_wall_ratio']}, UA {e['ua_w_per_k']['total']} W/K; "
+                  f"M3: {len(lsets)} layer sets, {len(usages)} usages")
         finally:
             os.remove(epath)
 

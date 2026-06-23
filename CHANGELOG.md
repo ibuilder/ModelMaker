@@ -4,6 +4,12 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.33 — material layer sets (M3)
+- **Layered construction assemblies** (M3) — generated models now carry real **IfcMaterialLayerSet**
+  data on walls, slabs and roofs (e.g. exterior wall = brick · cavity · insulation · CMU · gypsum),
+  the way Revit's compound structures work — attached via IfcMaterialLayerSetUsage and chosen from
+  `IsExternal` / slab type. Feeds take-off, U-value and schedules.
+
 ## v0.1.32 — first-person walkthrough (M2 complete)
 - **Walkthrough mode** (🚶 toolbar) — Matterport-style first-person navigation: drops to eye height
   (1.6 m), **W/A/S/D** to walk (locked horizontal so you stay on the floor) and drag to look around.

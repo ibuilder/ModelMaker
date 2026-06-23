@@ -176,9 +176,13 @@ material info). Grounded in: [IfcMaterial layer sets](https://forums.buildingsma
   height (1.6 m) with **W/A/S/D** to walk (horizontal-locked, feet on the floor) and drag-to-look;
   toggling off restores the prior camera. **M2 is complete** — next rendering depth lives under a
   future theme (real-time GI / baked AO, exterior HDRI skies).
-- **M3 — Family & material depth** (Revit-parity): **IfcMaterialLayerSet** wall/floor/roof assemblies
-  (e.g. plasterboard · stud · plasterboard), an expanded parametric **family library** with materials,
-  and **import of external IFC type content**.
+- **M3 — Family & material depth** (Revit-parity). ✅ **DONE (layer sets)** — `material_layers.py`
+  attaches real **IfcMaterialLayerSet** assemblies (exterior wall = brick · cavity · insulation · CMU ·
+  gypsum; interior partition; floor slab; flat roof) to every wall/slab/roof via an
+  IfcMaterialLayerSetUsage, chosen from `Pset_WallCommon.IsExternal` and slab `PredefinedType`. Runs in
+  the generation pipeline after the M1 palette; carries genuine compound-structure data for take-off,
+  U-value and schedules. *Next: an expanded parametric **family library** with materials, and **import
+  of external IFC type content**.*
 - ✅ **DONE (M4 start) — computational graph** (Dynamo/Hypar-style, zero-touch). `compute_graph.py`
   exposes the pure engines as **nodes** (params→input ports, dict return→output ports) + an executor:
   `GET /compute/nodes` (palette) and `POST /compute/graph` run a {nodes, edges} graph in dependency
