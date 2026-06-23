@@ -925,6 +925,33 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
               v: `${a.duration}d · float ${a.total_float}`, strong: a.critical }))));
           });
         }));
+        b.appendChild(toolBtn2("▤ Takt (line of balance)", () =>
+          window.open(api.url(`/projects/${projectId}/schedule/takt.svg?floors=12`), "_blank")));
+        // 4D construction sequence — scrub the takt timeline, isolating built-to-date elements
+        const fourdBtn = toolBtn2("⏱ 4D sequence (scrub)", async () => {
+          out.textContent = "loading 4D…";
+          const seq = await api.schedule4d(pid);
+          if (!seq.element_count) { out.textContent = "No published model elements to sequence — generate/publish a model first."; return; }
+          out.textContent = "";
+          const wrap = document.createElement("div"); wrap.style.marginTop = "4px";
+          const lbl = document.createElement("div"); lbl.className = "meta";
+          const slider = document.createElement("input"); slider.type = "range";
+          slider.min = "0"; slider.max = String(seq.duration_days); slider.value = String(seq.duration_days);
+          slider.style.width = "100%";
+          const apply = async (day: number) => {
+            const guids = seq.frames.filter((f) => f.day <= day).flatMap((f) => f.new_guids);
+            const done = seq.frames.filter((f) => f.day <= day).reduce((n, f) => n + f.new, 0);
+            lbl.innerHTML = `Day <b>${day}</b> / ${seq.duration_days} · built <b>${done}</b>/${seq.element_count} `
+              + `(${Math.round(done / seq.element_count * 100)}%)`;
+            if (guids.length) await visibility.isolate(await sets.fromGuids(guids));
+            else await visibility.showAll();
+          };
+          slider.oninput = () => void apply(+slider.value);
+          const reset = toolBtn2("⊞ Show all", () => void visibility.showAll());
+          wrap.append(lbl, slider, reset); out.appendChild(wrap);
+          await apply(seq.duration_days);
+        });
+        b.appendChild(fourdBtn);
         b.appendChild(out);
       },
       qa: () => {

@@ -715,6 +715,11 @@ export class ApiClient {
     return this.json<{ total: number; element_count: number; lines: { ifc_class: string; count: number; unit: string; quantity: number; rate: number; amount: number }[]; unpriced: { ifc_class: string; count: number }[] }>(
       `/projects/${pid}/estimate/from-model`);
   }
+  /** 4D construction sequence: scrubable frames (cumulative % built per day) over the takt plan. */
+  schedule4d(pid: string) {
+    return this.json<{ floors: number; duration_days: number; element_count: number; by_trade: Record<string, number>; frames: { day: number; new: number; completed_cumulative: number; pct: number; new_guids: string[] }[] }>(
+      `/projects/${pid}/schedule/4d`);
+  }
   /** CPM analysis of the schedule activities — float + critical path. */
   scheduleCpm(pid: string) {
     return this.json<{ project_duration: number; activity_count: number; critical_count: number; has_cycle: boolean; critical_path: string[]; activities: { ref: string | null; name: string; duration: number; es: number; ef: number; total_float: number; critical: boolean }[] }>(

@@ -66,6 +66,7 @@ def layout(plate_w: float, plate_d: float, floors: int = 1, unit_types: list[dic
         "corridor": {"w": corridor_w, "length": round(plate_w, 2)},
         "bay_depth": round(bay_d, 2), "leasable_depth": round(lease_d, 2),
         "daylight_limited": bay_d > max_lease_depth_m + 0.01, "core_depth_m": core_depth,
+        "egress": egress(plate_w, plate_d),
         "metrics": {
             "units_per_floor": units_per_floor,
             "total_units": total_units,
@@ -79,6 +80,21 @@ def layout(plate_w: float, plate_d: float, floors: int = 1, unit_types: list[dic
             "mix": by_type_total,
         },
     }
+
+
+def egress(plate_w: float, plate_d: float, n_stairs: int = 2, sprinklered: bool = True) -> dict[str, Any]:
+    """A2 — egress sanity: two means of egress + max travel distance within code (IBC ~76 m
+    sprinklered / 61 m not, residential). Stairs assumed distributed along the corridor."""
+    limit = 76.0 if sprinklered else 61.0
+    travel = plate_w / (2 * max(1, n_stairs)) + plate_d / 2     # to nearest of n stairs, + half-depth
+    flags: list[str] = []
+    if n_stairs < 2:
+        flags.append("Fewer than two means of egress — most occupancies require ≥2.")
+    if travel > limit:
+        flags.append(f"Max travel distance ≈ {travel:.0f} m exceeds the {limit:.0f} m limit — "
+                     "add a stair or shorten the corridor.")
+    return {"stairs": n_stairs, "max_travel_m": round(travel, 1), "limit_m": limit,
+            "sprinklered": sprinklered, "compliant": not flags, "flags": flags}
 
 
 def parking(units: int, ratio: float = 1.2, kind: str = "surface") -> dict[str, Any]:
