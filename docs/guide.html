@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guides — AEC BIM Platform</title>
+<meta name="description" content="Beginner-friendly guides and tutorials for the AEC BIM Platform: explore a model, generate a building from zoning, underwrite a deal, run a project, and hand it over." />
+<style>
+  :root{ --bg:#16171a; --panel:#1e1f22; --panel2:#25272b; --line:#2b2d31; --text:#e7e7e7; --muted:#9aa0a6; --accent:#4a8cff; --green:#33d17a; --code:#0f1012; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13.5px}
+  header.top{position:sticky;top:0;background:rgba(22,23,26,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);z-index:10}
+  header.top .wrap{display:flex;align-items:center;gap:16px;padding:12px 20px}
+  header.top b{font-size:15px} header.top nav{margin-left:auto;display:flex;gap:18px;font-size:14px}
+  h1{font-size:34px;letter-spacing:-.02em;margin:36px 0 6px}
+  .lede{color:var(--muted);font-size:18px;margin:0 0 8px}
+  h2{font-size:23px;margin:40px 0 4px;letter-spacing:-.01em;scroll-margin-top:70px}
+  h3{font-size:16px;margin:22px 0 4px}
+  .sub{color:var(--muted);margin:0 0 14px}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 8px}
+  .toc a{font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 11px;color:var(--text)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:14px 0}
+  ol.steps{counter-reset:s;list-style:none;padding:0;margin:8px 0}
+  ol.steps li{position:relative;padding:3px 0 12px 38px;color:var(--text)}
+  ol.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--accent);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  ol.steps b{color:var(--text)} .muted{color:var(--muted)}
+  .note{background:var(--panel);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;color:var(--muted);font-size:14px;margin:14px 0}
+  .tip{border-left-color:var(--green)}
+  table.gl{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:8px}
+  table.gl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.gl td:first-child{color:var(--text);font-weight:600;white-space:nowrap;width:1%}
+  table.gl td:nth-child(2){color:var(--muted)}
+  footer{padding:40px 0 60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:48px}
+  .pillrow{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+  .pill{font-size:13px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 12px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <b>AEC BIM Platform</b>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="app/">Live demo</a>
+      <a href="index.html#download">Download</a>
+      <a href="https://github.com/ibuilder/ModelMaker">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <h1>Guides &amp; tutorials</h1>
+  <p class="lede">Plain-English, step-by-step. No BIM or real-estate-finance background needed —
+    each tutorial takes about five minutes.</p>
+  <div class="note tip">👋 <b>Brand new?</b> Open the <a href="app/">live demo</a> or the desktop app and
+    take the built-in <b>60-second tour</b> (the <b>?</b> button, top-right). Then come back here for the deep dives.</div>
+
+  <div class="toc">
+    <a href="#start">Getting started</a>
+    <a href="#explore">1 · Explore a model</a>
+    <a href="#generate">2 · Generate from zoning</a>
+    <a href="#underwrite">3 · Underwrite a deal</a>
+    <a href="#run">4 · Run a project</a>
+    <a href="#turnover">5 · Hand it over</a>
+    <a href="#glossary">Glossary</a>
+    <a href="#faq">FAQ</a>
+  </div>
+
+  <h2 id="start">Getting started — three ways to run it</h2>
+  <div class="card">
+    <h3>🧊 Try it in your browser (nothing to install)</h3>
+    <p class="sub">Open the <a href="app/">live demo</a>, switch to the <b>Model</b> workspace, and pick a
+      sample from <b>Open ▾</b>. The viewer runs entirely in your browser on bundled models.</p>
+    <h3>💾 Free desktop app (full platform, offline)</h3>
+    <p class="sub"><a href="index.html#download">Download</a> the installer for Windows, macOS, or Linux.
+      It's the whole platform in one app — no login, no Docker. Your data stays on your machine.</p>
+    <h3>🐳 Server stack (teams)</h3>
+    <p class="sub">For multi-user use, run the Docker stack — see the
+      <a href="https://github.com/ibuilder/ModelMaker#readme">README</a>.</p>
+  </div>
+
+  <h2 id="explore">Tutorial 1 · Explore a model</h2>
+  <p class="sub">Learn to move around a 3D building and read its data.</p>
+  <ol class="steps">
+    <li>Open the app and make sure you're in the <b>Model</b> workspace (top bar).</li>
+    <li>Click <b>Open ▾ → BasicHouse</b> (or any sample). The building loads in the viewer.</li>
+    <li><b>Orbit</b> by dragging, <b>pan</b> with right-drag, <b>zoom</b> with the wheel. Click <b>⤢ Fit</b> to recenter.</li>
+    <li>Click any element — its <b>properties</b> open on the right. Every element has a permanent IFC ID.</li>
+    <li>Use the left rail: the <b>tree</b> (spatial breakdown), <b>layers</b> (show/hide by type), and <b>⊙ Isolate</b> / <b>⊞ Show all</b>.</li>
+    <li>Try <b>Section</b> (cut through the model) and <b>Measure</b> (distances/areas) from the toolbar.</li>
+  </ol>
+  <div class="note">There's nothing to "save" — the model is read from its IFC file. Edits you make
+    (Tutorial 4+) are written back to IFC server-side, keeping every ID stable.</div>
+
+  <h2 id="generate">Tutorial 2 · Generate a building from zoning ⭐</h2>
+  <p class="sub">The headline feature: turn a lot + zoning rules into a real building and a first-cut deal.</p>
+  <ol class="steps">
+    <li>Go to the <b>Finance</b> workspace → <b>Proforma</b> tab.</li>
+    <li>Find the <b>🏗️ Generate from zoning</b> panel. Enter your lot (width × depth or area), <b>FAR</b>,
+      setbacks, and a height limit.</li>
+    <li>Tick the options you want: <b>structural frame</b>, <b>unit layout</b> (apartments on a corridor),
+      <b>facade envelope</b>, <b>service core</b>.</li>
+    <li>Click <b>Estimate yield</b> to preview the program (floors, units, GSF) and a starter proforma —
+      instantly, without saving anything.</li>
+    <li>Happy with it? Click <b>Generate IFC model + apply</b>. It builds a real IFC building, publishes it
+      to the viewer, and loads the numbers into the live proforma.</li>
+    <li>Switch to the <b>Model</b> workspace to see your generated building. Open <b>Test Fit</b> (back in
+      Finance) to compare unit-mix schemes or <b>⚡ Optimize</b> for the highest-yield layout.</li>
+  </ol>
+  <div class="note tip">💡 The building is real openBIM — it flows straight into drawings, takeoff, the
+    estimate, and the deal. One input, the whole chain.</div>
+
+  <h2 id="underwrite">Tutorial 3 · Underwrite a deal</h2>
+  <p class="sub">Build the cost budget, balance the capital, and produce an investor package.</p>
+  <ol class="steps">
+    <li>In <b>Finance</b>, open the <b>cost budget</b> panel. Add line items by category — <b>acquisition</b>,
+      <b>hard</b> (construction), <b>soft</b> (design/fees) — as <i>$/unit × quantity</i>, with a contingency %.</li>
+    <li>Click <b>Apply to proforma</b> — the budget rolls into the deal's cost tree.</li>
+    <li>Open <b>Sources &amp; Uses</b> to see the capital plan (debt sized to your LTC/LTV/DSCR, plus equity).</li>
+    <li>Tune the drivers (rent, exit cap, hold). Watch the <b>returns bar</b> — IRR, equity multiple,
+      yield-on-cost — update live. <b>Guardrail badges</b> flag anything outside market ranges.</li>
+    <li>Click <b>📄 Investment memo</b> or <b>📊 Pitch deck</b> to generate a polished PDF from the live numbers.</li>
+  </ol>
+  <div class="note">Modeling something unusual (e.g. on-site solar or a vertical farm)? The <b>⚡ Specialty</b>
+    panel adds those economics — and their revenue is automatically <b>risk-adjusted</b> so the IRR stays honest.</div>
+
+  <h2 id="run">Tutorial 4 · Run a project (GC portal)</h2>
+  <p class="sub">Manage construction — works even with no model loaded.</p>
+  <ol class="steps">
+    <li>Click <b>＋ New</b> in the top bar to create a project (no IFC needed).</li>
+    <li>Go to the <b>Construction</b> workspace. You'll see the dashboard and a catalog of modules
+      (RFIs, submittals, change orders, daily reports, inspections, safety…).</li>
+    <li>Open <b>RFIs → ＋ New</b>, fill in the subject and question, and save. Use the workflow buttons
+      (<b>submit → respond</b>) to move it along.</li>
+    <li>Explore <b>Board</b> (kanban), filters, and the <b>Related</b> panel on a record (it links RFIs →
+      change events → CORs automatically).</li>
+    <li>Use <b>Schedule</b> for CPM/critical path, the <b>takt</b> chart, and the <b>⏱ 4D sequence</b> slider
+      to scrub the build in the viewer.</li>
+    <li>Ask the <b>"Ask AI"</b> box plain-English questions like "what's overdue?" or "are we over budget?"</li>
+  </ol>
+
+  <h2 id="turnover">Tutorial 5 · Hand it over (turnover)</h2>
+  <p class="sub">Close the project out and produce the handover package.</p>
+  <ol class="steps">
+    <li>Work the <b>Punchlist</b>: open an item, mark it <b>ready</b>, attach a photo, then <b>verify</b>
+      (verification requires the photo — an evidence gate).</li>
+    <li>Record <b>commissioning</b>, <b>as-builts</b>, <b>warranties</b>, and the <b>completion certificate</b>.</li>
+    <li>Export <b>COBie</b> (the standard facilities-handover spreadsheet), the <b>QTO</b>, and a one-click
+      <b>turnover package</b> (as-built IFC + COBie + closeout docs).</li>
+  </ol>
+
+  <h2 id="glossary">Glossary — plain English</h2>
+  <table class="gl">
+    <tr><td>IFC</td><td>The open file format for building models. The platform's "source of truth" — every record points at an element's permanent IFC ID.</td></tr>
+    <tr><td>BIM</td><td>Building Information Modeling — a 3D model that also carries data (materials, costs, properties), not just shapes.</td></tr>
+    <tr><td>FAR</td><td>Floor Area Ratio — how much building floor area zoning allows per unit of land. FAR 3 on a 10,000 sf lot ≈ 30,000 sf of building.</td></tr>
+    <tr><td>Setback</td><td>How far a building must sit back from the property lines.</td></tr>
+    <tr><td>Massing</td><td>The basic size/shape of a building before detailed design — what "generate from zoning" produces.</td></tr>
+    <tr><td>Proforma</td><td>The financial model of a development — costs in, rent/sale out, returns calculated.</td></tr>
+    <tr><td>Hard / soft costs</td><td>Hard = physical construction. Soft = design, fees, permits, financing. Roughly 70–80% / 20–30%.</td></tr>
+    <tr><td>Sources &amp; Uses</td><td>Where the money comes from (debt + equity) vs where it goes (land + construction + soft costs).</td></tr>
+    <tr><td>NOI</td><td>Net Operating Income — rent minus operating expenses. The basis for value.</td></tr>
+    <tr><td>Cap rate</td><td>NOI ÷ value. Lower cap = higher value. Used to estimate sale price at exit.</td></tr>
+    <tr><td>IRR / Equity multiple</td><td>IRR = annualized return %. EM = total cash back ÷ cash in (e.g. 1.9×).</td></tr>
+    <tr><td>Yield on cost</td><td>Stabilized NOI ÷ total project cost — the developer's "did this pencil?" number.</td></tr>
+    <tr><td>RFI</td><td>Request for Information — a formal question to the design team during construction.</td></tr>
+    <tr><td>Pay app (G702/G703)</td><td>The standard monthly billing forms a contractor submits for payment.</td></tr>
+    <tr><td>Takt / Line of Balance</td><td>Scheduling where each trade moves floor-to-floor at a steady pace — the "assembly line" approach.</td></tr>
+    <tr><td>4D</td><td>The 3D model + time — scrub a slider to see what's built on any day.</td></tr>
+    <tr><td>COBie</td><td>The standard spreadsheet handed to the building's operator at turnover (assets, warranties, manuals).</td></tr>
+    <tr><td>Clash / IDS</td><td>Clash = two elements overlapping. IDS = a checklist your model must satisfy (data quality).</td></tr>
+  </table>
+
+  <h2 id="faq">FAQ</h2>
+  <div class="card">
+    <h3>Do I need Revit or any paid software?</h3>
+    <p class="muted">No. The platform is open and IFC-native. Revit files (.rvt) need a paid Autodesk bridge; IFC and Fragments load free and offline.</p>
+    <h3>Is my data private?</h3>
+    <p class="muted">On the desktop app, everything stays on your machine. The server stack is self-hosted — you run it.</p>
+    <h3>Can I use just one part — say, only the proforma or only the GC portal?</h3>
+    <p class="muted">Yes. Create a blank project (＋ New) and use the Finance or Construction workspace on its own — no model required.</p>
+    <h3>What does it cost?</h3>
+    <p class="muted">The single-project desktop app is free with no per-seat license. A paid connected/cloud tier is planned.</p>
+    <h3>How do I get help?</h3>
+    <p class="muted">Re-open the in-app tour with the <b>?</b> button, or file an issue on <a href="https://github.com/ibuilder/ModelMaker/issues">GitHub</a>.</p>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html">← Back to home</a> · <a href="app/">Live demo</a> ·
+    <a href="https://github.com/ibuilder/ModelMaker">GitHub</a>
+    <div style="margin-top:8px">AEC BIM Platform — open, self-hosted, IFC-native.</div>
+  </div>
+</footer>
+
+</body>
+</html>

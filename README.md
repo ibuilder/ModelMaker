@@ -23,6 +23,7 @@ drives) — no proprietary format, no per-seat license.
 
 ⬇️ **Download the desktop app:** [ibuilder.github.io/ModelMaker#download](https://ibuilder.github.io/ModelMaker/#download) — free single-project installers for **Windows / macOS / Linux** (or grab them straight from [the latest release](https://github.com/ibuilder/ModelMaker/releases/latest)).
 📄 **Project page:** [ibuilder.github.io/ModelMaker](https://ibuilder.github.io/ModelMaker/) — overview + how to run it.
+📚 **Guides & tutorials:** [ibuilder.github.io/ModelMaker/guide.html](https://ibuilder.github.io/ModelMaker/guide.html) — plain-English step-by-steps + a glossary (and a [demo walkthrough script](docs/walkthrough.md)).
 🧊 **Live viewer demo:** [ibuilder.github.io/ModelMaker/app/](https://ibuilder.github.io/ModelMaker/app/) — the BIM viewer running in-browser (no backend) on bundled sample models.
 
 ![Generate a building from a zoning envelope, then underwrite the deal](docs/img/generate-build.gif)
