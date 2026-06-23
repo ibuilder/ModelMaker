@@ -192,8 +192,12 @@ material info). Grounded in: [IfcMaterial layer sets](https://forums.buildingsma
 - ✅ **DONE (M4 start) — computational graph** (Dynamo/Hypar-style, zero-touch). `compute_graph.py`
   exposes the pure engines as **nodes** (params→input ports, dict return→output ports) + an executor:
   `GET /compute/nodes` (palette) and `POST /compute/graph` run a {nodes, edges} graph in dependency
-  order (zoning → structure/takt/cost → yield). After the Dynamo zero-touch primer. *Next: a visual
-  node editor + the module-relations graph view.*
+  order (zoning → structure/takt/cost → yield). After the Dynamo zero-touch primer. ✅ **DONE — visual
+  node editor** ([studio/nodeEditor.ts](../apps/web/src/studio/nodeEditor.ts)): a new **Studio**
+  workspace with a palette, draggable nodes, click-to-connect ports (SVG bezier edges), live param
+  fields, and **Run** (executes server-side, values flow through the wires). Graph persists to
+  localStorage; persona-gated to developer/architect/engineer. **M4 complete.** *Next (optional): a
+  module-relations graph view.*
 
 ## L. Library & interoperability evaluations  ★ research pass (2026-06)
 Surveyed external libraries against the mission (IFC source-of-truth, server-side IFC→Fragments,
