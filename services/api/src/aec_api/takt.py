@@ -62,3 +62,35 @@ def plan(floors: int, trades: list[dict] | None = None, start_day: int = 0,
         "crew_peak": min(floors, nt),               # up to one crew per trade once the train ramps
         "delivery_plan": delivery,
     }
+
+
+_COLORS = ["#4a8cff", "#33d17a", "#ffd479", "#e2554a", "#b083d6", "#6cb6ff", "#f08c5a"]
+
+
+def takt_svg(p: dict) -> str:
+    """Line-of-balance chart: floors (Y) vs days (X), one sloped line per trade chasing up the
+    building. A flatter/steeper slope = faster/slower ascent; the gap between lines = the buffer."""
+    floors = p["floors"]
+    dur = max(1, p["duration_days"])
+    W, H, ml, mt, mb = 760, 40 + floors * 22 + 70, 50, 30, 40
+    plot_w, plot_h = W - ml - 20, H - mt - mb
+    def x(day): return ml + plot_w * day / dur
+    def y(fl): return mt + plot_h * (1 - fl / floors)
+    parts = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">']
+    parts.append(f'<rect width="{W}" height="{H}" fill="white"/>')
+    # axes + floor gridlines
+    for fl in range(0, floors + 1):
+        yy = y(fl)
+        parts.append(f'<line x1="{ml}" y1="{yy:.0f}" x2="{ml + plot_w}" y2="{yy:.0f}" stroke="#eee"/>')
+        if fl:
+            parts.append(f'<text x="{ml - 8}" y="{yy + 3:.0f}" font-size="9" fill="#888" text-anchor="end">L{fl}</text>')
+    parts.append(f'<text x="{ml}" y="{H - 8}" font-size="11" fill="#444">Days 0–{dur} · {p["duration_weeks"]} wks · {p["floors_per_week"]} floors/wk</text>')
+    # one polyline per trade through its per-floor start points
+    for i, tr in enumerate(p["trades"]):
+        col = _COLORS[i % len(_COLORS)]
+        pts = " ".join(f"{x(s):.0f},{y(fl + 1):.0f}" for fl, s in enumerate(tr["floor_starts"]))
+        parts.append(f'<polyline points="{pts}" fill="none" stroke="{col}" stroke-width="2.5"/>')
+        parts.append(f'<circle cx="{ml + 14 + i * 130}" cy="{mt - 14}" r="4" fill="{col}"/>'
+                     f'<text x="{ml + 22 + i * 130}" y="{mt - 10}" font-size="10" fill="#333">{tr["name"]}</text>')
+    parts.append("</svg>")
+    return "".join(parts)

@@ -34,6 +34,15 @@ assert deep["metrics"]["daylight_efficiency"] < shallow["metrics"]["daylight_eff
     (deep["metrics"]["daylight_efficiency"], shallow["metrics"]["daylight_efficiency"])
 assert deep["leasable_depth"] == 9.0, deep["leasable_depth"]   # capped at the daylight limit
 
+# --- A2: egress — two means + travel distance within code ----------------------
+eg_ok = tf.egress(40, 18, n_stairs=2, sprinklered=True)
+assert eg_ok["compliant"] and not eg_ok["flags"], eg_ok
+eg_one = tf.egress(40, 18, n_stairs=1)
+assert not eg_one["compliant"] and any("two means" in f for f in eg_one["flags"]), eg_one
+eg_far = tf.egress(400, 120, n_stairs=2, sprinklered=False)   # huge plate → travel exceeds limit
+assert not eg_far["compliant"] and any("travel distance" in f for f in eg_far["flags"]), eg_far
+assert shallow["egress"]["stairs"] == 2, shallow["egress"]    # layout surfaces egress
+
 # --- parking: stalls to ratio --------------------------------------------------
 pk = tf.parking(100, ratio=1.25, kind="structured")
 assert pk["stalls"] == 125 and pk["area_sf"] > 0 and pk["cost"] > 0, pk

@@ -61,6 +61,8 @@ assert lean.ppc([])["ppc"] == 0.0
 with TestClient(app) as c:
     t = c.post("/schedule/takt", json={"floors": 8})
     assert t.status_code == 200 and t.json()["crew_peak"] == 5, t.text
+    svg = c.get("/schedule/takt.svg", params={"floors": 8})
+    assert svg.status_code == 200 and svg.content[:4] == b"<svg" and b"floors/wk" in svg.content, svg.status_code
     b = c.get("/benchmarks")
     assert b.status_code == 200 and "cap_rate" in b.json()["benchmarks"], b.text
     pid = c.post("/projects", json={"name": "Lean Job"}).json()["id"]

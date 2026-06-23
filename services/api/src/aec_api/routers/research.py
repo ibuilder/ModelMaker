@@ -29,6 +29,13 @@ def schedule_takt(body: TaktIn):
     return takt.plan(body.floors, body.trades, jit_lead_days=body.jit_lead_days)
 
 
+@router.get("/schedule/takt.svg")
+def schedule_takt_svg(floors: int = 10):
+    """Line-of-balance (takt) chart as SVG — floors vs days, one line per trade (R2)."""
+    from fastapi import Response
+    return Response(takt.takt_svg(takt.plan(max(1, floors))), media_type="image/svg+xml")
+
+
 @router.get("/benchmarks")
 def get_benchmarks():
     """Citable benchmark ranges (cost/sf, cap rates, productivity, lean PPC) for grounding defaults (R5)."""
