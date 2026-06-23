@@ -470,9 +470,10 @@ def rotate_element(model: ifcopenshell.file, guid: str, angle_deg: float = 0.0) 
 
 
 def _recipe_add_family(model, p):
-    """Place a starter-library family (furniture/sanitary/appliance/plant) by catalog key."""
+    """Place a starter-library family (furniture/sanitary/appliance/lighting/MEP/structural/plant) by
+    catalog key. Optional `dims` ([w, d, h] m) places a parametrically-sized type variant."""
     from . import families  # lazy — families lazily imports edit, so this avoids an import cycle
-    return families.add_family(model, p["family"], p.get("storey"), p.get("position"))
+    return families.add_family(model, p["family"], p.get("storey"), p.get("position"), p.get("dims"))
 
 
 # recipe registry — what an API endpoint / Bonsai-MCP can invoke by name
