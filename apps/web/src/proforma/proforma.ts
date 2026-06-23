@@ -222,6 +222,12 @@ export class ProformaUI {
     const corrChk = document.createElement("input"); corrChk.type = "checkbox";
     corrWrap.append(corrChk, document.createTextNode("Double-loaded corridor unit layout (test-fit)"));
     host.appendChild(corrWrap);
+    const pkWrap = document.createElement("label");
+    pkWrap.style.cssText = "display:flex;align-items:center;gap:6px;margin:4px 0;font-size:13px";
+    const pkInput = document.createElement("input");
+    pkInput.type = "number"; pkInput.min = "0"; pkInput.max = "2000"; pkInput.value = "0"; pkInput.style.width = "70px";
+    pkWrap.append(document.createTextNode("Surface parking stalls (real IfcSpaces)"), pkInput);
+    host.appendChild(pkWrap);
 
     const params = (): MassingParams => {
       const p: MassingParams = { use_type: useSel.value as "residential" | "commercial", name: "Massing Study" };
@@ -235,6 +241,7 @@ export class ProformaUI {
       p.envelope = envChk.checked;
       p.core = coreChk.checked;
       if (corrChk.checked) { p.units = true; p.unit_layout = "corridor"; }
+      const pk = parseInt(pkInput.value, 10); if (pk > 0) p.parking = pk;
       if (domeChk.checked) { p.shape = "dome"; p.dome_radius = parseFloat(domeR.value) || 8; }
       return p;
     };

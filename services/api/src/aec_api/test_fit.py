@@ -82,19 +82,71 @@ def layout(plate_w: float, plate_d: float, floors: int = 1, unit_types: list[dic
     }
 
 
-def egress(plate_w: float, plate_d: float, n_stairs: int = 2, sprinklered: bool = True) -> dict[str, Any]:
-    """A2 — egress sanity: two means of egress + max travel distance within code (IBC ~76 m
-    sprinklered / 61 m not, residential). Stairs assumed distributed along the corridor."""
-    limit = 76.0 if sprinklered else 61.0
+# IBC occupant-load factors (Table 1004.5), gross m² per occupant, and travel-distance limits
+# (Table 1017.2): (sprinklered, non-sprinklered) metres. Approximations for early test-fit checks.
+_OCC_LOAD_M2 = {"residential": 18.6, "office": 9.3, "business": 9.3, "mercantile": 5.6, "assembly": 1.4}
+_TRAVEL_LIMIT_M = {"residential": (76.0, 61.0), "office": (91.0, 61.0), "business": (91.0, 61.0),
+                   "mercantile": (76.0, 61.0), "assembly": (76.0, 61.0)}
+
+
+def egress(plate_w: float, plate_d: float, n_stairs: int = 2, sprinklered: bool = True,
+           occupancy: str = "residential", floors: int = 1, corridor_w: float = 1.8) -> dict[str, Any]:
+    """A2 — egress / life-safety screen on a rectangular plate (IBC-style, approximate). Checks the
+    big four early-design fails: max **travel distance** (1017.2), **occupant load** & required
+    **egress width** (1004.5 / 1005.3), minimum **number of exits** (1006.3.2), and **exit
+    separation** (1007.1.1, ½ diagonal / ⅓ if sprinklered). Returns per-check detail + flags; keeps
+    the original top-level keys (stairs / max_travel_m / limit_m / compliant / flags) for callers."""
+    occ = occupancy if occupancy in _OCC_LOAD_M2 else "residential"
+    travel_limit = _TRAVEL_LIMIT_M[occ][0 if sprinklered else 1]
     travel = plate_w / (2 * max(1, n_stairs)) + plate_d / 2     # to nearest of n stairs, + half-depth
+
+    # occupant load (worst single floor drives stair/exit sizing) + required egress width
+    floor_area = plate_w * plate_d
+    occ_per_floor = math.ceil(floor_area / _OCC_LOAD_M2[occ])
+    width_per_occ = 7.6 if sprinklered else 12.7                # mm/occupant, stairways (1005.3.1)
+    req_width_mm = occ_per_floor * width_per_occ
+    provided_width_mm = n_stairs * 1118                         # 1118 mm = 44" min stair width each
+
+    # minimum number of exits by occupant load (1006.3.2)
+    min_exits = 2 if occ_per_floor <= 500 else 3 if occ_per_floor <= 1000 else 4
+
+    # exit remoteness: exits ≥ ½ (⅓ if sprinklered) of the plate diagonal apart; assume stairs sit
+    # toward opposite corridor ends, so achieved separation ≈ the corridor (plate_w) less a margin.
+    diagonal = math.hypot(plate_w, plate_d)
+    req_sep = diagonal * (1 / 3 if sprinklered else 1 / 2)
+    achieved_sep = plate_w * 0.8 if n_stairs >= 2 else 0.0
+
+    checks = [
+        {"name": "Two means of egress", "ok": n_stairs >= 2, "value": n_stairs, "limit": min_exits},
+        {"name": "Max travel distance (m)", "ok": travel <= travel_limit,
+         "value": round(travel, 1), "limit": travel_limit},
+        {"name": "Egress width (mm)", "ok": provided_width_mm >= req_width_mm,
+         "value": provided_width_mm, "limit": round(req_width_mm)},
+        {"name": "Exit separation (m)", "ok": achieved_sep >= req_sep,
+         "value": round(achieved_sep, 1), "limit": round(req_sep, 1)},
+    ]
     flags: list[str] = []
-    if n_stairs < 2:
-        flags.append("Fewer than two means of egress — most occupancies require ≥2.")
-    if travel > limit:
-        flags.append(f"Max travel distance ≈ {travel:.0f} m exceeds the {limit:.0f} m limit — "
+    if n_stairs < min_exits:
+        flags.append(f"Fewer than {min_exits} means of egress — {occ} at {occ_per_floor} occ/floor "
+                     f"requires ≥{min_exits}." if min_exits > 2 else
+                     "Fewer than two means of egress — most occupancies require ≥2.")
+    if travel > travel_limit:
+        flags.append(f"Max travel distance ≈ {travel:.0f} m exceeds the {travel_limit:.0f} m limit — "
                      "add a stair or shorten the corridor.")
-    return {"stairs": n_stairs, "max_travel_m": round(travel, 1), "limit_m": limit,
-            "sprinklered": sprinklered, "compliant": not flags, "flags": flags}
+    if provided_width_mm < req_width_mm:
+        flags.append(f"Egress width {provided_width_mm:.0f} mm < required {req_width_mm:.0f} mm for "
+                     f"{occ_per_floor} occupants — widen or add a stair.")
+    if achieved_sep < req_sep:
+        flags.append(f"Exits ≈ {achieved_sep:.0f} m apart, below the {req_sep:.0f} m remoteness rule "
+                     "(½ diagonal, ⅓ if sprinklered) — separate the stairs.")
+
+    return {"stairs": n_stairs, "max_travel_m": round(travel, 1), "limit_m": travel_limit,
+            "sprinklered": sprinklered, "occupancy": occ,
+            "occupant_load_per_floor": occ_per_floor, "occupant_load_total": occ_per_floor * max(1, floors),
+            "required_egress_width_mm": round(req_width_mm), "provided_egress_width_mm": provided_width_mm,
+            "min_exits_required": min_exits, "exit_separation_m": round(achieved_sep, 1),
+            "required_separation_m": round(req_sep, 1),
+            "checks": checks, "compliant": not flags, "flags": flags}
 
 
 def parking(units: int, ratio: float = 1.2, kind: str = "surface") -> dict[str, Any]:

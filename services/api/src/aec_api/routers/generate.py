@@ -57,6 +57,7 @@ class MassingIn(BaseModel):
     wwr: float = Field(default=0.4, gt=0, le=0.95)            # window-to-wall ratio
     core: bool = Field(default=False)                         # service core: shafts + stair + MEP risers
     unit_layout: str = Field(default="grid")                  # "grid" | "corridor" (double-loaded test-fit)
+    parking: int = Field(default=0, ge=0, le=2000)            # surface parking stalls as real IfcSpaces (A2)
     # --- acquisition proforma seed ---
     land_cost: float = Field(default=2_500_000.0, ge=0)
     hard_cost_psf: float = Field(default=225.0, ge=0)         # $/sf GFA
@@ -154,11 +155,12 @@ def generate_massing(pid: str, body: MassingIn, db: Session = Depends(get_db),
 
     generate_ifc(metrics, str(ifc_path), name=body.name, frame=body.frame, bay=body.bay_m,
                  units=body.units, envelope=body.envelope, wwr=body.wwr, core=body.core,
-                 unit_layout=body.unit_layout, members=members)
+                 unit_layout=body.unit_layout, members=members, parking=body.parking)
     metrics["framed"] = body.frame
     metrics["unitized"] = body.units
     metrics["enclosed"] = body.envelope
     metrics["cored"] = body.core
+    metrics["parking_stalls"] = body.parking
     metrics["structure"] = rec
     storage.put(f"{pid}/source.ifc", ifc_path.read_bytes())   # durable copy
     p.source_ifc = str(ifc_path)
