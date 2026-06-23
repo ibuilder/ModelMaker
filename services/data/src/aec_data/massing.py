@@ -311,3 +311,96 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
                     0.3, 0.3, f2f, name="Plumbing riser")
     model.write(out_path)
     return out_path
+
+
+def dome_metrics(radius: float, efficiency: float = 0.85, avg_unit_m2: float = 0) -> dict[str, Any]:
+    """Program metrics for a monolithic / earth dome house (a hemisphere of `radius` m)."""
+    import math
+    fa = math.pi * radius * radius
+    return {"floors": 1, "footprint_m2": round(fa, 1), "plate_w": round(2 * radius, 2),
+            "plate_d": round(2 * radius, 2), "floor_to_floor": round(radius, 2),
+            "building_height_m": round(radius, 1), "buildable_gfa_m2": round(fa, 1),
+            "buildable_gfa_sf": round(fa * M2_TO_SF), "net_sellable_m2": round(fa * efficiency, 1),
+            "units": 1, "binding_constraint": "dome", "shape": "dome", "radius_m": radius}
+
+
+def generate_dome_ifc(out_path: str, name: str = "Earth Dome House", radius: float = 8.0,
+                      thickness: float = 0.3, segs: int = 32, rings: int = 14) -> str:
+    """Write an IFC4 monolithic/earth dome: a hemispherical shell (IfcRoof as a triangulated face
+    set) on a circular floor slab, with an interior IfcSpace carrying the floor area. Renders in the
+    viewer (tessellation) and feeds budget/QTO/furnish like any other model."""
+    import math
+
+    import ifcopenshell
+    import ifcopenshell.api
+    import numpy as np
+
+    model = ifcopenshell.api.run("project.create_file", version="IFC4")
+    project = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcProject", name=name)
+    ifcopenshell.api.run("unit.assign_unit", model, length={"is_metric": True, "raw": "METERS"})
+    ctx = ifcopenshell.api.run("context.add_context", model, context_type="Model")
+    body = ifcopenshell.api.run("context.add_context", model, context_type="Model",
+                                context_identifier="Body", target_view="MODEL_VIEW", parent=ctx)
+    site = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSite", name="Site")
+    building = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcBuilding", name="Building")
+    storey = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Ground floor")
+    ifcopenshell.api.run("aggregate.assign_object", model, products=[site], relating_object=project)
+    ifcopenshell.api.run("aggregate.assign_object", model, products=[building], relating_object=site)
+    ifcopenshell.api.run("aggregate.assign_object", model, products=[storey], relating_object=building)
+
+    def circle_profile(r):
+        pos = model.create_entity("IfcAxis2Placement2D",
+                                  Location=model.create_entity("IfcCartesianPoint", (0.0, 0.0)),
+                                  RefDirection=model.create_entity("IfcDirection", (1.0, 0.0)))
+        return model.create_entity("IfcCircleProfileDef", ProfileType="AREA", Position=pos, Radius=float(r))
+
+    def place(el, z=0.0):
+        m = np.eye(4); m[2, 3] = z
+        ifcopenshell.api.run("geometry.edit_object_placement", model, product=el, matrix=m)
+
+    # --- hemispherical shell as a triangulated face set (the dome roof) ---
+    coords, faces = [], []
+    for ri in range(rings + 1):
+        phi = (math.pi / 2) * (ri / rings)          # 0 at apex → π/2 at base
+        z, rad = radius * math.cos(phi), radius * math.sin(phi)
+        for s in range(segs):
+            th = 2 * math.pi * s / segs
+            coords.append([round(rad * math.cos(th), 4), round(rad * math.sin(th), 4), round(z, 4)])
+    for ri in range(rings):
+        for s in range(segs):
+            a = ri * segs + s + 1; b = ri * segs + (s + 1) % segs + 1
+            c = (ri + 1) * segs + s + 1; d = (ri + 1) * segs + (s + 1) % segs + 1
+            faces.append([a, c, d]); faces.append([a, d, b])     # 1-based, CCW
+    plist = model.create_entity("IfcCartesianPointList3D", CoordList=coords)
+    tfs = model.create_entity("IfcTriangulatedFaceSet", Coordinates=plist, CoordIndex=faces, Closed=False)
+    shell_rep = model.create_entity("IfcShapeRepresentation", ContextOfItems=body,
+                                    RepresentationIdentifier="Body", RepresentationType="Tessellation", Items=[tfs])
+    roof = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcRoof", name="Dome shell")
+    place(roof)
+    roof.Representation = model.create_entity("IfcProductDefinitionShape", Representations=[shell_rep])
+    ifcopenshell.api.run("spatial.assign_container", model, products=[roof], relating_structure=storey)
+    ps = ifcopenshell.api.run("pset.add_pset", model, product=roof, name="Pset_RoofCommon")
+    ifcopenshell.api.run("pset.edit_pset", model, pset=ps, properties={"IsExternal": True})
+
+    # --- circular floor slab ---
+    slab = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSlab", name="Floor slab", predefined_type="BASESLAB")
+    place(slab, -0.2)
+    srep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
+                                profile=circle_profile(radius), depth=0.2)
+    ifcopenshell.api.run("geometry.assign_representation", model, product=slab, representation=srep)
+    ifcopenshell.api.run("spatial.assign_container", model, products=[slab], relating_structure=storey)
+
+    # --- interior space (carries the floor area) ---
+    space = ifcopenshell.api.run("root.create_entity", model, ifc_class="IfcSpace", name="Interior")
+    space.LongName = "Dome interior"
+    place(space)
+    rep = ifcopenshell.api.run("geometry.add_profile_representation", model, context=body,
+                               profile=circle_profile(radius * 0.97), depth=max(2.4, radius * 0.85))
+    ifcopenshell.api.run("geometry.assign_representation", model, product=space, representation=rep)
+    ifcopenshell.api.run("aggregate.assign_object", model, products=[space], relating_object=storey)
+    area = round(math.pi * radius * radius, 2)
+    qto = ifcopenshell.api.run("pset.add_qto", model, product=space, name="Qto_SpaceBaseQuantities")
+    ifcopenshell.api.run("pset.edit_qto", model, qto=qto,
+                         properties={"NetFloorArea": area, "GrossFloorArea": area})
+    model.write(out_path)
+    return out_path
