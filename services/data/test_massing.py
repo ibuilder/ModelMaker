@@ -76,8 +76,12 @@ if _have_ifc:
         xs = sh.geometry.verts[0::3]
         span = max(xs) - min(xs)
         assert span > 5.0, f"slab too small ({span:.3f} m) — unit/scale regression"
+        # M1: real IFC materials + surface-style colours applied
+        assert len(model.by_type("IfcMaterial")) >= 1 and len(model.by_type("IfcSurfaceStyle")) >= 1, "materials/styles missing"
+        assert len(model.by_type("IfcStyledItem")) > 0, "no styled representation items"
         print(f"IFC OK - {len(storeys)} storeys, {len(spaces)} floor-plate spaces + "
-              f"{len(slabs)} renderable slabs, sited + represented")
+              f"{len(slabs)} renderable slabs, sited + represented + "
+              f"{len(model.by_type('IfcMaterial'))} materials / {len(model.by_type('IfcSurfaceStyle'))} styles")
 
         # --- generative structural frame (frame=True) -----------------------
         fd2, fpath = tempfile.mkstemp(suffix=".ifc"); os.close(fd2)

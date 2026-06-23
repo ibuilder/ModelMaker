@@ -152,6 +152,27 @@ and ASU.
   onto the takt plan (trade × floor) → scrubable frames (cumulative % built/day), with a **viewer
   scrub** (the Schedule tools slider isolates built-to-date) + a takt **line-of-balance chart**.
 
+## M. Materials, rendering & computational design  ★ next major theme
+Closing gaps vs Revit (families/materials), Rhino/Revit/Matterport (rendering), and Dynamo
+(visual data/computational). Stays IFC-native + web-first (That Open / Fragments stores per-mesh
+material info). Grounded in: [IfcMaterial layer sets](https://forums.buildingsmart.org/t/why-are-material-layer-sets-excluded-from-ifc4-reference-view-mvd/3638),
+[three.js PBR](https://threejs.org/docs/pages/MeshStandardMaterial.html),
+[Dynamo alternatives / Hypar](https://www.ebool.com/alternatives/dynamo-bim).
+
+- ✅ **DONE (M1 start) — materials & surface styles.** `materials.apply_palette()` assigns an
+  IfcMaterial + IfcSurfaceStyle colour per element class to generated/dome models (concrete, glazing,
+  steel, vegetation…), so models carry real material data and render in colour. *Next: a material
+  editor + per-project palette.*
+- **M2 — Photorealistic rendering** (Revit/Rhino/Matterport): a viewer **render mode** — PBR
+  (MeshStandardMaterial) + environment/IBL lighting, **soft shadows + ambient occlusion**, a
+  **sun/shadow study** by date/location, and a **Matterport-style first-person walkthrough**.
+- **M3 — Family & material depth** (Revit-parity): **IfcMaterialLayerSet** wall/floor/roof assemblies
+  (e.g. plasterboard · stud · plasterboard), an expanded parametric **family library** with materials,
+  and **import of external IFC type content**.
+- **M4 — Visual data relationships** (Dynamo/Hypar-style): a **visual graph** of the config-driven
+  module relations + rollups (we have the data graph — make it visual), and a **computational rules →
+  model** step (parametric, IFC/glTF out, like Hypar). Pairs with the existing **Ask AI** automation.
+
 ## D. Platform / production
 Tracked in [production-readiness.md](production-readiness.md): main.ts account/connections split,
 dashboard JSON-extraction perf, Redis-backed rate limits (multi-worker), CI dependency scanning,

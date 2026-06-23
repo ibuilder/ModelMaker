@@ -309,6 +309,8 @@ def generate_ifc(metrics: dict, out_path: str, name: str = "Massing Study",
                     0.5, 0.5, f2f, name="Supply riser")
             add_box("IfcPipeSegment", storey, elev, ccx + half_w - 0.4, ccy + half_d - 0.4,
                     0.3, 0.3, f2f, name="Plumbing riser")
+    from . import materials
+    materials.apply_palette(model)               # real IFC materials + surface colours (M1)
     model.write(out_path)
     return out_path
 
@@ -402,5 +404,7 @@ def generate_dome_ifc(out_path: str, name: str = "Earth Dome House", radius: flo
     qto = ifcopenshell.api.run("pset.add_qto", model, product=space, name="Qto_SpaceBaseQuantities")
     ifcopenshell.api.run("pset.edit_qto", model, qto=qto,
                          properties={"NetFloorArea": area, "GrossFloorArea": area})
+    from . import materials
+    materials.apply_palette(model)               # real IFC materials + surface colours (M1)
     model.write(out_path)
     return out_path
