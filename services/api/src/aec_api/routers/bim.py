@@ -383,9 +383,11 @@ def download_attachment(aid: str, request: Request, db: Session = Depends(get_db
 
 @router.get("/projects/{pid}/model.frag")
 def model_frag(pid: str, request: Request):
-    """Serve the published Fragments tile with HTTP range support (streaming)."""
+    """Serve the published Fragments tile with HTTP range support + ETag revalidation. The URL is
+    stable across republishes, so we revalidate (not immutable): unchanged → 304 (instant re-open),
+    republished → fresh bytes (fixes stale-cache after an edit/regenerate)."""
     return range_response(request, f"{pid}/model.frag", "application/octet-stream",
-                          filename="model.frag")
+                          filename="model.frag", immutable=False)
 
 
 @router.get("/projects/{pid}/source.ifc")

@@ -34,6 +34,18 @@ with TestClient(app) as c:
     # unsatisfiable
     assert c.get(f"/projects/{pid}/model.frag", headers={"Range": "bytes=999-"}).status_code == 416
 
+    # --- ETag revalidation (stale-cache fix for republished models) ------------
+    etag = full.headers.get("etag")
+    assert etag, "frag must carry an ETag"
+    assert "must-revalidate" in full.headers.get("cache-control", ""), full.headers.get("cache-control")
+    # unchanged → 304, no body
+    nm = c.get(f"/projects/{pid}/model.frag", headers={"If-None-Match": etag})
+    assert nm.status_code == 304 and not nm.content, (nm.status_code, len(nm.content))
+    # republish (new bytes) → ETag changes → full 200 (not a stale 304)
+    storage.put(f"{pid}/model.frag", bytes(range(128)))
+    again = c.get(f"/projects/{pid}/model.frag", headers={"If-None-Match": etag})
+    assert again.status_code == 200 and again.headers.get("etag") != etag, "republished frag must refetch"
+
     # --- observability: /metrics in Prometheus text format ---------------------
     c.get("/health"); c.get("/health")          # generate some traffic on a stable route
     m = c.get("/metrics")

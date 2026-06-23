@@ -59,3 +59,33 @@ export async function withLoading<T>(container: HTMLElement, label: string,
     if (--depth <= 0) ov.classList.remove("show");
   }
 }
+
+/** Update the active loading overlay's label mid-task (e.g. download progress). */
+export function setLoadingLabel(container: HTMLElement, text: string): void {
+  const el = container.querySelector(".loading-label") as HTMLElement | null;
+  if (el) el.textContent = text;
+}
+
+/** Fetch an ArrayBuffer while reporting download progress (streams the body). Falls back to a
+ *  plain buffer when the body can't be streamed or Content-Length is absent. The browser still
+ *  handles ETag/304 transparently, so cached re-opens resolve instantly. */
+export async function fetchArrayBufferWithProgress(
+  url: string, init: RequestInit, onProgress: (loaded: number, total: number) => void,
+): Promise<ArrayBuffer> {
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const total = Number(res.headers.get("content-length") || 0);
+  if (!res.body || !total) return res.arrayBuffer();
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); loaded += value.length; onProgress(loaded, total);
+  }
+  const out = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.length; }
+  return out.buffer;
+}
