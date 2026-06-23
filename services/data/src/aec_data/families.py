@@ -184,3 +184,34 @@ def add_family(model: ifcopenshell.file, key: str, storey: str | None = None,
 
     typ = ensure_type(model, key, dims)
     return place_type(model, typ.GlobalId, storey, position)
+
+
+def import_types_from_ifc(model: ifcopenshell.file, source) -> list[dict[str, Any]]:
+    """Import external IFC **type content** (manufacturer / 3rd-party families) into `model` so they
+    become placeable like the built-in catalog. `source` is an ifcopenshell file, a path, or raw
+    bytes. Every IfcTypeProduct in the source is copied in (with its geometry) via
+    `project.append_asset`, deduped by (class, name) against what the target already has. Returns the
+    imported types as [{guid, name, ifc_class}] — place them with the normal place_type flow.
+    """
+    import ifcopenshell.util.element  # noqa: F401  (ensures util is importable for append_asset)
+
+    if isinstance(source, ifcopenshell.file):
+        lib = source
+    elif isinstance(source, (bytes, bytearray)):
+        lib = ifcopenshell.file.from_string(bytes(source).decode("utf-8", "ignore"))
+    else:
+        lib = ifcopenshell.open(str(source))
+
+    have = {(t.is_a(), (getattr(t, "Name", None) or "")) for t in model.by_type("IfcTypeProduct")}
+    imported: list[dict[str, Any]] = []
+    for typ in lib.by_type("IfcTypeProduct"):
+        sig = (typ.is_a(), (getattr(typ, "Name", None) or ""))
+        if not sig[1] or sig in have:                 # skip nameless or already-present types
+            continue
+        try:
+            new = ifcopenshell.api.run("project.append_asset", model, library=lib, element=typ)
+        except Exception:                             # noqa: BLE001 — incompatible/loose type, skip it
+            continue
+        have.add(sig)
+        imported.append({"guid": new.GlobalId, "name": new.Name or sig[1], "ifc_class": new.is_a()})
+    return imported

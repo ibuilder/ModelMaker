@@ -4,6 +4,13 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.34 — import external IFC families (M3 complete)
+- **Import IFC type content** — bring manufacturer / 3rd-party families into a project from any IFC:
+  `families.import_types_from_ifc` copies every IfcTypeProduct (with geometry) in via
+  `project.append_asset` (deduped, idempotent), then they're placeable like the built-in catalog.
+  New endpoint `POST /projects/{id}/families/import` + *"⇪ Import IFC families…"* in the authoring
+  panel. Completes M3.
+
 ## v0.1.33 — material layer sets + family library (M3)
 - **Layered construction assemblies** — generated models now carry real **IfcMaterialLayerSet**
   data on walls, slabs and roofs (e.g. exterior wall = brick · cavity · insulation · CMU · gypsum),

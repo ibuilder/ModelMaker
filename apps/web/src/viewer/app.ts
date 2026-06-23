@@ -1205,7 +1205,26 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
           out.innerHTML = `added <b>${label}</b>${pos ? ` at ${pos[0].toFixed(1)}, ${pos[1].toFixed(1)} m` : " at origin"}<br>publish: ${state}`;
         });
         place.dataset.cap = "edit";
-        furnish.append(hint, sel, place);
+        // Import external IFC type content (manufacturer / 3rd-party families) into the project.
+        const impInput = document.createElement("input");
+        impInput.type = "file"; impInput.accept = ".ifc"; impInput.style.display = "none";
+        const imp = toolBtn2("⇪ Import IFC families…", () => impInput.click());
+        imp.dataset.cap = "edit";
+        imp.title = "Import type content (families) from a manufacturer / 3rd-party IFC";
+        impInput.addEventListener("change", async () => {
+          const f = impInput.files?.[0]; if (!f) return;
+          out.textContent = `importing families from ${f.name}…`;
+          try {
+            const r = await api.importFamilies(pid, f);
+            if (!r.count) { out.textContent = "no new families found in that IFC"; impInput.value = ""; return; }
+            const state = await waitForPublish(pid);
+            if (state === "done") await loadProjectModel();
+            out.innerHTML = `imported <b>${r.count}</b> famil${r.count === 1 ? "y" : "ies"} `
+              + `(${r.imported.slice(0, 3).map((i) => i.name).join(", ")}${r.count > 3 ? "…" : ""}) · publish: ${state}`;
+          } catch (e) { out.textContent = `import failed: ${(e as Error).message}`; }
+          impInput.value = "";
+        });
+        furnish.append(hint, sel, place, imp, impInput);
         b.append(fix, pub, furnish, out);
       },
       drawings: () => {
