@@ -331,6 +331,11 @@ export class ApiClient {
     return this.json<{ headline: string; risks: { level: string; text: string }[]; source: string; ai_enabled: boolean }>(
       `/projects/${pid}/ai/risk-summary`);
   }
+  /** Last-Planner Plan Percent Complete + reasons for non-completion (lean, R4). */
+  leanPpc(pid: string) {
+    return this.json<{ commitments: number; completed: number; ppc: number; missed: number; rating: string; top_variance_reasons: { reason: string; count: number }[] }>(
+      `/projects/${pid}/lean/ppc`);
+  }
   /** Ask a natural-language question about the project; grounded on a live snapshot. */
   aiAsk(pid: string, question: string) {
     return this.json<{ answer: string; source: string; ai_enabled: boolean; snapshot?: unknown }>(

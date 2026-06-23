@@ -163,6 +163,18 @@ export class PortalUI {
         safety.textContent = `Safety: ${s.recordable_count} recordable / ${s.incident_count} incidents · ${s.lost_days} lost days${trir}${dart}`;
       }).catch(() => {});
 
+      // lean / Last-Planner PPC (shown once weekly-plan commitments exist) — R4
+      const lean = document.createElement("div"); lean.className = "meta"; lean.style.margin = "2px 0 6px";
+      this.root.appendChild(lean);
+      void this.host.api.leanPpc(pid).then((l) => {
+        if (!l.commitments) return;
+        const top = l.top_variance_reasons[0];
+        const color = l.rating === "good" ? "#33d17a" : l.rating === "fair" ? "#ffd479" : "#e2554a";
+        lean.innerHTML = `Lean PPC: <b style="color:${color}">${(l.ppc * 100).toFixed(0)}%</b> `
+          + `(${l.completed}/${l.commitments} commitments${l.missed ? ` · ${l.missed} missed` : ""})`
+          + (top ? ` · top reason: ${top.reason}` : "");
+      }).catch(() => {});
+
       // charts from by_module: workflow-state mix + busiest sections
       const states = new Map<string, number>();
       const sections = new Map<string, number>();
