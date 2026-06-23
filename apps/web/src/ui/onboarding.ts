@@ -78,13 +78,17 @@ export function showWelcome(ctx: OnboardCtx): void {
 
   const foot = document.createElement("div");
   foot.style.cssText = "display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:18px";
+  const guides = document.createElement("a");
+  guides.href = "https://ibuilder.github.io/ModelMaker/guide.html"; guides.target = "_blank"; guides.rel = "noopener";
+  guides.className = "tool-btn"; guides.textContent = "📚 Guides"; guides.style.cssText = "text-decoration:none;margin-right:auto";
+  guides.title = "Open the step-by-step guides & glossary in a new tab";
   const skip = document.createElement("button");
   skip.className = "tool-btn"; skip.textContent = "Skip for now";
   skip.onclick = () => { markOnboarded(); ov.remove(); };
   const tour = document.createElement("button");
   tour.className = "file-btn"; tour.textContent = "Take a 60-second tour";
   tour.onclick = () => { ov.remove(); startTour(); };
-  foot.append(skip, tour);
+  foot.append(guides, skip, tour);
   card.append(foot);
 
   ov.append(card);

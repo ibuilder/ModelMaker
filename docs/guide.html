@@ -36,6 +36,8 @@
   footer{padding:40px 0 60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:48px}
   .pillrow{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
   .pill{font-size:13px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 12px}
+  .shot{width:100%;border:1px solid var(--line);border-radius:10px;display:block;margin:14px 0 4px}
+  .shot.sm{max-width:520px} figcaption{color:var(--muted);font-size:13px;margin:0 0 10px}
 </style>
 </head>
 <body>
@@ -58,6 +60,11 @@
     each tutorial takes about five minutes.</p>
   <div class="note tip">👋 <b>Brand new?</b> Open the <a href="app/">live demo</a> or the desktop app and
     take the built-in <b>60-second tour</b> (the <b>?</b> button, top-right). Then come back here for the deep dives.</div>
+
+  <figure style="margin:18px 0">
+    <img class="shot" src="img/lifecycle.svg" alt="Lifecycle coverage: one IFC model spans acquisition to turnover" />
+    <figcaption>One IFC model spans the whole lifecycle — the tutorials below follow it left to right.</figcaption>
+  </figure>
 
   <div class="toc">
     <a href="#start">Getting started</a>
@@ -95,6 +102,10 @@
   </ol>
   <div class="note">There's nothing to "save" — the model is read from its IFC file. Edits you make
     (Tutorial 4+) are written back to IFC server-side, keeping every ID stable.</div>
+  <figure>
+    <img class="shot" src="img/plan_grid.png" alt="A dimensioned floor plan generated from the model" />
+    <figcaption>The same model also generates 2D drawings — dimensioned plans, sections, elevations, PDF sheets.</figcaption>
+  </figure>
 
   <h2 id="generate">Tutorial 2 · Generate a building from zoning ⭐</h2>
   <p class="sub">The headline feature: turn a lot + zoning rules into a real building and a first-cut deal.</p>
@@ -111,6 +122,11 @@
     <li>Switch to the <b>Model</b> workspace to see your generated building. Open <b>Test Fit</b> (back in
       Finance) to compare unit-mix schemes or <b>⚡ Optimize</b> for the highest-yield layout.</li>
   </ol>
+  <figure>
+    <img class="shot sm" src="img/generate-build.gif" alt="A building rises floor by floor from a zoning envelope, then the deal is underwritten" />
+    <figcaption>Zoning in → a real IFC building rises → the deal is underwritten.</figcaption>
+  </figure>
+  <img class="shot" src="img/massing_generate.svg" alt="Inputs to an IFC massing model and acquisition proforma" />
   <div class="note tip">💡 The building is real openBIM — it flows straight into drawings, takeoff, the
     estimate, and the deal. One input, the whole chain.</div>
 
@@ -142,6 +158,10 @@
       to scrub the build in the viewer.</li>
     <li>Ask the <b>"Ask AI"</b> box plain-English questions like "what's overdue?" or "are we over budget?"</li>
   </ol>
+  <figure>
+    <img class="shot" src="img/gantt.png" alt="A Gantt schedule generated from the project's activities" />
+    <figcaption>Schedule views (Gantt + line-of-balance) generate from the project's activities.</figcaption>
+  </figure>
 
   <h2 id="turnover">Tutorial 5 · Hand it over (turnover)</h2>
   <p class="sub">Close the project out and produce the handover package.</p>
