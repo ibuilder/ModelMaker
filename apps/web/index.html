@@ -18,7 +18,7 @@
         <div id="workspaces" role="tablist" aria-label="Workspace"></div>
         <span class="grow"></span>
         <label id="persona-wrap" title="Show tools for your role">
-          <select id="persona">
+          <select id="persona" aria-label="Role — show tools for your role">
             <option value="all">All roles</option>
             <option value="developer">Developer</option>
             <option value="gc">General Contractor</option>
@@ -27,7 +27,7 @@
             <option value="subcontractor">Subcontractor</option>
           </select>
         </label>
-        <span id="status">ready</span>
+        <span id="status" role="status" aria-live="polite">ready</span>
       </header>
 
       <main id="stage">
@@ -69,9 +69,9 @@
 
         <!-- FINANCE workspace: full-width proforma + portfolio roll-up -->
         <section id="ws-finance" class="workspace">
-          <div id="fin-tabs">
-            <button class="fintab active" data-fin="proforma">Proforma</button>
-            <button class="fintab" data-fin="portfolio">Portfolio</button>
+          <div id="fin-tabs" role="tablist" aria-label="Finance views">
+            <button class="fintab active" data-fin="proforma" role="tab" aria-selected="true">Proforma</button>
+            <button class="fintab" data-fin="portfolio" role="tab" aria-selected="false">Portfolio</button>
           </div>
           <div id="panel-proforma" class="fullpanel active"></div>
           <div id="panel-portfolio" class="fullpanel"></div>

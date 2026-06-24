@@ -175,7 +175,11 @@ async function openStudioTab() {
 let currentWs = "model";
 function setWorkspace(key: string) {
   currentWs = key;
-  document.querySelectorAll(".ws-btn").forEach((b) => b.classList.toggle("active", (b as HTMLElement).dataset.ws === key));
+  document.querySelectorAll(".ws-btn").forEach((b) => {
+    const on = (b as HTMLElement).dataset.ws === key;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", String(on));
+  });
   document.querySelectorAll(".workspace").forEach((w) => w.classList.toggle("active", w.id === `ws-${key}`));
   if (key === "drawings") openDrawingsTab();
   if (key === "studio") void openStudioTab();
@@ -193,15 +197,16 @@ const wsEl = $("workspaces");
 for (const w of WORKSPACES) {
   const b = document.createElement("button");
   b.className = "ws-btn"; b.dataset.ws = w.key; b.textContent = w.label;
+  b.setAttribute("role", "tab"); b.setAttribute("aria-selected", "false");
   b.onclick = () => setWorkspace(w.key);
   wsEl.appendChild(b);
 }
 
 document.querySelectorAll<HTMLButtonElement>(".fintab").forEach((t) => {
   t.onclick = () => {
-    document.querySelectorAll(".fintab").forEach((x) => x.classList.remove("active"));
+    document.querySelectorAll(".fintab").forEach((x) => { x.classList.remove("active"); x.setAttribute("aria-selected", "false"); });
     document.querySelectorAll("#ws-finance .fullpanel").forEach((p) => p.classList.remove("active"));
-    t.classList.add("active");
+    t.classList.add("active"); t.setAttribute("aria-selected", "true");
     $(`panel-${t.dataset.fin}`).classList.add("active");
     if (t.dataset.fin === "proforma") openProformaTab();
     if (t.dataset.fin === "portfolio") openPortfolioTab();
