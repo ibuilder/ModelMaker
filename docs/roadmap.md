@@ -275,7 +275,9 @@ The headline themes are **shipped** (v0.1.14): generative design + **Test Fit** 
 the **developer/finance portal** (B1 budgets · B2 Sources & Uses · B3 property/tax · B4 specialty ·
 B5 investment memo), the full **lifecycle** (acquisition→turnover), **AI assistant**, **SSO**, and
 the production-blocking hardening (see [production-readiness.md](production-readiness.md) — now
-shippable). 26/26 CI gate + a report-only dependency scan.
+shippable). **30/30 API suites + 3 data suites + 24 web unit tests** (incl. a Studio node-editor DOM
+smoke test, an `escapeHtml` / connections stored-XSS lock, and a direct 4D-timeline-engine test) +
+a report-only dependency scan.
 
 Remaining = incremental depth (not blockers). **Reconciled against the actual codebase (2026-06)** —
 several items the old list called "next" were already implemented; verified by reading source, not
