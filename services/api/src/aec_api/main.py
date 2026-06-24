@@ -78,19 +78,24 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
-# First-layer per-IP rate limit (opt-in: set AEC_RATE_LIMIT_RPM>0 in production). Fixed 60s window,
-# in-process — fine for a single worker; multi-worker needs a shared store (Redis). Off by default
-# so dev/tests aren't throttled. health/metrics are exempt.
+# First-layer per-IP rate limit (opt-in: set AEC_RATE_LIMIT_RPM>0 in production). Fixed 60s window.
+# Single worker → in-process buckets; for multi-worker set AEC_REDIS_URL and the count is shared via
+# an atomic Redis INCR+EXPIRE so the limit holds across processes. Redis is fail-open (any Redis error
+# falls back to the in-process count) so limiter infra can never take the API down. Off by default so
+# dev/tests aren't throttled; health/metrics are exempt.
 _RATE_RPM = int(os.environ.get("AEC_RATE_LIMIT_RPM", "0") or "0")
+_REDIS_URL = os.environ.get("AEC_REDIS_URL", "").strip()
 if _RATE_RPM > 0:
-    _rl_buckets: dict[str, list[int]] = {}      # ip -> [window_minute, count]
+    _rl_buckets: dict[str, list[int]] = {}      # ip -> [window_minute, count] (in-process fallback)
+    _rl_redis = None
+    if _REDIS_URL:
+        try:                                    # lazy: redis is only a dependency when REDIS_URL is set
+            import redis.asyncio as _aioredis
+            _rl_redis = _aioredis.from_url(_REDIS_URL, socket_timeout=0.25, socket_connect_timeout=0.25)
+        except Exception:                        # noqa: BLE001 — redis not installed / bad URL → in-process
+            _rl_redis = None
 
-    @app.middleware("http")
-    async def _rate_limit(request: Request, call_next):
-        if request.url.path in ("/health", "/metrics"):
-            return await call_next(request)
-        ip = request.client.host if request.client else "?"
-        win = int(time.time() // 60)
+    def _rl_local(ip: str, win: int) -> int:
         b = _rl_buckets.get(ip)
         if not b or b[0] != win:
             b = [win, 0]
@@ -98,7 +103,29 @@ if _RATE_RPM > 0:
                 _rl_buckets.clear()
             _rl_buckets[ip] = b
         b[1] += 1
-        if b[1] > _RATE_RPM:
+        return b[1]
+
+    async def _rl_count(ip: str, win: int) -> int:
+        """Hits for (ip, window). Shared via Redis when configured; fail-open to in-process on error."""
+        if _rl_redis is not None:
+            try:
+                key = f"rl:{ip}:{win}"
+                async with _rl_redis.pipeline(transaction=True) as pipe:
+                    pipe.incr(key)
+                    pipe.expire(key, 65)         # auto-drop one window after it closes
+                    count, _ = await pipe.execute()
+                return int(count)
+            except Exception:                    # noqa: BLE001 — Redis hiccup must not throttle/break requests
+                pass
+        return _rl_local(ip, win)
+
+    @app.middleware("http")
+    async def _rate_limit(request: Request, call_next):
+        if request.url.path in ("/health", "/metrics"):
+            return await call_next(request)
+        ip = request.client.host if request.client else "?"
+        win = int(time.time() // 60)
+        if await _rl_count(ip, win) > _RATE_RPM:
             return Response('{"detail":"rate limit exceeded"}', status_code=429,
                             media_type="application/json", headers={"Retry-After": "60"})
         return await call_next(request)
