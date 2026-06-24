@@ -7,6 +7,7 @@
 [![Downloads](https://img.shields.io/github/downloads/ibuilder/ModelMaker/total?color=33d17a)](https://github.com/ibuilder/ModelMaker/releases)
 ![Platforms](https://img.shields.io/badge/desktop-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-555)
 ![IFC-native](https://img.shields.io/badge/IFC-native-4a8cff)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/demo-in%20browser-33d17a)](https://ibuilder.github.io/ModelMaker/app/)
 
 > **Open, self-hosted, IFC-native AEC platform.** A web **BIM viewer + modeling**, a **73-module GC

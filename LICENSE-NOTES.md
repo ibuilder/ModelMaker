@@ -1,4 +1,8 @@
-# Licensing notes (confirm with counsel before distributing)
+# Licensing notes (third-party components)
+
+> **This project's own code is MIT-licensed (see [`LICENSE`](LICENSE)).** The notes below cover
+> the third-party components it composes and the distribution boundaries to keep.
+
 
 This platform composes components under different licenses. The key rule: keep the **GPL**
 desktop editor a separate process you *use*, not code you statically link into a proprietary
