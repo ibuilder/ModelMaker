@@ -272,7 +272,8 @@ the prior list. Status now in rough priority:
      is dropped in handover.
    - C3 4D sequencing — ✅ already done: [fourd.py](../services/api/src/aec_api/fourd.py) `timeline()`
      + `GET /schedule/4d` + a scrubber in the web portal; schedule viz (`gantt_svg` / `lob_svg`) too.
-4. **Platform** — ⏳ Redis-backed rate limits (currently an in-memory single-worker limiter in
-   [main.ts](../services/api/src/aec_api/main.py) — real multi-worker gap); main.ts (web) account/
-   connections split (1.2k-line file — refactor, low user value); a11y pass; dashboard
-   JSON-extraction perf. Mobile (Capacitor) is a flagged **separate-app** effort, out of scope here.
+4. **Platform** — ✅ **Redis-backed rate limits** done: set `AEC_REDIS_URL` and the per-IP limit is
+   shared across workers via an atomic Redis `INCR`+`EXPIRE` (fail-open to the in-process bucket on any
+   Redis error; redis is lazily imported only when the URL is set), with a `test_ratelimit` gate. ⏳
+   Remaining: main.ts (web) account/connections split (1.2k-line file — refactor, low user value);
+   a11y pass; dashboard JSON-extraction perf. Mobile (Capacitor) is a flagged **separate-app** effort.
