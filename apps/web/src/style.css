@@ -94,7 +94,9 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
 #rail-resize { position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 20; }
 #rail-resize:hover { background: var(--accent); opacity: 0.5; }
 
-#container { position: relative; min-width: 0; overflow: hidden; }
+/* touch-action:none lets camera-controls own touch gestures (orbit/pan/pinch) instead of the
+   browser scrolling/zooming the page; overscroll-behavior stops pull-to-refresh hijacking a drag. */
+#container { position: relative; min-width: 0; overflow: hidden; touch-action: none; overscroll-behavior: none; }
 
 /* floating viewer toolbar over the 3D viewport */
 #viewer-tools {
@@ -459,6 +461,9 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
   .portal-table { font-size: 11px; }
   #panel-portal, #ws-construction { overflow-x: auto; }
   .result-card { max-height: 88vh; }
+  /* coarse-pointer ergonomics: bigger tap targets for the icon rail + viewer tools on phones */
+  .rail-btn, .icon-btn, #viewer-tools .tool-btn { min-width: 38px; min-height: 38px; }
+  #viewer-tools { gap: 4px; flex-wrap: wrap; max-width: 64vw; }
 }
 
 /* ---- Studio: visual computational node graph (M4) ------------------------- */
