@@ -72,6 +72,44 @@ def from_mapping_csv(model: ifcopenshell.file, csv_path: str) -> list[dict[str, 
         return from_mapping(model, list(csv.DictReader(fh)))
 
 
+def parse_xer(text: str) -> list[dict[str, str]]:
+    """Parse a Primavera P6 **.xer** export (tab-delimited; %T table / %F field-header / %R rows)
+    into activity rows {activity_id, name, start, finish} from its TASK table — the same shape
+    `from_mapping` consumes. Prefers planned (target) dates, falls back to actual/early dates.
+    Pure string→rows; .mpp is intentionally unsupported (proprietary binary — export to XER/CSV)."""
+    rows: list[dict[str, str]] = []
+    table: str | None = None
+    fields: list[str] = []
+    for line in text.splitlines():
+        if not line:
+            continue
+        tag, _, rest = line.partition("\t")
+        if tag == "%T":
+            table = rest.strip(); fields = []
+        elif tag == "%F":
+            fields = rest.split("\t")
+        elif tag == "%R" and table == "TASK" and fields:
+            vals = rest.split("\t")
+            rec = dict(zip(fields, vals))
+            start = rec.get("target_start_date") or rec.get("act_start_date") or rec.get("early_start_date") or ""
+            finish = rec.get("target_end_date") or rec.get("act_end_date") or rec.get("early_end_date") or ""
+            rows.append({
+                "activity_id": rec.get("task_code") or rec.get("task_id") or "",
+                "name": rec.get("task_name") or "",
+                "start": start[:10], "finish": finish[:10],
+            })
+    return rows
+
+
+def from_xer(model: ifcopenshell.file, xer_path: str) -> list[dict[str, Any]]:
+    """Import P6 .xer activities and match them to model elements by the same name/class/storey
+    rules as the CSV path (so a P6 schedule drives the 4D scrub). Element-matching columns
+    (ifc_class/storey/type) may be added per-row by a companion mapping; bare .xer yields dated
+    activities you can then map."""
+    with open(xer_path, encoding="utf-8", errors="ignore") as fh:
+        return from_mapping(model, parse_xer(fh.read()))
+
+
 def schedule_file(ifc_path: str, mapping_csv: str | None = None) -> list[dict[str, Any]]:
     model = open_model(ifc_path)
     if mapping_csv:

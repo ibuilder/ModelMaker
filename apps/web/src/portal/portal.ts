@@ -1,5 +1,6 @@
 import type { ApiClient, ModuleDef, ModuleRecord, RecordBrief } from "../api/client";
 import { toast } from "../ui/feedback";
+import { noProjectHtml } from "../ui/empty";
 
 /**
  * GC portal UI — one config-driven engine renders every module's list / form / record pages
@@ -22,7 +23,7 @@ export class PortalUI {
   constructor(private root: HTMLElement, private host: PortalHost) {}
 
   async init() {
-    if (!this.host.projectId()) { this.root.innerHTML = `<div class="empty-state">No project open<span class="es-hint">Pick a project in the toolbar to use the GC portal.</span></div>`; return; }
+    if (!this.host.projectId()) { this.root.innerHTML = noProjectHtml("the GC portal"); return; }
     this.mods = await this.host.api.modules();
     // re-order the module catalog's default-open sections when the persona changes
     window.addEventListener("aec:persona", () => this.refreshCatalog());

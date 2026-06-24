@@ -46,17 +46,17 @@ Grounded in [TestFit Site Solver](https://www.testfit.io/product/site-solver),
 - ✅ **DONE — A3 parking (lite) + A4 yield compare.** `test_fit.parking()` (stalls/unit ratio →
   count/area/cost) and `compare()` rank schemes; `POST /test-fit/compare` + a "📐 Test Fit" Finance
   panel (units/efficiency/avg-SF/NSF/stalls, best ★). *Next: parking as real IFC geometry, egress.*
-- **A1b/A2 — Circulation & egress (full).** Define unit *types* (studio/1BR/2BR… target SF + mix %/count) and
-  tile them along a **double-loaded corridor** on the floor plate (not a naive grid) — real unit
-  modules + demising walls + corridor. Import/save unit presets.
-- **A2 — Circulation & egress.** Auto corridors, egress stairs, elevators positioned for code
-  (max travel distance, two means of egress); core placement from the unit layout.
-- **A3 — Parking solver.** Surface / podium / structured parking to a target **stalls/unit** ratio,
-  with drive aisles + ramps; auto stall count; parking as IFC spaces/slabs.
-- **A4 — Yield metrics & scenario compare.** Live GSF/NSF, **efficiency (load factor)**, units,
-  units/acre, parking ratio, FAR achieved, **yield-on-cost** — multiple fits compared side-by-side.
-- **A5 — Generative design (targets).** Define targets/filters (FAR, parking ratio, yield-on-cost)
-  → search massing/unit-mix/parking permutations and rank — "find the deal that pencils."
+> **A-theme status (reconciled 2026-06):** A1/A3/A4/A5/A6 are **done** (see the ✅ entries); the
+> egress *analysis* (occupant load · travel · exits · separation), **parking as real IFC geometry**,
+> and the **polygon-offset footprint** all shipped in the Test-Fit-depth pass. The bracketed entries
+> below are the *original* aspirational specs kept for reference — only two pieces remain genuinely
+> open: **(A1b)** named unit-*type* presets (studio/1BR/2BR target-SF + mix) you can save/load, and
+> **(A2-geometry)** auto-*placing* code-positioned egress **geometry** (corridors/stairs/elevators as
+> IFC, not just the pass/fail check). Both are deeper generative-design work, not blockers.
+- *[ref] A1b — unit-type presets:* define unit types (target SF + mix %/count) + save/load presets.
+- *[ref] A2 — egress geometry:* auto corridors + egress stairs/elevators positioned for code; core
+  placement from the unit layout. (The egress *check* is done; this is the generative *placement*.)
+- ✅ **DONE — A3/A4 parking + yield compare** (parking lite + real IFC stalls; `compare()` ranks fits).
 - ✅ **DONE — A5 generative design (targets).** `test_fit.optimize()` sweeps unit-mix × parking
   presets, scores yield-on-cost, filters by targets (units/efficiency/parking/YoC), ranks. `POST
   /test-fit/optimize` + "⚡ Optimize" button. *Next: tie YoC to the live proforma vs the proxy.*
@@ -237,6 +237,16 @@ bundling/auto-update policy these feed into.
   importer). A browser **3D building editor**. *Verdict: reference only — out of scope.* The mission
   is explicit that **Blender/Bonsai is the desktop editor, not the web viewer**; in-browser authoring
   would contradict it. Keep as a UX reference for the existing edit-gated place-tools; do not adopt.
+
+**Schedule import (P6 / MS Project)?** ✅ **.xer (Primavera P6) now parsed** — `schedule.parse_xer`
+reads the TASK table (planned→actual→early date fallback) into the same activity rows the CSV mapping
+path consumes, so a P6 schedule can drive the 4D scrub (matched to elements by name/class/storey).
+**.mpp (MS Project) intentionally not parsed** — it's a proprietary OLE-compound binary with no
+reliable open-source reader; the standard path is *MS Project → Save As XML/CSV → import* (CSV mapping
+already supported). **What else to import:** IFC (✅ source of truth), RVT/DWG/NWC via the paid APS
+bridge or free Revit-IFC export (✅), BCF issues (✅ round-trip), data via connectors (Postgres/Procore/
+QuickBooks/Sage/Viewpoint ✅). Candidate future imports: **E57/point clouds** (reality capture →
+overlay) and **glTF** — both nice-to-have, neither blocking the IFC-source-of-truth mission.
 
 **Do we need to create/import libraries to "run on its own"? Do they auto-update?** No new library is
 required — the desktop build already runs standalone (Tauri shell + bundled PyInstaller FastAPI

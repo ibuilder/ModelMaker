@@ -4,6 +4,22 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.43 — demo-aware empty states, mobile/PWA polish, P6 .xer import
+- **Demo-aware empty states** — the GC portal & drawings no longer show a misleading "pick a project"
+  in the viewer-only Pages demo (there's no backend there). A shared `noProjectHtml` explains it's the
+  viewer demo + links to the full app; in the real app it gives an actionable "create/open a project"
+  hint.
+- **Mobile / PWA polish** — `touch-action:none` + `overscroll-behavior:none` on the 3D container so
+  camera-controls own touch gestures (orbit/pan/pinch) instead of the page scrolling; PWA install meta
+  (theme-color, apple-mobile-web-app-*, viewport-fit=cover); bigger tap targets for the rail + viewer
+  tools on phones.
+- **Primavera P6 .xer schedule import** — `schedule.parse_xer` reads the TASK table (planned→actual→
+  early date fallback) into the activity rows the CSV mapping path consumes, so a P6 schedule can drive
+  the 4D scrub. `.mpp` stays export-to-XML/CSV (proprietary binary). Gated in test_analysis.
+- **Roadmap reconciled** — A-theme status clarified (A1/A3/A4/A5/A6 + egress check + parking geometry
+  + polygon offset done; only unit-type presets + auto-placed egress geometry remain); schedule-import
+  + "what else to import" + Revit/Navisworks-plugin + IFC5-alpha verdicts recorded.
+
 ## v0.1.42 — main.ts refactor round 2 (account/admin UI) + login on modalShell
 - **Modularization** — the account / auth / admin surface (sign-in + SSO, reset, account menu,
   self-service password, admin user management, audit log, project-member management; ~330 lines)

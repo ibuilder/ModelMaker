@@ -35,7 +35,22 @@ assert len(sch) == 8 and all(s["net_area"] and s["storey"] for s in sch), sch[:2
 import os  # noqa: E402
 os.remove("../../samples/_test_spaces.ifc")
 
+# --- Primavera P6 .xer schedule import (TASK table → dated activities) -------
+from aec_data import schedule  # noqa: E402
+_xer = "\n".join([
+    "\t".join(["%T", "TASK"]),
+    "\t".join(["%F", "task_id", "task_code", "task_name", "target_start_date", "target_end_date"]),
+    "\t".join(["%R", "1", "A1010", "Foundations", "2026-03-01 08:00", "2026-03-20 17:00"]),
+    "\t".join(["%R", "2", "A1020", "Superstructure", "2026-03-21 08:00", "2026-05-15 17:00"]),
+    "\t".join(["%T", "PROJWBS"]), "\t".join(["%F", "wbs_id", "wbs_name"]), "\t".join(["%R", "9", "skip"]),
+])
+xrows = schedule.parse_xer(_xer)
+assert len(xrows) == 2, xrows                                   # only the TASK table, PROJWBS ignored
+assert xrows[0] == {"activity_id": "A1010", "name": "Foundations", "start": "2026-03-01", "finish": "2026-03-20"}, xrows[0]
+assert xrows[1]["name"] == "Superstructure" and xrows[1]["finish"] == "2026-05-15"
+
 print("ANALYSIS OK")
 print(f"  energy: EUI {e['eui_kwh_m2_yr']} kWh/m2.yr | heating {e['loads']['design_heating_kw']} kW | UA {e['ua_w_per_k']['total']} W/K")
 print(f"  mep: {mep['total_distribution_elements']} distribution elements")
 print(f"  spaces authored: {r['changed']} ({sch[0]['net_area']} m2/room on {sch[0]['storey']})")
+print(f"  P6 .xer import: {len(xrows)} activities ({xrows[0]['activity_id']} {xrows[0]['start']} - {xrows[0]['finish']})")

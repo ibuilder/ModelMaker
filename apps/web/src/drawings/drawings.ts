@@ -1,4 +1,5 @@
 import type { ApiClient, DrawingMarkupItem } from "../api/client";
+import { noProjectHtml } from "../ui/empty";
 
 /** 2D Drawings Set — a sheet-set browser for the server-generated plans / elevations / sections
  *  (cf. PlanGrid plan room + Bluebeam markup + Fieldlens field pins). Left: a sheet register;
@@ -65,7 +66,7 @@ export class DrawingsUI {
     const pid = this.host_.projectId();
     const list = this.root.querySelector<HTMLElement>("#dwg-list")!;
     list.innerHTML = "";
-    if (!pid) { list.innerHTML = `<div class="empty-state">No project open<span class="es-hint">Pick a project in the toolbar to view its drawings.</span></div>`; return; }
+    if (!pid) { list.innerHTML = noProjectHtml("drawings"); return; }
     const pq = (s: Record<string, string | number>) =>
       Object.entries(s).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
 
