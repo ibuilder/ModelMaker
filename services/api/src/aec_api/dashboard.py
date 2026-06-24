@@ -28,18 +28,21 @@ def build(db: Session, pid: str, party: str | None) -> dict[str, Any]:
     overdue = 0
     open_states = {"open", "submitted", "draft", "issued", "scheduled", "investigating",
                    "applied", "agenda", "proposed", "pending"}
+    # _overdue ignores these terminal states; loading JSON only for non-terminal records (active set)
+    # is the perf win — counts come from a GROUP BY that never touches the JSON `data` blob.
+    terminal_states = {"closed", "answered", "verified", "done"}
     counts = Counter()
 
     for key, mod in me.REGISTRY.items():
-        recs = me.list_records(db, key, pid, limit=100000)
-        if not recs:
+        states = me.state_counts(db, key, pid)           # GROUP BY — no JSON parsed
+        total = sum(states.values())
+        if not total:
             continue
-        states = Counter(r["workflow_state"] for r in recs)
         by_module.append({"key": key, "name": mod["name"], "section": mod.get("section"),
-                          "count": len(recs), "by_state": dict(states)})
-        counts["total"] += len(recs)
-        counts[f"open:{key}"] += sum(states[s] for s in states if s in open_states)
-        for r in recs:
+                          "count": total, "by_state": states})
+        counts["total"] += total
+        counts[f"open:{key}"] += sum(n for s, n in states.items() if s in open_states)
+        for r in me.active_records(db, key, pid, terminal_states):   # JSON only for the active tail
             if _overdue(r):
                 overdue += 1
             acts = me.available_actions(mod, r["workflow_state"], party)

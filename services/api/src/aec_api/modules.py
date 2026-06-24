@@ -221,6 +221,25 @@ def list_records(db: Session, key: str, project_id: str, state: str | None = Non
     return rows
 
 
+def state_counts(db: Session, key: str, project_id: str) -> dict[str, int]:
+    """{workflow_state: count} for a module via a single GROUP BY on the indexed `workflow_state`
+    column — no JSON `data` is loaded or parsed. For dashboards that only need status tallies."""
+    t = TABLES[key]
+    stmt = (select(t.c.workflow_state, func.count()).where(t.c.project_id == project_id)
+            .group_by(t.c.workflow_state))
+    return {state: n for state, n in db.execute(stmt)}
+
+
+def active_records(db: Session, key: str, project_id: str, exclude_states: set[str]) -> list[dict]:
+    """Lean records NOT in `exclude_states` (e.g. closed/done): only the columns a dashboard needs —
+    id, ref, title, workflow_state, assignee + the `data` blob (for due dates). Skips parsing JSON
+    for the typically-large tail of completed records."""
+    t = TABLES[key]
+    stmt = (select(t.c.id, t.c.ref, t.c.title, t.c.workflow_state, t.c.assignee, t.c.data)
+            .where(t.c.project_id == project_id, t.c.workflow_state.notin_(exclude_states)))
+    return [dict(r._mapping) for r in db.execute(stmt)]
+
+
 def get_record(db: Session, key: str, project_id: str, rid: str) -> dict:
     t = TABLES[key]
     r = db.execute(select(t).where(t.c.id == rid, t.c.project_id == project_id)).first()

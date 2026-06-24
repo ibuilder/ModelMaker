@@ -4,13 +4,18 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
-## v0.1.38 — Redis-backed rate limiting (multi-worker)
+## v0.1.38 — Redis rate limiting (multi-worker) + dashboard perf
 - **Distributed rate limiter** — set `AEC_REDIS_URL` and the per-IP request limit is now shared across
   workers/processes via an atomic Redis `INCR`+`EXPIRE` (fixed 60s window), so the limit holds under a
   multi-worker deployment instead of being per-process. Fail-open: any Redis error falls back to the
   in-process bucket so limiter infrastructure can never take the API down; redis is imported lazily
   only when the URL is set (no new dependency for the single-worker/desktop build). New `test_ratelimit`
   gate covers the enforcement path (health/metrics exempt, 429 + Retry-After past the limit).
+- **Dashboard perf** — the GC dashboard no longer loads and JSON-parses every record across all
+  modules. Status tallies now come from a single indexed `GROUP BY workflow_state` per module (zero
+  JSON), and the `data` blob is parsed only for the **active** (non-terminal) records that feed
+  overdue + action-items — so completed-record-heavy projects build the dashboard far faster. Output
+  is byte-for-byte identical (`test_dashboard` unchanged).
 
 ## v0.1.37 — COBie field depth (C2) + investment-deck market/timeline slides
 - **COBie model-derived field enrichment (C2)** — the handover sheets gain the fields FM teams use:
