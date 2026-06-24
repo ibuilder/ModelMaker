@@ -159,6 +159,20 @@ Deliverables** — with a sticky live-solved returns bar.
 
 ## Recent platform work
 
+- **Rendering, families & computational design (M-theme)** — a viewer **render mode** (directional
+  sun + soft shadows, ACES/PBR, IBL), a NOAA **sun-&-shadow study** (date · time · lat/long), and a
+  Matterport-style first-person **walkthrough**; Revit-style **`IfcMaterialLayerSet` assemblies** on
+  walls/slabs/roofs; the family library grown to **37 parametric types** (Lighting/MEP/Structural/
+  Transport added) with **type-variant sizing** and **import of external/manufacturer IFC families**
+  (`project.append_asset`); and **Studio**, a visual **computational node graph** (Dynamo/Hypar-style)
+  that runs the server compute engine — wire zoning → structure → schedule → cost → yield with no code.
+- **Hardening & ops** — distributed **Redis-backed rate limiting** (multi-worker, fail-open), a
+  faster **dashboard** (GROUP-BY counts, JSON parsed only for active records), an **accessibility**
+  pass (tab roles/`aria-selected`, labels, live region), a **stored-XSS** sweep of the admin modals,
+  and `main.ts` modularization (the connections UI is now a lazily-loaded chunk). COBie handover gains
+  model-derived **areas / manufacturer / warranty / asset-id** fields + an **Attribute** sheet; the
+  pitch deck gains **Market** + **Timeline** slides. Library interop evaluated (IFClite / pyRevit /
+  FreeCAD / Pascal) — see `docs/roadmap.md` §L and the dependency/update ADR.
 - **Built-world techniques (research-grounded)** — direction from Carol Willis (*Form Follows
   Finance*, *Building the Empire State*), Salvadori (*Why Buildings Stand Up*), and CM/RE research:
   **form-follows-finance** massing (daylight-limited rentable depth + core efficiency), a
@@ -182,7 +196,7 @@ Deliverables** — with a sticky live-solved returns bar.
 - **Generative massing + family library** — `aec_data.massing` turns a zoning envelope into a
   buildable program + a from-scratch **IFC4** model (`POST /projects/{id}/generate/massing`, plus a
   stateless `/generate/massing/preview`) and seeds a solved acquisition proforma; `aec_data.families`
-  generates a 16-family starter type library (`GET /families/catalog`) placed via the `add_family`
+  generates a 37-family parametric type library (`GET /families/catalog`) placed via the `add_family`
   authoring recipe. Both render in the viewer (fixed two web-ifc gotchas surfaced en route: generated
   models now use **metre** units, and every `IfcProfileDef` carries a `Position` — without it web-ifc
   silently skips the geometry). Gated by `test_generate` in the CI suite.

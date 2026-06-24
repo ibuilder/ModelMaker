@@ -217,6 +217,17 @@ bundling/auto-update policy these feed into.
   from Revit (no bridge)…"* documenting Revit's built-in IFC export + pyRevit batch export, so the
   free single-project promise is reachable without the paid Autodesk bridge. Not bundled (it runs
   inside desktop Revit; we never read .rvt offline).
+- **Revit / Navisworks export plugin?** ❌ **Not needed (decided 2026-06).** Autodesk's
+  [revit-ifc](https://github.com/Autodesk/revit-ifc) is the official, free, open-source, *certified*
+  IFC exporter for Revit 2019+ (ships natively; an OSS override exists) — a custom plugin would just
+  duplicate it. Navisworks is a coordination/review tool, not an authoring app; its IFC export is
+  weak/third-party, so the correct workflow is **export IFC from each authoring source** (Revit native)
+  and federate here. Our free pyRevit path (L3) already covers batch export. *Optional future nicety:*
+  a one-click pyRevit macro that exports IFC **and uploads to a ModelMaker project** — convenience
+  only, not a mission requirement.
+- **IFC5 / IFCX** — confirmed **alpha** (component-based + JSON serialization,
+  [IFC5-development](https://github.com/buildingSMART/IFC5-development)); not production. L2 stays
+  *track, don't adopt*; revisit when buildingSMART moves past alpha.
 - **FreeCAD** (LGPL — [FreeCAD](https://github.com/FreeCAD/FreeCAD)). Scriptable, **headless-capable**
   via the same `ifcopenshell` we already run, with NativeIFC bidirectional linking + 2D drawing
   generation. *Verdict: evaluate (L4)* as an optional **headless server engine** for parametric
@@ -285,7 +296,12 @@ the prior list. Status now in rough priority:
    **connections UI** (~240 lines) is extracted to a **lazily-imported** `connectionsUI.ts` chunk
    (main.ts 1205→963 lines; the 13 kB chunk loads only when an admin opens it), and real stored-XSS
    vectors (connection name, Procore ID, browsed DB cells, audit detail) are now escaped via a shared
-   `escapeHtml`. ⏳ Remaining: extract the account/admin UI (round 2). Mobile (Capacitor) below.
+   `escapeHtml`. ⏳ Remaining: extract the account/admin UI (round 2).
+5. **Mobile** — framework + plan written ([docs/mobile.md](mobile.md)): the web app is already an
+   installable offline **PWA** with the field-capture loop, so the native app is a **Capacitor wrapper**
+   of the existing build (camera/GPS/push as capability-detected plugin swaps), not a rewrite. Native
+   store builds need a macOS/Xcode + Android-SDK pipeline (separate from the Tauri desktop release);
+   recommendation is to ship the PWA "Add to Home Screen" now and fast-follow the native shell.
 
 **Net:** the reconciled roadmap is effectively cleared — every theme (M1–M4, Test Fit, Developer deck,
 Construction C1–C3, Platform Redis/perf/a11y) is done except the low-value main.ts refactor and the
