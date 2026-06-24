@@ -4,6 +4,18 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.46 — Studio UX hardening
+- **Studio layout bug fixed** — `#panel-studio` carries both `.fullpanel` and `.studio`, and
+  `.fullpanel.active{display:block}` was overriding `.studio{display:flex}`, so the node canvas grew
+  to its full 1700 px content instead of filling the viewport. Now a higher-specificity rule forces
+  the flex column; the canvas is viewport-bounded and **scrolls internally**.
+- **Touch support** — node dragging uses pointer events (+ `setPointerCapture`, `touch-action:none`),
+  so it works on tablets/phones, not just mouse.
+- **Empty-state guidance** — an in-viewport hint ("add a node… then wire… Run", or "connect the API")
+  when the canvas is empty.
+- **Smarter node placement** — new nodes drop into the current scroll viewport (with a small cascade)
+  instead of a fixed corner that overlapped after a few adds.
+
 ## v0.1.45 — custom unit-mix editor (A1b — Test Fit A-theme complete)
 - **Define your own unit mix** — the Test Fit panel gains an editor to add/remove unit types
   (name · target SF · mix %), saved to localStorage. "Compare schemes" sends it with `with_defaults`
