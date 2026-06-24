@@ -248,22 +248,27 @@ B5 investment memo), the full **lifecycle** (acquisition→turnover), **AI assis
 the production-blocking hardening (see [production-readiness.md](production-readiness.md) — now
 shippable). 26/26 CI gate + a report-only dependency scan.
 
-Remaining = incremental depth (not blockers), in rough priority:
-1. **Test Fit depth** — ✅ **DONE.** A2 egress deepened (occupant load, required egress width, min
-   exits, exit separation — not just travel distance); parking as real IFC geometry (IfcSpace
-   `PARKING` stalls on a *Site Parking* storey); true **polygon-offset footprint** (`offset_polygon`,
-   real inward setback on arbitrary parcels, surfaced as `buildable_polygon`); and optimize's
-   yield-on-cost + **dev spread** now use the canonical proforma `returns` functions (with stabilized
-   occupancy), not a local proxy.
-2. **Developer** — ✅ B6 pitch-deck (slide) variant shipped (`/investment-deck.pdf` + 📊 button);
-   next: market/timeline sections, property photos.
-3. **Construction** — C1 already shipped in `f0b1367` (multi-period pay-app accounting via
-   `/cost/pay-app/advance`, lien-waiver **record tracking** via `POST /cost/lien-waiver`, and COBie
-   enrichment folding closeout records into Warranty/System/Asset/Document tabs). v0.1.36 **adds the
-   printable statutory waiver document** the record-tracking lacked: the four conditional/unconditional
-   × progress/final forms (`cost.lien_waiver`) as `GET /cost/lien-waiver[.pdf]` + a "⚖ Lien waiver"
-   action — so each tracked waiver can now be rendered as the actual signable legal form.
-   *Next: C2 model-derived COBie field depth (space areas, manufacturer/warranty, Attribute sheet);
-   C3 4D sequencing.*
-4. **Platform** — main.ts account/connections split; dashboard JSON-extraction perf; Redis-backed
-   rate limits (multi-worker); a11y pass; mobile (Capacitor) build hardening; RVT→IFC (APS) polish.
+Remaining = incremental depth (not blockers). **Reconciled against the actual codebase (2026-06)** —
+several items the old list called "next" were already implemented; verified by reading source, not
+the prior list. Status now in rough priority:
+
+1. **Test Fit depth** — ✅ **DONE** (this pass). A2 egress deepened (occupant load, egress width, min
+   exits, exit separation); parking as real IFC geometry (`PARKING` IfcSpaces on a *Site Parking*
+   storey); true **polygon-offset footprint** (`offset_polygon` → `buildable_polygon`); optimize's
+   yield-on-cost + **dev spread** use the canonical proforma `returns` (with stabilized occupancy).
+2. **Developer deck** — ⏳ **REAL GAP.** [report.py](../services/api/src/aec_api/report.py)
+   `investment_deck_pdf` has Title · The deal in numbers · Sources & Uses · Returns & the ask slides,
+   but **no market section, timeline/schedule section, or property photos**. ← *next build target.*
+3. **Construction**
+   - C1 pay-apps + lien tracking + COBie record-folding — ✅ done (`f0b1367`); printable statutory
+     waiver **document/PDF** added v0.1.36 (`GET /cost/lien-waiver[.pdf]`).
+   - **C2 model-derived COBie field depth** — ⏳ **REAL GAP.** [cobie.py](../services/data/src/aec_data/cobie.py)
+     Space/Type/Component sheets are sparse: no **space areas** (Qto), no **manufacturer / warranty /
+     asset-id** fields, no **Attribute** sheet. (Closeout-record folding into Warranty/System/Asset/
+     Document already exists — that's the *DB* side; this is the *model* side.) ← *next build target.*
+   - C3 4D sequencing — ✅ already done: [fourd.py](../services/api/src/aec_api/fourd.py) `timeline()`
+     + `GET /schedule/4d` + a scrubber in the web portal; schedule viz (`gantt_svg` / `lob_svg`) too.
+4. **Platform** — ⏳ Redis-backed rate limits (currently an in-memory single-worker limiter in
+   [main.ts](../services/api/src/aec_api/main.py) — real multi-worker gap); main.ts (web) account/
+   connections split (1.2k-line file — refactor, low user value); a11y pass; dashboard
+   JSON-extraction perf. Mobile (Capacitor) is a flagged **separate-app** effort, out of scope here.
