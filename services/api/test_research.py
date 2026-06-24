@@ -10,8 +10,29 @@ for f in ("./test_research.db",):
         os.remove(f)
 
 from fastapi.testclient import TestClient  # noqa: E402
-from aec_api import lean, takt  # noqa: E402
+from aec_api import fourd, lean, takt  # noqa: E402
 from aec_api.main import app  # noqa: E402
+
+# --- C3: 4D timeline engine (direct) — build order + cumulative progress -------
+_plan = takt.plan(3)
+_els = [
+    {"guid": "g1", "ifc_class": "IfcColumn", "storey": "Level 1"},   # Structure, floor 0
+    {"guid": "g2", "ifc_class": "IfcWall", "storey": "Level 1"},     # Envelope, floor 0
+    {"guid": "g3", "ifc_class": "IfcColumn", "storey": "Level 3"},   # Structure, floor 2
+    {"guid": "g4", "ifc_class": "IfcFurniture", "storey": "Level 3"},  # Finishes, floor 2
+]
+_tl = fourd.timeline(_plan, _els)
+assert _tl["element_count"] == 4 and _tl["by_trade"]["Structure"] == 2, _tl["by_trade"]
+# frames are day-ordered, cumulative is monotonic and ends at 100% / all elements
+days = [f["day"] for f in _tl["frames"]]
+assert days == sorted(days), days
+assert _tl["frames"][-1]["completed_cumulative"] == 4 and _tl["frames"][-1]["pct"] == 100.0, _tl["frames"][-1]
+# Structure on floor 0 completes before Structure on floor 2 (the train ascends)
+_struct_days = sorted(f["day"] for f in _tl["frames"] for g in f["new_guids"] if g in ("g1", "g3"))
+assert _struct_days[0] < _struct_days[-1], _struct_days
+# an unknown storey defaults to ground; empty input is safe
+assert fourd._floor_index("Level 2") == 1 and fourd._floor_index(None) == 0
+assert fourd.timeline(_plan, [])["element_count"] == 0
 
 # --- R2: takt / line-of-balance ----------------------------------------------
 p = takt.plan(10)                                  # 10 floors, default 5-trade train
