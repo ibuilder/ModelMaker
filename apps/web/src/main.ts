@@ -67,10 +67,19 @@ buildMenu("open-menu", "Open ▾", [
 ], () => void ensureViewer());
 buildMenu("save-menu", "Save ▾", [
   { label: "Save Project (.mmproj)", onClick: () => saveProjectBundle() },
+  { label: "Turnover", sep: true },
+  { label: "Closeout package (.zip)", onClick: () => exportCloseoutPackage() },
   { label: "Geometry", sep: true },
   { label: "Export Fragments (.frag)", onClick: () => withViewer((v) => void v.exportFrag()) },
   { label: "Export source IFC (.ifc)", onClick: () => withViewer((v) => v.exportIfc()) },
 ], () => void ensureViewer());
+
+/** Full turnover deliverable in one ZIP: as-built model + COBie/QTO/space workbooks + status report
+ *  + closeout records (warranties, asset register, completion cert, punchlist). */
+function exportCloseoutPackage() {
+  if (!projectId) { toast("Open a project first", "info"); return; }
+  window.open(api.url(`/projects/${projectId}/closeout/package.zip`), "_blank");
+}
 
 /**
  * The free, offline way to get a Revit/CAD model into the viewer — IFC is the source of truth, so
