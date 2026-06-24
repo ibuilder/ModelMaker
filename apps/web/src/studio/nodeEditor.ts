@@ -70,6 +70,7 @@ export class NodeEditor {
       this.render();
       this.setMsg(`${nodes.length} node types available.`);
     } catch {
+      this.render();   // show the empty-canvas hint ("connect the API")
       this.setMsg("Compute palette unavailable (API offline).");
     }
   }
@@ -96,7 +97,11 @@ export class NodeEditor {
     const id = `n${++this.seq}`;
     const params: Record<string, number | string> = {};
     for (const inp of spec.inputs) if (inp.default !== null) params[inp.name] = inp.default;
-    const node: GNode = { id, type, x: x ?? 40 + (this.nodes.length % 5) * 30, y: y ?? 40 + (this.nodes.length % 5) * 30, params };
+    // place new nodes within the current scroll viewport (so they're visible) + a small cascade
+    const cv = this.root.querySelector<HTMLElement>("#studio-canvas");
+    const ox = cv ? cv.scrollLeft : 0, oy = cv ? cv.scrollTop : 0;
+    const step = (this.nodes.length % 6) * 28;
+    const node: GNode = { id, type, x: x ?? ox + 30 + step, y: y ?? oy + 30 + step, params };
     this.nodes.push(node);
     this.persist(); this.render();
     return node;
@@ -125,6 +130,16 @@ export class NodeEditor {
   private render(): void {
     // nodes (rebuild; keep the SVG element)
     [...this.content.querySelectorAll(".studio-node")].forEach((n) => n.remove());
+    const canvas = this.root.querySelector(".studio-canvas")!;
+    canvas.querySelector(".studio-empty")?.remove();
+    if (!this.nodes.length) {                          // guidance when the canvas is empty (pinned to viewport)
+      const hint = document.createElement("div");
+      hint.className = "studio-empty";
+      hint.innerHTML = this.specs.size
+        ? `<span>Click a node in the palette to add it, then wire an output ● into an input ○ and press <b>▶ Run</b>.<br><br>New here? Try <b>Load example</b>.</span>`
+        : `<span>Compute palette unavailable — connect the API to use Studio.</span>`;
+      canvas.appendChild(hint);
+    }
     for (const node of this.nodes) this.content.appendChild(this.renderNode(node));
     this.renderEdges();
   }
@@ -202,18 +217,21 @@ export class NodeEditor {
   }
 
   private makeDraggable(handle: HTMLElement, node: GNode): void {
-    handle.addEventListener("mousedown", (e) => {
+    // pointer events → works for mouse AND touch (PWA/tablet); setPointerCapture keeps the drag
+    // even if the pointer outruns the node.
+    handle.addEventListener("pointerdown", (e) => {
       if ((e.target as HTMLElement).classList.contains("studio-x")) return;
       e.preventDefault();
+      handle.setPointerCapture?.(e.pointerId);
       const sx = e.clientX, sy = e.clientY, ox = node.x, oy = node.y;
-      const move = (ev: MouseEvent) => {
+      const move = (ev: PointerEvent) => {
         node.x = Math.max(0, ox + (ev.clientX - sx)); node.y = Math.max(0, oy + (ev.clientY - sy));
         const el = this.content.querySelector<HTMLElement>(`.studio-node[data-id="${node.id}"]`);
         if (el) { el.style.left = `${node.x}px`; el.style.top = `${node.y}px`; }
         this.renderEdges();
       };
-      const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); this.persist(); };
-      document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+      const up = () => { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); this.persist(); };
+      handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up);
     });
   }
 
