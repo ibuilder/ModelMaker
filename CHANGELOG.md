@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.42 — main.ts refactor round 2 (account/admin UI) + login on modalShell
+- **Modularization** — the account / auth / admin surface (sign-in + SSO, reset, account menu,
+  self-service password, admin user management, audit log, project-member management; ~330 lines)
+  moves out of `main.ts` into `account/accountUI.ts` behind a small deps object. With round 1's
+  connections extraction, **`main.ts` drops from 1205 → 657 lines**.
+- **Login fix** — the sign-in dialog hand-rolled its own overlay and so lacked Esc-to-close, a focus
+  trap and dialog ARIA. It's now built on the shared `modalShell` like every other modal — consistent
+  look + behaviour + accessibility.
+
 ## v0.1.41 — main.ts modularization (round 1) + XSS hardening
 - **Security (stored-XSS fixes)** — admin modals interpolated user/remote values straight into
   `innerHTML`. Now escaped via a shared `escapeHtml`: connection **name/type**, Procore **project ID**

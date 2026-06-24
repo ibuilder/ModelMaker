@@ -296,7 +296,11 @@ the prior list. Status now in rough priority:
    **connections UI** (~240 lines) is extracted to a **lazily-imported** `connectionsUI.ts` chunk
    (main.ts 1205→963 lines; the 13 kB chunk loads only when an admin opens it), and real stored-XSS
    vectors (connection name, Procore ID, browsed DB cells, audit detail) are now escaped via a shared
-   `escapeHtml`. ⏳ Remaining: extract the account/admin UI (round 2).
+   `escapeHtml`. ✅ **Round 2** done: the account/auth/admin UI (sign-in + SSO, reset, account menu,
+   password, user management, audit log, project members — ~330 lines) extracted to
+   `account/accountUI.ts` behind a small deps object; **main.ts is now 657 lines** (from 1205). Sign-in
+   was also rebuilt on the shared `modalShell` (it had hand-rolled its own overlay, so it now gets
+   Esc-to-close / focus-trap / dialog-ARIA like every other modal).
 5. **Mobile** — framework + plan written ([docs/mobile.md](mobile.md)): the web app is already an
    installable offline **PWA** with the field-capture loop, so the native app is a **Capacitor wrapper**
    of the existing build (camera/GPS/push as capability-detected plugin swaps), not a rewrite. Native
