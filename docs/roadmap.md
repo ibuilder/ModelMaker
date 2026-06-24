@@ -257,10 +257,13 @@ Remaining = incremental depth (not blockers), in rough priority:
    occupancy), not a local proxy.
 2. **Developer** — ✅ B6 pitch-deck (slide) variant shipped (`/investment-deck.pdf` + 📊 button);
    next: market/timeline sections, property photos.
-3. **Construction** — ✅ **C1 complete**: multi-period pay-app accounting (G702/G703 +
-   `advance_period` roll-forward) was already in; added **lien waivers** — the four statutory
-   conditional/unconditional × progress/final forms (`cost.lien_waiver`), tied to the pay app's
-   amount, as JSON + PDF (`/cost/lien-waiver[.pdf]`) and a "⚖ Lien waiver" action in the cost panel.
-   *Next: C2 COBie field-enrichment; C3 4D sequencing.*
+3. **Construction** — C1 already shipped in `f0b1367` (multi-period pay-app accounting via
+   `/cost/pay-app/advance`, lien-waiver **record tracking** via `POST /cost/lien-waiver`, and COBie
+   enrichment folding closeout records into Warranty/System/Asset/Document tabs). v0.1.36 **adds the
+   printable statutory waiver document** the record-tracking lacked: the four conditional/unconditional
+   × progress/final forms (`cost.lien_waiver`) as `GET /cost/lien-waiver[.pdf]` + a "⚖ Lien waiver"
+   action — so each tracked waiver can now be rendered as the actual signable legal form.
+   *Next: C2 model-derived COBie field depth (space areas, manufacturer/warranty, Attribute sheet);
+   C3 4D sequencing.*
 4. **Platform** — main.ts account/connections split; dashboard JSON-extraction perf; Redis-backed
    rate limits (multi-worker); a11y pass; mobile (Capacitor) build hardening; RVT→IFC (APS) polish.
