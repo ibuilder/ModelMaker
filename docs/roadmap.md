@@ -277,5 +277,12 @@ the prior list. Status now in rough priority:
    Redis error; redis is lazily imported only when the URL is set), with a `test_ratelimit` gate.
    ✅ **Dashboard JSON-extraction perf** done: status counts via an indexed `GROUP BY` (no JSON), and
    the `data` blob parsed only for active (non-terminal) records — identical output, much less work on
-   completed-record-heavy projects. ⏳ Remaining: main.ts (web) account/connections split (1.2k-line
-   file — refactor, low user value); a11y pass. Mobile (Capacitor) is a flagged **separate-app** effort.
+   completed-record-heavy projects. ✅ **a11y pass** (first cut): workspace + finance tabs now expose
+   `role="tab"`/`role="tablist"` with `aria-selected` tracking the active tab, the persona picker has an
+   `aria-label`, and the status bar is a polite `role="status"` live region (existing landmarks/labels
+   were already in place). ⏳ Remaining: main.ts (web) account/connections split (1.2k-line file —
+   refactor, low user value). Mobile (Capacitor) is a flagged **separate-app** effort, out of scope.
+
+**Net:** the reconciled roadmap is effectively cleared — every theme (M1–M4, Test Fit, Developer deck,
+Construction C1–C3, Platform Redis/perf/a11y) is done except the low-value main.ts refactor and the
+out-of-scope mobile app.

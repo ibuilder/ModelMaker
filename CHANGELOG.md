@@ -4,6 +4,13 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.39 — accessibility pass (tab semantics, labels, live region)
+- **a11y** — the workspace switcher and finance sub-tabs now carry `role="tablist"`/`role="tab"` with
+  `aria-selected` kept in sync as you switch (screen readers announce the active view); the role/persona
+  picker gained an `aria-label`; and the status bar is a polite `role="status"` live region so status
+  updates are announced. Builds on the existing landmarks (`main`/`nav`/`header`/`footer`), `lang`, and
+  icon-button `aria-label`s.
+
 ## v0.1.38 — Redis rate limiting (multi-worker) + dashboard perf
 - **Distributed rate limiter** — set `AEC_REDIS_URL` and the per-IP request limit is now shared across
   workers/processes via an atomic Redis `INCR`+`EXPIRE` (fixed 60s window), so the limit holds under a
