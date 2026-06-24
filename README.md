@@ -1,4 +1,6 @@
-# AEC BIM Platform + GC Portal
+# AEC BIM Platform — viewer · GC portal · proforma
+
+![AEC BIM Platform — one IFC model from acquisition to turnover](docs/img/og-image.png)
 
 [![CI](https://github.com/ibuilder/ModelMaker/actions/workflows/ci.yml/badge.svg)](https://github.com/ibuilder/ModelMaker/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ibuilder/ModelMaker?label=release&color=4a8cff)](https://github.com/ibuilder/ModelMaker/releases/latest)
@@ -7,26 +9,31 @@
 ![IFC-native](https://img.shields.io/badge/IFC-native-4a8cff)
 [![Live demo](https://img.shields.io/badge/demo-in%20browser-33d17a)](https://ibuilder.github.io/ModelMaker/app/)
 
-A standalone, open, web-based **BIM viewer + data + coordination platform** for AEC firms,
-built on the IfcOpenShell / That Open (Fragments) ecosystem, **plus a general-contracting
-portal** (RFIs, change-order chain, pay apps, dashboards) whose records pin to the 3D model.
-**IFC is the source of truth.** The browser viewer streams a fast tiled format; a Python
-service does extraction, QA, clash, and 2D documentation; a FastAPI backend handles BCF
-issues, the GC-portal module engine, and authoring on `ifcopenshell.api` (the engine Bonsai
-drives) — no proprietary format, no per-seat license.
+> **Open, self-hosted, IFC-native AEC platform.** A web **BIM viewer + modeling**, a **73-module GC
+> portal** (RFIs, pay apps, CPM schedule, TRIR), and a **development proforma** — **one model, from
+> acquisition to turnover.** Generate a building from a zoning envelope, then coordinate, draw,
+> schedule & underwrite it. Built on **That Open + IfcOpenShell**. **$0 to run.**
 
-> Status: a working end-to-end platform, verified against real models (the That Open
-> "school" structural IFC + a 52 MB architectural Revit export). **Three pillars:** the
-> **BIM platform** (below), the **[General Contracting Portal](docs/gc-portal.md)**, and a
-> **Real-Estate Development Proforma** (sources & uses, S-curve draws, XIRR/NPV, JV
-> waterfall) — switched via a Model / Construction / Finance workspace bar.
+**What it is** — three pillars on one IFC-keyed model, switched by a Model / Construction / Finance bar:
 
-⬇️ **Download the desktop app:** [ibuilder.github.io/ModelMaker#download](https://ibuilder.github.io/ModelMaker/#download) — free single-project installers for **Windows / macOS / Linux** (or grab them straight from [the latest release](https://github.com/ibuilder/ModelMaker/releases/latest)).
-📄 **Project page:** [ibuilder.github.io/ModelMaker](https://ibuilder.github.io/ModelMaker/) — overview + how to run it.
-📚 **Guides & tutorials:** [ibuilder.github.io/ModelMaker/guide.html](https://ibuilder.github.io/ModelMaker/guide.html) — plain-English step-by-steps + a glossary (and a [demo walkthrough script](docs/walkthrough.md)).
-🧊 **Live viewer demo:** [ibuilder.github.io/ModelMaker/app/](https://ibuilder.github.io/ModelMaker/app/) — the BIM viewer running in-browser (no backend) on bundled sample models.
+- 🧊 **BIM platform** — stream + author IFC in the browser (That Open Fragments), QA, clash, IDS, BCF, 2D drawings
+- 🏗 **GC portal** — config-driven modules: RFIs, submittals, change orders, pay apps (G702/G703), CPM schedule, safety/TRIR, closeout (COBie)
+- 💵 **Development proforma** — sources & uses, S-curve draws, XIRR/NPV, JV waterfall — seeded straight from the model
 
 ![Generate a building from a zoning envelope, then underwrite the deal](docs/img/generate-build.gif)
+
+**[▶ Live demo](https://ibuilder.github.io/ModelMaker/app/)** · **[⬇ Download (Win/macOS/Linux)](https://github.com/ibuilder/ModelMaker/releases/latest)** · **[📚 Guides](https://ibuilder.github.io/ModelMaker/guide.html)** · **[📄 Project page](https://ibuilder.github.io/ModelMaker/)**
+
+### Quickstart — self-host the full stack
+
+```bash
+docker compose --profile full up --build      # web → http://localhost:8080 · api → http://localhost:8000
+docker compose --profile full --profile seed run --rm seed   # optional: a demo project across every module
+```
+
+Or install the signed desktop app (single-project, auto-updating) from the [latest release](https://github.com/ibuilder/ModelMaker/releases/latest).
+
+**Built on** [That Open](https://github.com/ThatOpen) (Fragments + web-ifc, MIT) · [IfcOpenShell](https://ifcopenshell.org) (LGPL) · [three.js](https://threejs.org) · [FastAPI](https://fastapi.tiangolo.com) · [Tauri](https://tauri.app). IFC is the source of truth — no proprietary format, no per-seat license.
 
 ## The whole lifecycle, on one model
 
@@ -237,7 +244,7 @@ Deliverables** — with a sticky live-solved returns bar.
   Open/Save menu. The Tauri 2 shell spawns this backend as a sidecar for a **native window**;
   mobile (Capacitor/Tauri-mobile) is next.
 - **UX** — the ⚙ Tools panel is a collapsible, **persona-ordered**, state-aware accordion with
-  **readable result modals** (cost/energy/IDS/clash); the **71-module portal catalog** gains ★
+  **readable result modals** (cost/energy/IDS/clash); the **73-module portal catalog** gains ★
   favorites + collapsible persona-aware sections + a filter; the viewer toolbar is grouped. The
   project picker tags each project's model type (`.frag`/`.ifc`). (See `docs/ux-findings.md`.)
 - **Installable + offline** — PWA (manifest + Workbox service worker; lean ~97 KB precache,
@@ -299,7 +306,7 @@ GC portal schedule visuals (from the `schedule_activity` module):
 
 Platform interface (vector renders of the redesigned UI — see the [live demo](https://ibuilder.github.io/ModelMaker/app/) for the running app):
 
-| Tools panel + readable results | 71-module portal catalog |
+| Tools panel + readable results | 73-module portal catalog |
 |---|---|
 | ![tools panel](docs/img/ui-tools-panel.svg) | ![portal catalog](docs/img/ui-portal-catalog.svg) |
 
