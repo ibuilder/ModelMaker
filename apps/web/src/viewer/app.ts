@@ -1008,6 +1008,10 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
         if (!b) return;
         for (const [label, file] of [["Quantity takeoff (QTO/5D)", "qto"], ["COBie", "cobie"], ["Space schedule", "spaces"], ["4D schedule", "schedule"]] as const)
           b.appendChild(toolBtn2(`↓ ${label}`, () => window.open(api.url(`/projects/${projectId}/exports/${file}.xlsx`), "_blank")));
+        // full turnover deliverable: as-built IFC + COBie/QTO/spaces + status PDF + closeout records
+        const pkg = toolBtn2("📦 Closeout package (.zip)", () => window.open(api.url(`/projects/${projectId}/closeout/package.zip`), "_blank"));
+        pkg.title = "Everything for handover in one ZIP: as-built model, data workbooks, status report, closeout records";
+        b.appendChild(pkg);
       },
       cost: () => {
         const b = section("cost", "Cost / Pay Apps", { requires: "project", tool: true });

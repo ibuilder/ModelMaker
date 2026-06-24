@@ -4,6 +4,13 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.48 — closeout package reachable in the UI
+- **Full turnover .zip now has UI access** — the `closeout/package.zip` deliverable (as-built IFC +
+  COBie/QTO/space workbooks + status report + closeout records) worked via the API but had **no
+  button anywhere**. Added it to **Save ▾ → Closeout package (.zip)** and the **Tools → Exports**
+  panel (📦). Found by debugging every menu item against a real demo project. (The `.mmproj` bundle —
+  geometry + full database + blobs, round-trips via Open/Save — was already wired.)
+
 ## v0.1.47 — end-to-end demo hardening (closeout filename + generate→finance)
 Two real bugs found by a full login→closeout demo run (only surface with a realistic project):
 - **Closeout package 500** on any project name containing a non-latin-1 char (em-dash, smart quote,
