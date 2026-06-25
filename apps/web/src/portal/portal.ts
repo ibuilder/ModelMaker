@@ -432,6 +432,40 @@ export class PortalUI {
       + `<div>${'<div class="skel-row"></div>'.repeat(6)}</div>`;
   }
 
+  /** Unified schedule visuals for the GC Schedule module: Gantt + Line-of-Balance (the same
+   *  activities that drive the 3D 4D scrub) + a CPM critical-path summary. */
+  private async renderScheduleViews(m: ModuleDef) {
+    const pid = this.host.projectId()!;
+    this.root.innerHTML = "";
+    this.root.appendChild(this.bar("Schedule — views", () => this.openModule(m)));
+    const note = document.createElement("div"); note.className = "meta"; note.style.margin = "2px 0 8px";
+    note.innerHTML = "These render the same <b>Schedule</b> activities that drive the 3D model’s "
+      + "<b>4D sequence</b> (Model → ⏱ 4D sequence) — one relational schedule.";
+    this.root.appendChild(note);
+
+    // CPM summary line (critical path + float)
+    const cpmBox = document.createElement("div"); cpmBox.className = "meta"; cpmBox.style.margin = "0 0 8px";
+    cpmBox.textContent = "Computing critical path…"; this.root.appendChild(cpmBox);
+    void this.host.api.scheduleCpm(pid).then((c) => {
+      if (!c.activity_count) { cpmBox.textContent = "CPM: no activities with durations yet."; return; }
+      const cp = c.critical_path.slice(0, 12).join(" → ") || "—";
+      cpmBox.innerHTML = `<b>CPM</b>: project ${c.project_duration}d · ${c.critical_count}/${c.activity_count} on the `
+        + `<span style="color:#e2554a">critical path</span>${c.has_cycle ? " · ⚠ cycle broken" : ""}<br>`
+        + `<span class="meta">Critical: ${cp}</span>`;
+    }).catch(() => { cpmBox.textContent = "CPM unavailable."; });
+
+    // Gantt + Line-of-Balance, fetched as inline SVG
+    for (const [kind, title] of [["gantt", "Gantt"], ["lob", "Line of Balance (linear)"]] as const) {
+      const card = document.createElement("div"); card.className = "dash-card"; card.style.marginBottom = "10px";
+      card.appendChild(Object.assign(document.createElement("div"), { className: "section-title", textContent: title }));
+      const holder = document.createElement("div"); holder.style.overflowX = "auto";
+      holder.innerHTML = `<div class="meta">loading ${title}…</div>`;
+      card.appendChild(holder); this.root.appendChild(card);
+      void this.host.api.scheduleSvg(pid, kind).then((svg) => { holder.innerHTML = svg; })
+        .catch(() => { holder.innerHTML = `<div class="meta">No ${title.toLowerCase()} yet — add activities with start/finish dates.</div>`; });
+    }
+  }
+
   private async openModule(m: ModuleDef, filter: { q?: string; state?: string } = {}) {
     const pid = this.host.projectId()!;
     this.skeleton(`Loading ${m.name}…`);
@@ -490,6 +524,13 @@ export class PortalUI {
       }
     };
     actions.append(newBtn, boardBtn, csvBtn, tplBtn, fbox, stateSel, viewSel, saveView);
+    // the Schedule module is the relational home for the same activities behind Gantt / LOB / CPM /
+    // the 3D 4D scrub — surface those views here so linear + gantt live with the GC schedule.
+    if (m.key === "schedule_activity") {
+      const sv = document.createElement("button"); sv.className = "tool-btn"; sv.textContent = "📊 Views";
+      sv.onclick = () => this.renderScheduleViews(m);
+      actions.append(sv);
+    }
     this.root.appendChild(actions);
 
     if (!records.length) {
