@@ -35,7 +35,7 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 | **A1** | **Ball-in-court / assignee on every actionable module** — explicit `assignee` + ball-in-court party so super/PM instantly see *who owes what* | Procore requires Assignees to open an RFI; "ball in court" is the core metric | ✅ ball-in-court party (computed from workflow transitions) shows as a column in every module list **and** in the record detail header, on top of the existing inline-editable assignee |
 | **F1** | **Fieldsets** — group a module's fields into labeled sections in the form (e.g. RFI → *Question / Response / Impacts*) | long flat forms are slow on a phone in the field | ✅ `fieldset` on each field; form renderer emits a labeled header per contiguous run. Applied to all 8 tier-1 modules |
 | **D1** | **Inline "add new" from reference dropdowns** — create a cost code / location / sub without leaving the form | supers shouldn't navigate away mid-entry | ✅ done (any reference field) |
-| **R1** | **Super vs PM views** — per-role default columns + favorites + which fields show first (field-first vs office-first) | a super needs manpower/weather/safety; a PM needs RFI/submittal/cost/change | planned |
+| **R1** | **Super vs PM views** — per-role default columns + favorites + which fields show first (field-first vs office-first) | a super needs manpower/weather/safety; a PM needs RFI/submittal/cost/change | ✅ two GC personas — **Superintendent** opens Field/Safety/Quality/Schedule first; **Project Manager** opens Engineering/Cost/Change/Contracts first; each gets a tailored workspace/rail set. Verified live |
 | **C1** | **Cross-module conversions** — RFI → Change Event/COR, Observation → NCR, Inspection fail → Punchlist | Procore "convert RFI to PCO" is a daily move | ✅ record-view "⤳ convert" buttons: RFI→Change Event/PCO, Observation→NCR/Punch, Inspection(fail/conditional)→Deficiency/NCR, Deficiency→Punch. New record is pre-filled + linked back; verified live |
 | **E1** | **Extendable `select` options** — admin can add an enum value (discipline, trade, type) without editing JSON | every firm's trade list differs | ✅ "＋ option" on every select/multiselect; values persist per-project (`enum_options` table) + merge into the dropdown for all users. Verified live + end-to-end test |
 
@@ -87,7 +87,7 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 2. **D1 add-from-dropdown + X1 cost-code links** — the cost-code workflow end-to-end.
 3. **A1 ball-in-court** ✅ **+ R1 super/PM views** — the "who owes what" layer both roles live in.
 4. **Tier-1 field completeness** ✅ (rfi → submittal → cor → daily → punchlist → inspection) + **F1 fieldsets** ✅.
-5. **C1 conversions** ✅ **+ E1 extendable enums** ✅. **All cross-cutting themes (N1·X1·D1·A1·F1·C1·E1) done.**
+5. **C1 conversions** ✅ **+ E1 extendable enums** ✅ **+ R1 super/PM views** ✅. **All cross-cutting themes (N1·X1·D1·A1·F1·C1·E1·R1) done.**
 6. **Tier-2 depth** ✅ incident(OSHA)·meeting·subcontract·prime_contract·commitment; **Tier-3** ✅ coi·permit
    expiry cleanup. Remaining Tier-2/3 = bid leveling, closeout (warranty/O&M/as-built), sustainability,
    coordination BCF, + a unified compliance-expiring endpoint.

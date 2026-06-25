@@ -327,6 +327,10 @@ export class PortalUI {
   /** Which sections open by default per persona (the rest collapse). Undefined persona = all open. */
   private static SECTIONS_BY_PERSONA: Record<string, string[]> = {
     gc: ["Field", "Cost", "Change Management", "Contracts"],
+    // R1 — the super works the field (daily reports, manpower, safety, quality, schedule);
+    // the PM works the office (RFIs/submittals, cost, change, contracts).
+    superintendent: ["Field", "Safety", "Quality", "Schedule"],
+    project_manager: ["Engineering", "Cost", "Change Management", "Contracts"],
     developer: ["Cost", "Contracts", "Preconstruction", "Closeout"],
     architect: ["Engineering", "Preconstruction", "BIM", "Closeout"],
     engineer: ["Engineering", "Quality", "BIM"],
