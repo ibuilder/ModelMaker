@@ -816,6 +816,11 @@ export class ApiClient {
       proforma: { hard_cost: number; gmp_vs_hard: number } | null;
     }>(`/projects/${pid}/budget/gmp`);
   }
+  /** Seed the owner pay-app SOV from the GMP budget lines (idempotent unless replace). */
+  sovFromBudget(pid: string, replace = false) {
+    return this.json<{ created: number; lines?: number; scheduled_value?: number; skipped?: number; note?: string }>(
+      `/projects/${pid}/cost/sov/from-budget?replace=${replace}`, { method: "POST" });
+  }
   /** Short-interval lookahead: near-term activities grouped by week (the field's 3-/6-week plan). */
   scheduleLookahead(pid: string, weeks = 3) {
     return this.json<{ start: string; finish: string; weeks: number; count: number;

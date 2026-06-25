@@ -476,9 +476,20 @@ export class PortalUI {
       + `<option value="commitment">Commitments / POs</option><option value="bid_package">Bid packages</option>`
       + `<option value="prime_contract">Prime contract (markups)</option>`;
     jump.onchange = () => { if (jump.value) jumpTo(jump.value); };
+    const sovBtn = document.createElement("button"); sovBtn.className = "tool-btn"; sovBtn.dataset.cap = "edit";
+    sovBtn.textContent = "⎘ Build owner SOV"; sovBtn.title = "Seed the owner pay-app Schedule of Values from these GMP lines";
+    sovBtn.onclick = async () => {
+      try {
+        let r = await this.host.api.sovFromBudget(pid);
+        if (!r.created && r.skipped && confirm(`The SOV already has ${r.skipped} lines. Rebuild it from the budget?`))
+          r = await this.host.api.sovFromBudget(pid, true);
+        this.host.setStatus(r.created ? `built ${r.created} SOV lines from the budget` : "SOV unchanged");
+        if (r.created) jumpTo("sov");
+      } catch (e) { this.host.setStatus(`couldn't build SOV: ${(e as Error).message}`); }
+    };
     const note = document.createElement("span"); note.className = "meta";
     note.innerHTML = "The agreed <b>GMP</b> broken to every cost code & bid package + GC/GR, overhead, fee & contingency — budget vs committed vs actual.";
-    intro.append(jump, note); this.root.appendChild(intro);
+    intro.append(jump, sovBtn, note); this.root.appendChild(intro);
 
     const status = document.createElement("div"); status.className = "meta"; status.textContent = "loading budget…";
     this.root.appendChild(status);
