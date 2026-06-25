@@ -433,6 +433,15 @@ def assign_record(pid: str, key: str, rid: str, assignee: str | None = Body(None
     return mod_engine.set_assignee(db, key, pid, rid, assignee, user, _party(pid, db, user))
 
 
+@router.post("/projects/{pid}/modules/{key}/{rid}/elements")
+def tag_elements(pid: str, key: str, rid: str, guids: list[str] = Body(..., embed=True),
+                 mode: str = Body("add", embed=True), db: Session = Depends(get_db),
+                 user: str = Depends(require_role("reviewer"))):
+    """Tie model elements (IFC GlobalIds) to a record (mode: add | remove | set). For a schedule
+    activity this hard-ties the exact elements it builds, so the 4D scrub is precise (not trade-based)."""
+    return mod_engine.set_element_guids(db, key, pid, rid, guids, user, mode)
+
+
 @router.post("/projects/{pid}/modules/{key}/{rid}/attachments", status_code=201)
 async def upload_attachment(pid: str, key: str, rid: str, file: UploadFile = File(...),
                             db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):

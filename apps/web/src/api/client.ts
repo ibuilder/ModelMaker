@@ -687,6 +687,11 @@ export class ApiClient {
     if (!res.ok) throw new Error(`upload -> ${res.status}`);
     return res.json() as Promise<RecordAttachmentMeta>;
   }
+  /** Tie model elements (IFC GlobalIds) to a record. mode: add | remove | set. */
+  tagElements(pid: string, key: string, rid: string, guids: string[], mode: "add" | "remove" | "set" = "add") {
+    return this.json<{ element_guids: string[]; count: number }>(
+      `/projects/${pid}/modules/${key}/${rid}/elements`, { method: "POST", body: JSON.stringify({ guids, mode }) });
+  }
   /** Attach many files at once (bulk site-photo upload). */
   async uploadAttachmentsBulk(pid: string, key: string, rid: string, files: File[] | FileList) {
     const fd = new FormData();

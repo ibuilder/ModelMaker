@@ -1068,11 +1068,40 @@ export class PortalUI {
     this.root.appendChild(relatedBox);
     void this.renderRelated(relatedBox, m.key, rid);
 
-    // anchor / linked elements
-    if (r.element_guids?.length) {
-      const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = "Show in model";
-      b.style.margin = "4px 0"; b.onclick = () => this.host.onSelectGuids(r.element_guids!);
-      this.root.appendChild(b);
+    // model elements — show / tie the current 3D selection (hard-ties a schedule activity for an
+    // exact 4D; also lets any record point at the elements it concerns)
+    const guids = r.element_guids ?? [];
+    const elHead = document.createElement("div"); elHead.className = "section-title";
+    elHead.textContent = `Model elements${guids.length ? ` (${guids.length})` : ""}`;
+    this.root.appendChild(elHead);
+    const elRow = document.createElement("div"); elRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin:4px 0";
+    const tagBtn = document.createElement("button"); tagBtn.className = "tool-btn";
+    tagBtn.textContent = "🔗 Tie current 3D selection";
+    tagBtn.title = "Add the element selected in the 3D model to this record";
+    tagBtn.onclick = async () => {
+      const g = this.host.selectedGuid();
+      if (!g) { this.host.setStatus("select an element in the 3D model first (Model workspace)"); return; }
+      try { const res = await this.host.api.tagElements(pid, m.key, rid, [g], "add");
+        this.host.setStatus(`tied ${res.count} element${res.count === 1 ? "" : "s"}`); this.openRecord(m, rid); }
+      catch (e) { this.host.setStatus(`tie failed: ${(e as Error).message}`); }
+    };
+    elRow.appendChild(tagBtn);
+    if (guids.length) {
+      const showBtn = document.createElement("button"); showBtn.className = "tool-btn"; showBtn.textContent = "👁 Show in model";
+      showBtn.onclick = () => this.host.onSelectGuids(guids); elRow.appendChild(showBtn);
+      const clrBtn = document.createElement("button"); clrBtn.className = "tool-btn"; clrBtn.textContent = "✕ Clear ties";
+      clrBtn.onclick = async () => {
+        if (!confirm(`Untie all ${guids.length} elements from ${r.ref}?`)) return;
+        try { await this.host.api.tagElements(pid, m.key, rid, [], "set"); this.openRecord(m, rid); }
+        catch (e) { this.host.setStatus(`clear failed: ${(e as Error).message}`); }
+      };
+      elRow.appendChild(clrBtn);
+    }
+    this.root.appendChild(elRow);
+    if (m.key === "schedule_activity" && guids.length) {
+      const hint = document.createElement("div"); hint.className = "meta";
+      hint.textContent = "These elements complete on this activity's finish date in the 4D scrub.";
+      this.root.appendChild(hint);
     }
 
     // workflow actions (server-gated by party)
