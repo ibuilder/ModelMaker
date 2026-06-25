@@ -573,3 +573,9 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
   letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent);
   border-bottom: 1px solid var(--border); }
 .portal-fieldset-head:first-child { margin-top: 2px; }
+
+/* E1 — "＋ option" button to extend a select enum inline (admin, no JSON edit) */
+.pf-addopt { margin-top: 3px; align-self: flex-start; font-size: 10px; padding: 1px 7px;
+  border: 1px dashed var(--border); border-radius: 6px; background: transparent;
+  color: var(--muted); cursor: pointer; }
+.pf-addopt:hover { color: var(--accent); border-color: var(--accent); }

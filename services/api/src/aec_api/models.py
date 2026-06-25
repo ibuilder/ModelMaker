@@ -108,6 +108,20 @@ class SavedView(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class EnumOption(Base):
+    """E1 — a project-level custom option added to a module field's `select`/`multiselect`
+    enum (e.g. a firm's own discipline/trade/type), so users extend dropdowns without editing
+    JSON. Merged with the module.json options at read time. Keyed by project + module + field."""
+    __tablename__ = "enum_options"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    module: Mapped[str] = mapped_column(String, index=True)
+    field: Mapped[str] = mapped_column(String, index=True)
+    value: Mapped[str] = mapped_column(String, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class RecordAttachment(Base):
     """File attached to any GC module record (object bytes live in storage/MinIO)."""
     __tablename__ = "record_attachments"

@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from . import rbac
 from .db import Base
-from .models import RecordActivity, RecordComment
+from .models import EnumOption, RecordActivity, RecordComment
 
 # repo layout: services/api/modules; the frozen desktop build sets AEC_MODULES_DIR to the
 # bundled copy (PyInstaller _MEIPASS/modules) since __file__ no longer resolves there.
@@ -604,6 +604,38 @@ def link_record(db: Session, key: str, project_id: str, rid: str, target: dict,
     _log(db, project_id, key, rid, actor, party, "link", {"to": f"{tmod}:{tref}"})
     db.commit()
     return get_record(db, key, project_id, rid)
+
+
+# --- E1: project-level custom enum options ----------------------------------
+def list_enum_options(db: Session, project_id: str) -> dict[str, dict[str, list[str]]]:
+    """All custom options for a project, nested {module: {field: [values]}}."""
+    out: dict[str, dict[str, list[str]]] = {}
+    rows = db.execute(select(EnumOption).where(EnumOption.project_id == project_id)
+                      .order_by(EnumOption.created_at))
+    for (o,) in rows:
+        out.setdefault(o.module, {}).setdefault(o.field, []).append(o.value)
+    return out
+
+
+def add_enum_option(db: Session, project_id: str, module: str, field: str, value: str,
+                    actor: str | None) -> dict:
+    """Add a custom option to a module field's enum. Validates the field is a real
+    select/multiselect, and is idempotent against the JSON options + existing customs."""
+    mod = get_module(module)
+    f = next((x for x in mod.get("fields", []) if x["name"] == field), None)
+    if not f or f.get("type") not in ("select", "multiselect"):
+        raise HTTPException(422, f"{module}.{field} is not a select field")
+    value = (value or "").strip()
+    if not value:
+        raise HTTPException(422, "value required")
+    existing = set(f.get("options", [])) | set(
+        list_enum_options(db, project_id).get(module, {}).get(field, []))
+    if value not in existing:
+        db.add(EnumOption(project_id=project_id, module=module, field=field,
+                          value=value, created_by=actor))
+        db.commit()
+    return {"module": module, "field": field, "value": value,
+            "options": list_enum_options(db, project_id).get(module, {}).get(field, [])}
 
 
 def project_pins(db: Session, project_id: str) -> list[dict]:

@@ -236,6 +236,29 @@ with TestClient(app) as c:
     # non-admin can't trigger a digest
     assert c.post(f"/projects/{pid}/notifications/digest", headers=H("sub")).status_code == 403
 
+    # ---- E1: project-level custom enum options (extend a select without editing JSON) --------
+    assert c.get(f"/projects/{pid}/enum-options", headers=H("gc")).json() == {}  # none yet
+    add = c.post(f"/projects/{pid}/modules/rfi/enum/discipline", headers=H("gc"),
+                 json={"value": "Acoustics"})
+    assert add.status_code == 201 and "Acoustics" in add.json()["options"], add.text
+    # it now shows up in the per-project catalog, nested module→field→[values]
+    opts = c.get(f"/projects/{pid}/enum-options", headers=H("gc")).json()
+    assert opts.get("rfi", {}).get("discipline") == ["Acoustics"], opts
+    # idempotent: re-adding the same value (or a JSON built-in) doesn't duplicate
+    c.post(f"/projects/{pid}/modules/rfi/enum/discipline", headers=H("gc"), json={"value": "Acoustics"})
+    c.post(f"/projects/{pid}/modules/rfi/enum/discipline", headers=H("gc"), json={"value": "Structural"})
+    opts = c.get(f"/projects/{pid}/enum-options", headers=H("gc")).json()
+    assert opts["rfi"]["discipline"] == ["Acoustics"], opts
+    # a record can be created using the custom value
+    r2 = c.post(f"/projects/{pid}/modules/rfi", headers=H("gc"),
+                json={"data": {"subject": "Acoustic RFI", "question": "STC?", "discipline": "Acoustics"}})
+    assert r2.json()["data"]["discipline"] == "Acoustics", r2.text
+    # validation: only select/multiselect fields accept custom options
+    assert c.post(f"/projects/{pid}/modules/rfi/enum/subject", headers=H("gc"),
+                  json={"value": "x"}).status_code == 422
+    assert c.post(f"/projects/{pid}/modules/rfi/enum/discipline", headers=H("gc"),
+                  json={"value": "   "}).status_code == 422
+
     print("GC MODULES OK")
     print(f"  modules loaded: {len(mods)}  |  project={pid}")
     print(f"  RFI lifecycle gated (sub blocked from answering: 403)")
