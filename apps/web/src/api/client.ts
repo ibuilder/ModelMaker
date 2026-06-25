@@ -800,14 +800,18 @@ export class ApiClient {
    *  committed vs actual vs variance; reconciled to the prime contract + developer proforma. */
   gmpBudget(pid: string) {
     type Cat = { key: string; name: string; budget: number; committed: number; actual: number;
-      forecast: number; variance: number; lines: { name: string; budget: number; committed: number;
-      variance: number; is_group?: boolean }[]; groups?: { name: string; budget: number }[] };
+      forecast: number; eac: number; etc: number; variance: number; lines: { name: string; budget: number;
+      committed: number; eac?: number; etc?: number; variance: number; is_group?: boolean }[];
+      groups?: { name: string; budget: number }[] };
     return this.json<{
       gmp: { contract_value: number; computed: number; reconciliation: number | null; cost_of_work: number;
         markups: { overhead_pct: number; fee_pct: number; contingency_pct: number } };
       categories: Cat[];
-      totals: { budget: number; committed: number; actual: number; forecast: number; variance: number };
-      bid_packages: { ref: string; name: string; trade?: string; budget: number; submissions: number }[];
+      totals: { budget: number; committed: number; actual: number; forecast: number; eac: number; etc: number; variance: number };
+      completion: { bac: number; eac: number; etc: number; actual_to_date: number; projected_over_under: number; pct_spent: number };
+      bid_packages: { ref: string; name: string; trade?: string; budget: number; awarded: number;
+        bought_out: boolean; savings: number; submissions: number }[];
+      buyout: { packages: number; bought_out: number; budget: number; awarded: number; savings: number };
       staffing: { projected: number; headcount_roles: number };
       proforma: { hard_cost: number; gmp_vs_hard: number } | null;
     }>(`/projects/${pid}/budget/gmp`);

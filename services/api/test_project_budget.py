@@ -26,12 +26,14 @@ with TestClient(app) as c:
     cc_gr = mk(c, pid, "cost_code", {"code": "01-5000", "description": "Temp facilities", "division": "01"})["id"]
 
     # budget lines per cost code (the PX's GMP allocation)
-    mk(c, pid, "budget", {"cost_code": cc_conc, "description": "Concrete", "revised": 2_000_000})
+    # concrete keyed with a forecast (EAC $1.9M) below budget; temp facilities no forecast
+    mk(c, pid, "budget", {"cost_code": cc_conc, "description": "Concrete", "revised": 2_000_000, "forecast": 1_900_000})
     mk(c, pid, "budget", {"cost_code": cc_gr, "description": "Temp facilities", "revised": 500_000})
 
-    # buyout: an executed commitment against concrete (committed < budget → positive variance)
+    # buyout: an executed commitment + actual spend to date against concrete
     com = mk(c, pid, "commitment", {"description": "Concrete sub", "cost_code": cc_conc, "amount": 1_800_000})
     c.post(f"/projects/{pid}/modules/commitment/{com['id']}/transition", json={"action": "execute"})
+    mk(c, pid, "direct_cost", {"description": "Concrete pours", "cost_code": cc_conc, "amount": 500_000})
 
     # staffing projections: PM under General Conditions, Safety under General Requirements
     mk(c, pid, "staffing", {"role": "Project Manager", "category": "General Conditions", "count": 1,
@@ -43,8 +45,10 @@ with TestClient(app) as c:
     mk(c, pid, "prime_contract", {"name": "GMP w/ Owner", "type": "GMP", "value": 10_000_000,
                                   "overhead_pct": 5, "fee_pct": 4, "contingency_pct": 3})
 
-    # a bid package (buyout tracking is relational to every package)
-    mk(c, pid, "bid_package", {"name": "Concrete", "trade": "Concrete", "budget": 2_000_000})
+    # a bid package + an awarded bid below budget → buyout savings
+    bp = mk(c, pid, "bid_package", {"name": "Concrete", "trade": "Concrete", "budget": 2_000_000})
+    mk(c, pid, "bid_submission", {"bidder": "Acme Concrete", "package": bp["id"],
+                                  "amount": 1_750_000, "status": "Awarded"})
 
     # developer proforma hard cost (the construction line the GMP must reconcile against)
     c.put(f"/projects/{pid}/dev-budget", json={"lines": [
@@ -56,8 +60,20 @@ with TestClient(app) as c:
 
     # direct work: $2.0M budget, $1.8M committed (the executed sub), grouped under Division 03
     assert cats["direct"]["budget"] == 2_000_000 and cats["direct"]["committed"] == 1_800_000, cats["direct"]
-    assert cats["direct"]["variance"] == 200_000, cats["direct"]["variance"]
     assert any(g["name"] == "Division 03" for g in cats["direct"]["groups"]), cats["direct"]["groups"]
+
+    # cost-to-complete (EAC/ETC): concrete keyed at $1.9M EAC, $0.5M spent → $1.4M to go, VAC $0.1M
+    conc = next(l for g in cats["direct"]["groups"] for l in g["lines"] if "Concrete" in l["name"])
+    assert conc["eac"] == 1_900_000 and conc["actual"] == 500_000, conc
+    assert conc["etc"] == 1_400_000 and conc["variance"] == 100_000, conc
+    comp = b["completion"]
+    assert comp["eac"] == b["totals"]["eac"] and comp["etc"] == round(comp["eac"] - comp["actual_to_date"], 2), comp
+    assert comp["bac"] == b["totals"]["budget"] and comp["pct_spent"] > 0, comp
+
+    # buyout savings: concrete awarded at $1.75M vs $2.0M package budget → $250k savings
+    bo = b["buyout"]
+    assert bo["packages"] == 1 and bo["bought_out"] == 1, bo
+    assert bo["awarded"] == 1_750_000 and bo["savings"] == 250_000, bo
 
     # staffing rolls into the right buckets (PM→GC, Safety→GR); ~12 months each
     assert 280_000 < cats["general_conditions"]["budget"] < 320_000, cats["general_conditions"]["budget"]
