@@ -11,22 +11,50 @@
       "name": "company",
       "label": "Company",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Company"
     },
     {
       "name": "trade",
       "label": "Trade",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Company"
+    },
+    {
+      "name": "contact",
+      "label": "Contact",
+      "type": "text",
+      "fieldset": "Company"
+    },
+    {
+      "name": "references",
+      "label": "References",
+      "type": "textarea",
+      "fieldset": "Company"
     },
     {
       "name": "emr",
       "label": "EMR Rate",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Capacity"
     },
     {
       "name": "bonding_capacity",
       "label": "Bonding Capacity",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Capacity"
+    },
+    {
+      "name": "annual_revenue",
+      "label": "Annual Revenue",
+      "type": "currency",
+      "fieldset": "Capacity"
+    },
+    {
+      "name": "largest_project",
+      "label": "Largest Project",
+      "type": "currency",
+      "fieldset": "Capacity"
     },
     {
       "name": "rating",
@@ -37,7 +65,8 @@
         "B",
         "C",
         "Not Qualified"
-      ]
+      ],
+      "fieldset": "Status"
     },
     {
       "name": "status",
@@ -48,7 +77,14 @@
         "Submitted",
         "Approved",
         "Rejected"
-      ]
+      ],
+      "fieldset": "Status"
+    },
+    {
+      "name": "expires",
+      "label": "Prequal Expires",
+      "type": "date",
+      "fieldset": "Status"
     }
   ],
   "workflow": {

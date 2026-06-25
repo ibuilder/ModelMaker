@@ -11,18 +11,27 @@
       "name": "name",
       "label": "Manual",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Manual"
     },
     {
       "name": "system",
       "label": "System",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Manual"
     },
     {
       "name": "submittal",
       "label": "Submittal",
       "type": "reference",
-      "module": "submittal"
+      "module": "submittal",
+      "fieldset": "Manual"
+    },
+    {
+      "name": "spec_section",
+      "label": "Spec Section",
+      "type": "text",
+      "fieldset": "Manual"
     },
     {
       "name": "format",
@@ -32,7 +41,8 @@
         "PDF",
         "Hard Copy",
         "Both"
-      ]
+      ],
+      "fieldset": "Status"
     },
     {
       "name": "status",
@@ -42,7 +52,14 @@
         "Pending",
         "Submitted",
         "Accepted"
-      ]
+      ],
+      "fieldset": "Status"
+    },
+    {
+      "name": "responsible",
+      "label": "Responsible Sub",
+      "type": "text",
+      "fieldset": "Status"
     }
   ],
   "workflow": {

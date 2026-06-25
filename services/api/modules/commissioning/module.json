@@ -11,23 +11,63 @@
       "name": "system",
       "label": "System",
       "type": "text",
-      "required": true
-    },
-    {
-      "name": "status",
-      "label": "Status",
-      "type": "text"
+      "required": true,
+      "fieldset": "System"
     },
     {
       "name": "asset",
       "label": "Asset",
       "type": "reference",
-      "module": "asset_register"
+      "module": "asset_register",
+      "fieldset": "System"
+    },
+    {
+      "name": "cx_agent",
+      "label": "Cx Agent",
+      "type": "text",
+      "fieldset": "System"
     },
     {
       "name": "date",
       "label": "Date",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Testing"
+    },
+    {
+      "name": "test_type",
+      "label": "Test Type",
+      "type": "select",
+      "options": [
+        "Pre-Functional",
+        "Functional",
+        "Integrated Systems",
+        "TAB",
+        "Retro-Cx"
+      ],
+      "fieldset": "Testing"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "text",
+      "fieldset": "Result"
+    },
+    {
+      "name": "result",
+      "label": "Result",
+      "type": "select",
+      "options": [
+        "Pass",
+        "Fail",
+        "Conditional"
+      ],
+      "fieldset": "Result"
+    },
+    {
+      "name": "deficiencies",
+      "label": "Deficiencies",
+      "type": "textarea",
+      "fieldset": "Result"
     }
   ],
   "workflow": {

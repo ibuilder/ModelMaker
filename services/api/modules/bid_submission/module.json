@@ -11,18 +11,57 @@
       "name": "bidder",
       "label": "Bidder",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Bid"
     },
     {
       "name": "package",
       "label": "Bid package",
       "type": "reference",
-      "module": "bid_package"
+      "module": "bid_package",
+      "fieldset": "Bid"
     },
     {
       "name": "amount",
       "label": "Amount",
-      "type": "currency"
+      "type": "currency",
+      "fieldset": "Pricing"
+    },
+    {
+      "name": "base_bid",
+      "label": "Base Bid",
+      "type": "currency",
+      "fieldset": "Pricing"
+    },
+    {
+      "name": "alternates",
+      "label": "Alternates (desc + $)",
+      "type": "textarea",
+      "fieldset": "Pricing"
+    },
+    {
+      "name": "unit_prices",
+      "label": "Unit Prices",
+      "type": "textarea",
+      "fieldset": "Pricing"
+    },
+    {
+      "name": "inclusions",
+      "label": "Inclusions",
+      "type": "textarea",
+      "fieldset": "Leveling"
+    },
+    {
+      "name": "exclusions",
+      "label": "Exclusions",
+      "type": "textarea",
+      "fieldset": "Leveling"
+    },
+    {
+      "name": "qualifications",
+      "label": "Qualifications / Assumptions",
+      "type": "textarea",
+      "fieldset": "Leveling"
     },
     {
       "name": "status",
@@ -34,7 +73,24 @@
         "Shortlisted",
         "Awarded",
         "Rejected"
-      ]
+      ],
+      "fieldset": "Compliance"
+    },
+    {
+      "name": "addenda_acknowledged",
+      "label": "Addenda Acknowledged",
+      "type": "text",
+      "fieldset": "Compliance"
+    },
+    {
+      "name": "bond_provided",
+      "label": "Bid Bond Provided?",
+      "type": "select",
+      "options": [
+        "No",
+        "Yes"
+      ],
+      "fieldset": "Compliance"
     }
   ],
   "workflow": {

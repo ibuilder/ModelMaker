@@ -11,22 +11,44 @@
       "name": "material",
       "label": "Material",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Material"
     },
     {
       "name": "tons",
       "label": "Tons",
-      "type": "number"
-    },
-    {
-      "name": "diverted",
-      "label": "Diverted %",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Material"
     },
     {
       "name": "date",
       "label": "Date",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Material"
+    },
+    {
+      "name": "diverted",
+      "label": "Diverted %",
+      "type": "number",
+      "fieldset": "Disposition"
+    },
+    {
+      "name": "hauler",
+      "label": "Hauler",
+      "type": "text",
+      "fieldset": "Disposition"
+    },
+    {
+      "name": "destination",
+      "label": "Destination Facility",
+      "type": "text",
+      "fieldset": "Disposition"
+    },
+    {
+      "name": "diversion_pct",
+      "label": "Diversion %",
+      "type": "number",
+      "fieldset": "Disposition"
     }
   ],
   "workflow": {
