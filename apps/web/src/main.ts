@@ -255,6 +255,10 @@ const PERSONAS: Record<string, PersonaCfg> = {
   all:           { ws: null, rail: null, home: "model" },
   developer:     { ws: ["finance", "model", "studio", "drawings", "construction"], rail: ["issues", "tools", "tree"], home: "finance" },
   gc:            { ws: ["construction", "model", "drawings", "finance"], rail: ["tree", "layers", "issues", "tools"], home: "construction" },
+  // R1 — two GC flavors: the super lives in the field (model + construction), the PM in the office
+  // (construction + finance). Same construction home; the portal nav opens each role's sections first.
+  superintendent:  { ws: ["construction", "model", "drawings"], rail: ["issues", "tree", "layers", "tools"], home: "construction" },
+  project_manager: { ws: ["construction", "finance", "drawings", "model"], rail: ["tree", "issues", "layers", "tools"], home: "construction" },
   architect:     { ws: ["model", "studio", "drawings", "construction"], rail: ["tree", "layers", "issues", "tools"], home: "model" },
   engineer:      { ws: ["model", "studio", "drawings"], rail: ["tree", "layers", "tools", "issues"], home: "model" },
   subcontractor: { ws: ["construction", "model", "drawings"], rail: ["issues", "tools"], home: "construction" },
