@@ -519,6 +519,7 @@ export class ProformaUI {
    *  per-category contingency, that roll into the proforma's cost_lines. The institutional gap the
    *  flat cost drivers don't cover. */
   private renderBudget() {
+    this.root.querySelector("#pf-budget")?.remove();   // idempotent — re-render replaces, never duplicates
     const host = document.createElement("div"); host.id = "pf-budget";
     host.style.cssText = "margin:8px 0;padding:8px 10px;border:1px dashed var(--line);border-radius:8px";
     const pid = this.projectId();
@@ -526,6 +527,27 @@ export class ProformaUI {
     if (!pid) { host.insertAdjacentHTML("beforeend", `<div class="meta">Open a project to build a line-item cost budget.</div>`); this.root.appendChild(host); return; }
     const body = document.createElement("div"); host.appendChild(body); this.root.appendChild(host);
     body.innerHTML = `<div class="meta">loading…</div>`;
+
+    // GC GMP ↔ developer hard-cost reconciliation — ties the underwriting to the live construction number
+    const recon = document.createElement("div"); recon.style.cssText = "margin:0 0 8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px";
+    host.insertBefore(recon, body); recon.innerHTML = `<div class="meta">checking GC GMP…</div>`;
+    const refreshRecon = () => {
+      void this.api.gmpReconciliation(pid).then((g) => {
+        if (!g.gc_gmp) { recon.style.display = "none"; return; }
+        const col = g.in_sync ? "#33d17a" : (g.delta > 0 ? "#e2554a" : "#ffd479");
+        recon.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">`
+          + `<span class="meta">🤝 GC GMP <b>${money(g.gc_gmp)}</b> · EAC ${money(g.gmp_eac)} vs hard cost <b>${money(g.dev_hard_cost)}</b> · `
+          + `<span style="color:${col}">${g.in_sync ? "in sync" : (g.delta > 0 ? "GMP over by " : "GMP under by ") + money(Math.abs(g.delta))}</span></span>`
+          + `<button class="tool-btn" id="pf-sync-gmp"${g.in_sync ? " disabled" : ""}>⤵ Set hard cost = GMP</button></div>`;
+        const btn = recon.querySelector<HTMLButtonElement>("#pf-sync-gmp");
+        if (btn) btn.onclick = async () => {
+          btn.disabled = true; btn.textContent = "syncing…";
+          try { await this.api.syncGmpToHard(pid); this.setStatus("hard cost synced to GC GMP"); this.renderBudget(); }
+          catch (e) { this.setStatus(`sync failed: ${(e as Error).message}`); refreshRecon(); }
+        };
+      }).catch(() => { recon.style.display = "none"; });   // no GMP / endpoint absent → hide quietly
+    };
+    refreshRecon();
 
     const CATS: [string, string][] = [["acquisition", "Acquisition"], ["hard", "Hard costs"], ["soft", "Soft costs"]];
     void this.api.devBudget(pid).then((resp) => {

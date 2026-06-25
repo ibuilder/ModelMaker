@@ -235,6 +235,52 @@ def investment_deck(pid: str, db: Session = Depends(get_db)):
                     headers={"Content-Disposition": f'inline; filename="pitch-deck-{pid[:8]}.pdf"'})
 
 
+@router.get("/projects/{pid}/dev-budget/gmp-reconciliation")
+def gmp_reconciliation(pid: str, db: Session = Depends(get_db)):
+    """Tie the developer's construction **hard cost** to the GC's actual **GMP**: the proforma was
+    underwritten with a hard-cost line; the GC manages a live GMP (buyout + GC/GR + OH/fee). This
+    shows them side by side so the developer sees whether construction is tracking the underwriting."""
+    from .. import dev_budget as dvb
+    from .. import project_budget as pb
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    budget = p.dev_budget or dvb.starter_budget()
+    dev_hard = round(sum(dvb.line_total(ln) for ln in (budget.get("lines") or [])
+                         if ln.get("category") == "hard"), 2)
+    gmp = pb.gmp_budget(db, pid)
+    gc_gmp = gmp["gmp"].get("revised") or gmp["gmp"]["computed"]
+    tot = gmp["totals"]
+    return {"dev_hard_cost": dev_hard, "gc_gmp": round(gc_gmp, 2),
+            "delta": round(gc_gmp - dev_hard, 2), "in_sync": abs(gc_gmp - dev_hard) < 1.0,
+            "gmp_committed": tot["committed"], "gmp_eac": tot.get("eac", tot["forecast"]),
+            "gmp_variance_at_completion": tot["variance"]}
+
+
+@router.post("/projects/{pid}/dev-budget/sync-gmp")
+def sync_gmp_to_hard(pid: str, db: Session = Depends(get_db)):
+    """Set the developer budget's construction hard cost to the GC's GMP — one click ties the
+    underwriting to the live construction number. Replaces hard lines with a single synced GMP line;
+    soft / acquisition / contingency are untouched. Returns the recomputed budget summary."""
+    from .. import dev_budget as dvb
+    from .. import project_budget as pb
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    gmp = pb.gmp_budget(db, pid)
+    gc_gmp = round(gmp["gmp"].get("revised") or gmp["gmp"]["computed"], 2)
+    budget = dict(p.dev_budget or dvb.starter_budget())
+    lines = [dict(ln) for ln in (budget.get("lines") or []) if ln.get("category") != "hard"]
+    lines.append({"category": "hard", "description": "Construction — GC GMP (synced)",
+                  "unit_cost": gc_gmp, "quantity": 1, "cost_code": ""})
+    budget["lines"] = lines
+    p.dev_budget = budget
+    db.commit()
+    return {"synced": True, "hard_cost": gc_gmp, "budget": budget, "summary": dvb.summarize(budget)}
+
+
 @router.get("/projects/{pid}/dev-budget/cost-lines")
 def dev_budget_cost_lines(pid: str, db: Session = Depends(get_db)):
     """The budget rolled into proforma cost_lines (the seed the Finance view applies)."""
