@@ -756,6 +756,20 @@ export class ApiClient {
       frames: { day: number; new: number; completed_cumulative: number; pct: number; date?: string; new_guids: string[] }[] }>(
       `/projects/${pid}/schedule/4d${source ? `?source=${source}` : ""}`);
   }
+  /** Snapshot the current schedule as the baseline (variance is measured against it). */
+  setBaseline(pid: string) {
+    return this.json<{ captured_at: string; count: number }>(
+      `/projects/${pid}/schedule/baseline`, { method: "POST" });
+  }
+  clearBaseline(pid: string) {
+    return this.json<{ cleared: boolean }>(`/projects/${pid}/schedule/baseline`, { method: "DELETE" });
+  }
+  /** Per-activity slip vs the baseline (finish_var/start_var in days). 409 if no baseline set. */
+  scheduleVariance(pid: string) {
+    return this.json<{ captured_at: string; baseline_count: number; summary: Record<string, number>;
+      activities: { ref: string; name: string; status: string; start_var: number | null; finish_var: number | null }[] }>(
+      `/projects/${pid}/schedule/variance`);
+  }
   /** Schedule earned value: BAC / EV / PV / SPI + per-activity schedule variance. */
   scheduleEarnedValue(pid: string) {
     return this.json<{ bac: number; ev: number; pv: number; sv: number; spi: number | null;

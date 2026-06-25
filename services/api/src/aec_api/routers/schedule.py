@@ -8,11 +8,13 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from .. import modules as me
-from .. import schedule_cpm, schedule_viz
+from .. import schedule_cpm, schedule_viz, storage
 from ..db import get_db
 from ..rbac import require_role
 
 router = APIRouter()
+
+_BASELINE_KEY = "{pid}/schedule_baseline.json"
 
 
 def _svg(s: str) -> Response:
@@ -89,6 +91,77 @@ def lookahead(pid: str, weeks: int = 3, start: str | None = None, db: Session = 
     total = sum(len(v) for v in buckets.values())
     return {"start": d0.isoformat(), "finish": d1.isoformat(), "weeks": weeks,
             "count": total, "weeks_detail": [{"week": k, "activities": buckets[k]} for k in sorted(buckets)]}
+
+
+@router.post("/projects/{pid}/schedule/baseline", status_code=201)
+def set_baseline(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("editor"))):
+    """Snapshot the current schedule as the **baseline** (each activity's planned start/finish + budget,
+    keyed by id). Variance is then measured against this — re-run to re-baseline after an approved
+    change. One baseline per project."""
+    import json
+
+    snap = {}
+    for r in me.list_records(db, "schedule_activity", pid, limit=1_000_000):
+        data = r.get("data") or {}
+        snap[r["id"]] = {"ref": r.get("ref"), "name": r.get("title") or data.get("name"),
+                         "start": data.get("start"), "finish": data.get("finish"),
+                         "budget": data.get("budget")}
+    payload = {"captured_at": date.today().isoformat(), "count": len(snap), "activities": snap}
+    storage.put(_BASELINE_KEY.format(pid=pid), json.dumps(payload).encode("utf-8"))
+    return {"captured_at": payload["captured_at"], "count": payload["count"]}
+
+
+@router.delete("/projects/{pid}/schedule/baseline")
+def clear_baseline(pid: str, _: str = Depends(require_role("editor"))):
+    """Remove the schedule baseline."""
+    storage.delete(_BASELINE_KEY.format(pid=pid))
+    return {"cleared": True}
+
+
+@router.get("/projects/{pid}/schedule/variance")
+def variance(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Per-activity slip vs the baseline: **finish_var**/start_var in days (positive = later than
+    baseline = slipped), plus added/removed activities. Surfaces how far the job has drifted from
+    the plan of record. 409 if no baseline has been set."""
+    import json
+
+    try:
+        base = json.loads(storage.get(_BASELINE_KEY.format(pid=pid)))
+    except Exception:                                # noqa: BLE001
+        from fastapi import HTTPException
+        raise HTTPException(409, "no baseline set — POST /schedule/baseline first")
+    base_acts = base.get("activities", {})
+    current = {r["id"]: r for r in me.list_records(db, "schedule_activity", pid, limit=1_000_000)}
+    lines = []
+    for rid, b in base_acts.items():
+        cur = current.get(rid)
+        if not cur:
+            lines.append({"ref": b.get("ref"), "name": b.get("name"), "status": "removed",
+                          "start_var": None, "finish_var": None}); continue
+        data = cur.get("data") or {}
+        bs, bf = _d(b.get("start")), _d(b.get("finish"))
+        cs, cf = _d(data.get("start")), _d(data.get("finish"))
+        sv = (cs - bs).days if (cs and bs) else None
+        fv = (cf - bf).days if (cf and bf) else None
+        lines.append({"ref": cur.get("ref"), "name": cur.get("title") or data.get("name"),
+                      "start_var": sv, "finish_var": fv,
+                      "status": "slipped" if (fv or 0) > 0 else "improved" if (fv or 0) < 0 else "on_baseline"})
+    for rid, cur in current.items():
+        if rid not in base_acts:
+            data = cur.get("data") or {}
+            lines.append({"ref": cur.get("ref"), "name": cur.get("title") or data.get("name"),
+                          "status": "added", "start_var": None, "finish_var": None})
+    slips = [x["finish_var"] for x in lines if x["finish_var"] is not None]
+    summary = {"slipped": sum(1 for x in lines if x["status"] == "slipped"),
+               "improved": sum(1 for x in lines if x["status"] == "improved"),
+               "on_baseline": sum(1 for x in lines if x["status"] == "on_baseline"),
+               "added": sum(1 for x in lines if x["status"] == "added"),
+               "removed": sum(1 for x in lines if x["status"] == "removed"),
+               "max_slip_days": max(slips) if slips else 0,
+               "avg_finish_var": round(sum(slips) / len(slips), 1) if slips else 0}
+    lines.sort(key=lambda x: (x["finish_var"] is None, -(x["finish_var"] or 0)))   # biggest slip first
+    return {"captured_at": base.get("captured_at"), "baseline_count": len(base_acts),
+            "summary": summary, "activities": lines}
 
 
 @router.get("/projects/{pid}/schedule/earned-value")

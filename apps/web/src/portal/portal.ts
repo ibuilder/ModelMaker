@@ -521,6 +521,37 @@ export class PortalUI {
         + `<span class="meta">EV ${usd(e.ev)} · PV ${usd(e.pv)} · BAC ${usd(e.bac)}</span>`;
     }).catch(() => { evBox.textContent = "Earned value unavailable."; });
 
+    // Baseline + variance — snapshot the plan, then track slip against it
+    const blCard = document.createElement("div"); blCard.className = "dash-card"; blCard.style.marginBottom = "10px";
+    const blHead = document.createElement("div"); blHead.className = "section-title";
+    blHead.style.cssText = "display:flex;justify-content:space-between;align-items:center";
+    blHead.append(Object.assign(document.createElement("span"), { textContent: "Baseline & variance" }));
+    const setBtn = document.createElement("button"); setBtn.className = "tool-btn"; setBtn.textContent = "📌 Set baseline";
+    blHead.appendChild(setBtn); blCard.appendChild(blHead);
+    const blBody = document.createElement("div"); blBody.innerHTML = `<div class="meta">loading…</div>`; blCard.appendChild(blBody);
+    const loadVariance = () => {
+      blBody.innerHTML = `<div class="meta">loading…</div>`;
+      void this.host.api.scheduleVariance(pid).then((v) => {
+        const s = v.summary;
+        blBody.innerHTML = `<div class="meta">Baseline ${v.captured_at} · ${v.baseline_count} activities · `
+          + `<b style="color:#e2554a">${s.slipped || 0} slipped</b> · ${s.on_baseline || 0} on plan · `
+          + `${s.improved || 0} improved · ${s.added || 0} added · max slip <b>${s.max_slip_days || 0}d</b></div>`;
+        for (const a of v.activities.filter((x) => (x.finish_var || 0) !== 0 || x.status === "added" || x.status === "removed").slice(0, 8)) {
+          const row = document.createElement("div"); row.className = "meta"; row.style.margin = "1px 0";
+          const fv = a.finish_var; const tag = fv == null ? a.status : fv > 0 ? `+${fv}d late` : `${fv}d early`;
+          const col = fv != null && fv > 0 ? "#e2554a" : fv != null && fv < 0 ? "#33d17a" : "var(--muted)";
+          row.innerHTML = `<span style="color:${col}">◷</span> ${a.name} · <span style="color:${col}">${tag}</span>`;
+          blBody.appendChild(row);
+        }
+      }).catch(() => { blBody.innerHTML = `<div class="meta">No baseline set — click <b>📌 Set baseline</b> to snapshot the current plan and start tracking slip.</div>`; });
+    };
+    setBtn.onclick = async () => {
+      if (!confirm("Snapshot the current schedule as the baseline? Variance will be measured against it (re-baseline anytime).")) return;
+      try { const b = await this.host.api.setBaseline(pid); this.host.setStatus(`baseline set (${b.count} activities)`); loadVariance(); }
+      catch (e) { this.host.setStatus(`baseline failed: ${(e as Error).message}`); }
+    };
+    this.root.appendChild(blCard); loadVariance();
+
     // Gantt + Line-of-Balance, fetched as inline SVG
     for (const [kind, title] of [["gantt", "Gantt"], ["lob", "Line of Balance (linear)"]] as const) {
       const card = document.createElement("div"); card.className = "dash-card"; card.style.marginBottom = "10px";
