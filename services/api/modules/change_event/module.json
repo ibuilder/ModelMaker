@@ -2,7 +2,7 @@
   "key": "change_event",
   "name": "Change Events",
   "section": "Cost",
-  "icon": "\u271a",
+  "icon": "✚",
   "ref_prefix": "CE",
   "title_field": "subject",
   "pinnable": false,
@@ -11,12 +11,14 @@
       "name": "subject",
       "label": "Change Event",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Change"
     },
     {
       "name": "rom",
       "label": "ROM Cost",
-      "type": "currency"
+      "type": "currency",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "reason",
@@ -30,7 +32,8 @@
         "Code / AHJ",
         "Errors & Omissions",
         "Allowance Reconciliation"
-      ]
+      ],
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "scope_status",
@@ -40,18 +43,21 @@
         "Undetermined",
         "In Scope",
         "Out of Scope"
-      ]
+      ],
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "schedule_impact_days",
       "label": "Schedule Impact (days)",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "source_rfi",
       "label": "Source RFI",
       "type": "reference",
-      "module": "rfi"
+      "module": "rfi",
+      "fieldset": "Scope & links"
     },
     {
       "name": "trades",
@@ -64,7 +70,8 @@
         "Drywall",
         "Glazing",
         "Sitework"
-      ]
+      ],
+      "fieldset": "Scope & links"
     },
     {
       "name": "pco_total",
@@ -86,7 +93,8 @@
       "name": "cost_code",
       "label": "Cost Code",
       "type": "reference",
-      "module": "cost_code"
+      "module": "cost_code",
+      "fieldset": "Scope & links"
     }
   ],
   "workflow": {

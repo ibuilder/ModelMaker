@@ -2,7 +2,7 @@
   "key": "submittal",
   "name": "Submittals",
   "section": "Engineering",
-  "icon": "\u25a4",
+  "icon": "▤",
   "ref_prefix": "SUB",
   "title_field": "title",
   "pinnable": true,
@@ -11,13 +11,15 @@
       "name": "title",
       "label": "Title",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Identification"
     },
     {
       "name": "spec_section",
       "label": "Spec Section",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Identification"
     },
     {
       "name": "type",
@@ -33,17 +35,20 @@
         "Calculations",
         "O&M Manual",
         "Warranty"
-      ]
+      ],
+      "fieldset": "Identification"
     },
     {
       "name": "rev",
       "label": "Revision",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Identification"
     },
     {
       "name": "responsible_contractor",
       "label": "Responsible Contractor",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Identification"
     },
     {
       "name": "disposition",
@@ -55,45 +60,53 @@
         "Revise & Resubmit",
         "Rejected",
         "For Record Only"
-      ]
+      ],
+      "fieldset": "Review"
     },
     {
       "name": "lead_time_days",
       "label": "Lead Time (days)",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Schedule"
     },
     {
       "name": "required_on_site",
       "label": "Required On Site",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Schedule"
     },
     {
       "name": "date_received",
       "label": "Date Received",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Schedule"
     },
     {
       "name": "date_returned",
       "label": "Date Returned",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Schedule"
     },
     {
       "name": "cost_code",
       "label": "Cost Code",
       "type": "reference",
-      "module": "cost_code"
+      "module": "cost_code",
+      "fieldset": "Cost & references"
     },
     {
       "name": "transmittal",
       "label": "Transmittal",
       "type": "reference",
-      "module": "transmittal"
+      "module": "transmittal",
+      "fieldset": "Cost & references"
     },
     {
       "name": "drawing",
       "label": "Drawing / detail",
       "type": "reference",
-      "module": "drawing"
+      "module": "drawing",
+      "fieldset": "Cost & references"
     }
   ],
   "list_columns": [

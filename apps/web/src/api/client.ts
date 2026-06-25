@@ -97,6 +97,7 @@ export interface Vec3 { x: number; y: number; z: number; }
 export interface ModuleField {
   name: string; label: string; type: string; required?: boolean; options?: string[];
   module?: string;   // for type:"reference" — the target module key
+  fieldset?: string; // F1 — labeled form section this field groups under
 }
 export interface ModuleDef {
   key: string; name: string; section: string; icon: string; pinnable: boolean;

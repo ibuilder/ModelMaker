@@ -11,13 +11,15 @@
       "name": "subject",
       "label": "Subject",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Question"
     },
     {
       "name": "question",
       "label": "Question",
       "type": "textarea",
-      "required": true
+      "required": true,
+      "fieldset": "Question"
     },
     {
       "name": "discipline",
@@ -31,7 +33,8 @@
         "Geotechnical",
         "Fire Protection",
         "Low Voltage"
-      ]
+      ],
+      "fieldset": "Question"
     },
     {
       "name": "priority",
@@ -42,38 +45,45 @@
         "Normal",
         "High",
         "Critical"
-      ]
+      ],
+      "fieldset": "Question"
     },
     {
       "name": "spec_section",
       "label": "Spec Section",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Question"
     },
     {
       "name": "location",
       "label": "Location",
       "type": "reference",
-      "module": "location"
+      "module": "location",
+      "fieldset": "Question"
     },
     {
       "name": "rfi_manager",
       "label": "RFI Manager",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Routing"
     },
     {
       "name": "received_from",
       "label": "Asked By",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Routing"
     },
     {
       "name": "due_date",
       "label": "Date Required",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Routing"
     },
     {
       "name": "answer",
       "label": "Response",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Response"
     },
     {
       "name": "cost_impact",
@@ -83,13 +93,15 @@
         "None",
         "Possible",
         "Yes"
-      ]
+      ],
+      "fieldset": "Impacts & references"
     },
     {
       "name": "cost_code",
       "label": "Cost Code",
       "type": "reference",
-      "module": "cost_code"
+      "module": "cost_code",
+      "fieldset": "Impacts & references"
     },
     {
       "name": "schedule_impact",
@@ -99,13 +111,15 @@
         "None",
         "Possible",
         "Yes"
-      ]
+      ],
+      "fieldset": "Impacts & references"
     },
     {
       "name": "drawing",
       "label": "Drawing",
       "type": "reference",
-      "module": "drawing"
+      "module": "drawing",
+      "fieldset": "Impacts & references"
     }
   ],
   "workflow": {

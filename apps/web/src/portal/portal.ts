@@ -614,8 +614,14 @@ export class PortalUI {
     const inputs: Record<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> = {};
     const sigs: Record<string, () => string> = {};   // signature field getters (data-URI)
     const cur = (n: string) => (existing?.data?.[n] as string | number | string[] | undefined);
+    let curFieldset: string | undefined;   // F1 — emit a labeled header when the fieldset changes
     for (const f of m.fields) {
       if (f.type === "rollup") continue;   // computed, not user-entered
+      if (f.fieldset && f.fieldset !== curFieldset) {
+        curFieldset = f.fieldset;
+        const h = document.createElement("div"); h.className = "portal-fieldset-head"; h.textContent = f.fieldset;
+        this.root.appendChild(h);
+      }
       const wrap = document.createElement("label"); wrap.className = "portal-field";
       wrap.textContent = f.label + (f.required ? " *" : "");
       if (f.type === "signature") {
