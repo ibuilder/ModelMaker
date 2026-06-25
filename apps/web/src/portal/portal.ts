@@ -585,6 +585,28 @@ export class PortalUI {
       } else { bc.appendChild(Object.assign(document.createElement("div"), { className: "meta", textContent: "No bid packages yet." })); }
       this.root.appendChild(bc);
 
+      // cash-flow / draw curve — the cost-loaded schedule (monthly bars + cumulative S-curve)
+      const cfCard = document.createElement("div"); cfCard.className = "dash-card"; cfCard.style.marginBottom = "10px";
+      cfCard.appendChild(Object.assign(document.createElement("div"), { className: "section-title", textContent: "Cash flow (cost-loaded schedule)" }));
+      const cfBody = document.createElement("div"); cfBody.innerHTML = `<div class="meta">loading cash flow…</div>`;
+      cfCard.appendChild(cfBody); this.root.appendChild(cfCard);
+      void this.host.api.budgetCashflow(pid).then((cf) => {
+        if (!cf.series.length) { cfBody.innerHTML = `<div class="meta">No cash flow yet — give schedule activities a budgeted cost + start/finish dates.</div>`; return; }
+        const W = 560, H = 130, pad = 22, n = cf.series.length;
+        const maxCost = Math.max(...cf.series.map((s) => s.cost), 1);
+        const bw = (W - pad * 2) / n;
+        const bars = cf.series.map((s, i) => {
+          const h = (s.cost / maxCost) * (H - pad * 2);
+          return `<rect x="${pad + i * bw + 1}" y="${H - pad - h}" width="${Math.max(1, bw - 2)}" height="${h}" fill="var(--accent)" opacity="0.55"/>`;
+        }).join("");
+        const pts = cf.series.map((s, i) => `${pad + i * bw + bw / 2},${(H - pad) - (s.pct / 100) * (H - pad * 2)}`).join(" ");
+        const ticks = cf.series.map((s, i) => (i % Math.ceil(n / 6) === 0
+          ? `<text x="${pad + i * bw + bw / 2}" y="${H - 6}" fill="var(--muted)" font-size="8" text-anchor="middle">${s.month.slice(2)}</text>` : "")).join("");
+        cfBody.innerHTML = `<div class="meta" style="margin-bottom:4px">Total <b>${usd(cf.total)}</b> over ${cf.months} months · peak ${usd(cf.peak_month_cost)}/mo · ${cf.loaded_activities} cost-loaded activities</div>`
+          + `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="cash flow curve">${bars}`
+          + `<polyline points="${pts}" fill="none" stroke="#33d17a" stroke-width="1.5"/>${ticks}</svg>`;
+      }).catch(() => { cfBody.innerHTML = `<div class="meta">Cash flow unavailable.</div>`; });
+
       const foot = document.createElement("div"); foot.className = "meta"; foot.style.marginTop = "2px";
       foot.innerHTML = `Staffing projection ${usd(b.staffing.projected)} across ${b.staffing.headcount_roles} roles · `
         + `markups: ${g.markups.overhead_pct}% OH · ${g.markups.fee_pct}% fee · ${g.markups.contingency_pct}% contingency`;
