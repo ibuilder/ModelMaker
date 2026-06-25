@@ -114,6 +114,17 @@ with TestClient(app) as c:
     assert c.post(f"/projects/{pid}/modules/rfi/{rid}/transition", headers=H("gc"),
                   json={"action": "accept"}).json()["workflow_state"] == "closed"
 
+    # ---- tie model elements to a record (hard-ties a schedule activity for an exact 4D) ----
+    act = c.post(f"/projects/{pid}/modules/schedule_activity", headers=H("gc"),
+                 json={"data": {"name": "Erect steel L3", "trade": "Steel"}}).json()
+    e = f"/projects/{pid}/modules/schedule_activity/{act['id']}/elements"
+    assert c.post(e, headers=H("gc"), json={"guids": ["g1", "g2"], "mode": "add"}).json()["count"] == 2
+    assert c.post(e, headers=H("gc"), json={"guids": ["g2", "g3"], "mode": "add"}).json()["count"] == 3  # union
+    assert c.post(e, headers=H("gc"), json={"guids": ["g1"], "mode": "remove"}).json()["count"] == 2
+    got = c.get(f"/projects/{pid}/modules/schedule_activity/{act['id']}", headers=H("gc")).json()
+    assert set(got["element_guids"]) == {"g2", "g3"}, got["element_guids"]
+    assert c.post(e, headers=H("gc"), json={"guids": ["x"], "mode": "set"}).json()["element_guids"] == ["x"]
+
     # ---- change-order chain across modules, with linking ---------------------
     pco = c.post(f"/projects/{pid}/modules/pco_request", headers=H("gc"),
                  json={"data": {"subject": "Added fireproofing", "description": "Owner-requested upgrade"},

@@ -325,6 +325,22 @@ def set_assignee(db: Session, key: str, project_id: str, rid: str, assignee: str
     return get_record(db, key, project_id, rid)
 
 
+def set_element_guids(db: Session, key: str, project_id: str, rid: str, guids: list[str],
+                      actor: str, mode: str = "add") -> dict:
+    """Tie model elements (IFC GlobalIds) to a record. `mode`: add | remove | set. Used to hard-tie
+    a schedule activity to the exact elements it builds (so the 4D scrub is precise, not trade-based)."""
+    t = TABLES[key]
+    rec = get_record(db, key, project_id, rid)  # 404 if missing
+    cur = set(rec.get("element_guids") or [])
+    incoming = {g for g in guids if g}
+    result = sorted(cur | incoming if mode == "add" else cur - incoming if mode == "remove" else incoming)
+    db.execute(update(t).where(t.c.id == rid, t.c.project_id == project_id)
+               .values(element_guids=result, modified_at=_now()))
+    _log(db, project_id, key, rid, actor, None, "tag-elements", {"count": len(result), "mode": mode})
+    db.commit()
+    return {"element_guids": result, "count": len(result)}
+
+
 # --- attachments (bytes live in storage/MinIO) ------------------------------
 def add_attachment(db: Session, key: str, project_id: str, rid: str, filename: str,
                    content_type: str | None, data: bytes, actor: str) -> dict:
