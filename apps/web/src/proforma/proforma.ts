@@ -676,11 +676,37 @@ export class ProformaUI {
       html += `<tr><th style="text-align:left">${ln.name}</th><td>${money(ln.amount)}</td>` +
         `<td><input class="pf-actual" data-i="${i}" type="number" step="any" value="0" style="width:90px"></td></tr>`;
     });
-    html += `</table><button class="file-btn" id="pf-reforecast" style="margin-top:6px">Re-forecast</button>` +
-      `<div id="pf-fc-out"></div>`;
+    html += `</table>`
+      + `<button class="file-btn" id="pf-pull-draws" title="Fill construction actuals from the GC's owner-invoice draws to date">⤵ Pull actuals from GC draws</button>`
+      + ` <button class="file-btn" id="pf-reforecast" style="margin-top:6px">Re-forecast</button>`
+      + `<div id="pf-draws-note" class="meta" style="font-size:11px;margin-top:3px"></div>`
+      + `<div id="pf-fc-out"></div>`;
     host.innerHTML = html;
     this.root.appendChild(host);
     (host.querySelector("#pf-reforecast") as HTMLButtonElement).onclick = () => this.reforecast();
+    (host.querySelector("#pf-pull-draws") as HTMLButtonElement).onclick = () => this.pullGcDraws();
+  }
+
+  /** Actuals loop: pull the GC's owner-invoice draws to date into the construction line's actual,
+   *  so the developer's re-forecast runs against what's really been billed (not hand-keyed). */
+  private async pullGcDraws() {
+    const pid = this.projectId();
+    const note = document.getElementById("pf-draws-note");
+    if (!pid) { if (note) note.textContent = "Open a project with a GC budget to pull draws."; return; }
+    this.setStatus("pulling GC draws…");
+    let d;
+    try { d = await this.api.constructionDraws(pid); }
+    catch (e) { this.setStatus(`pull failed: ${(e as Error).message}`); return; }
+    const lines = this.a.cost_lines as { name: string; category?: string }[];
+    let idx = lines.findIndex((l) => l.category === "hard");
+    if (idx < 0) idx = lines.findIndex((l) => /hard|construction/i.test(l.name));
+    if (idx < 0) idx = Math.min(1, lines.length - 1);
+    const inp = document.querySelector<HTMLInputElement>(`.pf-actual[data-i="${idx}"]`);
+    if (inp) inp.value = String(d.actual_billed);
+    if (note) note.innerHTML = `Pulled <b>${money(d.actual_billed)}</b> billed to date (${d.pct_billed}% of `
+      + `${money(d.projected_total)} projected draws, ${d.invoice_count} owner invoice${d.invoice_count === 1 ? "" : "s"}) → construction actual.`;
+    this.setStatus(`pulled GC draws: ${money(d.actual_billed)} (${d.pct_billed}%)`);
+    void this.reforecast();
   }
 
   private async reforecast() {
