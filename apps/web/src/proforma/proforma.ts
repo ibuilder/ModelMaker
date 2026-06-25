@@ -681,11 +681,23 @@ export class ProformaUI {
       + ` <button class="file-btn" id="pf-reforecast" style="margin-top:6px">Re-forecast</button>`
       + `<div id="pf-draws-note" class="meta" style="font-size:11px;margin-top:3px"></div>`
       + `<div id="pf-loan-draws" class="meta" style="font-size:11px;margin-top:3px"></div>`
+      + `<div id="pf-draw-comp" class="meta" style="font-size:11px;margin-top:3px"></div>`
       + `<div id="pf-fc-out"></div>`;
     host.innerHTML = html;
     this.root.appendChild(host);
     (host.querySelector("#pf-reforecast") as HTMLButtonElement).onclick = () => this.reforecast();
     (host.querySelector("#pf-pull-draws") as HTMLButtonElement).onclick = () => this.pullGcDraws();
+
+    // per-cost-code draw composition — what the construction draw is for, from the GC's SOV
+    const comp = host.querySelector("#pf-draw-comp") as HTMLElement;
+    const pidc = this.projectId();
+    if (pidc) void this.api.constructionDraws(pidc).then((cd) => {
+      if (!cd.by_cost_code || !cd.by_cost_code.length) { comp.style.display = "none"; return; }
+      const top = cd.by_cost_code.slice(0, 6);
+      comp.innerHTML = "Draw by cost code: " + top.map((x) =>
+        `<b>${x.code}</b> ${money(x.billed)}`).join(" · ")
+        + (cd.by_cost_code.length > top.length ? ` · +${cd.by_cost_code.length - top.length} more` : "");
+    }).catch(() => { comp.style.display = "none"; });
 
     // construction-loan draw status — owner invoices funded equity-first then debt vs the sized stack
     const pid = this.projectId();
@@ -694,7 +706,9 @@ export class ProformaUI {
       if (!l.loan_amount && !l.equity) { ld.style.display = "none"; return; }
       ld.innerHTML = `🏦 Construction loan: drawn <b>${money(l.drawn_to_date)}</b> of ${money(l.loan_amount + l.equity)} `
         + `(${l.pct_capital_drawn}%) — equity ${money(l.equity_drawn)}/${money(l.equity)} · `
-        + `loan ${money(l.loan_drawn)}/${money(l.loan_amount)} · available ${money(l.loan_available)} `;
+        + `loan ${money(l.loan_drawn)}/${money(l.loan_amount)} · available ${money(l.loan_available)}`
+        + (l.accrued_interest ? ` · <span style="color:#e2554a">accrued interest ${money(l.accrued_interest)}</span> @ ${(l.interest_rate * 100).toFixed(2)}% (outstanding ${money(l.outstanding_with_interest)})` : "")
+        + ` `;
       const dr = document.createElement("button"); dr.className = "tool-btn"; dr.textContent = "⬇ Lender draw request (PDF)";
       dr.style.fontSize = "10px"; dr.onclick = async () => {
         try { const blob = await this.api.loanDrawRequestPdf(pid, 1);

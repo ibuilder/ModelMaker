@@ -294,6 +294,9 @@ def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, db: Session = D
     p = db.get(_P, pid)
     if not p:
         raise HTTPException(404, "project not found")
+    from datetime import date as _date
+
+    from .. import project_budget as _pb
     sumry = dvb.summarize(p.dev_budget or dvb.starter_budget())
     cap = su.build(sumry, {"ltc": ltc, "rate": rate})
     debt, equity = float(cap["debt"]), float(cap["equity"])
@@ -301,10 +304,36 @@ def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, db: Session = D
     drawn = round(sum(float((r.get("data") or {}).get("amount") or 0) for r in invs), 2)
     equity_drawn = round(min(drawn, equity), 2)        # equity-first funding
     loan_drawn = round(max(0.0, drawn - equity), 2)
+
+    # accrued interest on the OUTSTANDING loan balance — simple interest per tranche from its draw
+    # date (the invoice period if a date, else the record's created_at) to today. Equity-funded
+    # draws don't accrue; only the portion of each draw that lands on the loan does.
+    today = _date.today()
+    ordered = sorted(invs, key=lambda r: str(r.get("created_at") or ""))
+    cum = 0.0
+    accrued = 0.0
+    loan_start = None
+    for r in ordered:
+        amt = float((r.get("data") or {}).get("amount") or 0)
+        if amt <= 0:
+            continue
+        prev, cum = cum, cum + amt
+        loan_portion = max(0.0, cum - equity) - max(0.0, prev - equity)
+        if loan_portion <= 0:
+            continue
+        cd = r.get("created_at")
+        dd = _pb._pdate((r.get("data") or {}).get("period")) or (cd.date() if hasattr(cd, "date") else None) or today
+        loan_start = dd if loan_start is None else min(loan_start, dd)
+        accrued += loan_portion * rate * max(0, (today - dd).days) / 365
+    accrued = round(accrued, 2)
+
     return {"loan_amount": round(debt, 2), "equity": round(equity, 2), "drawn_to_date": drawn,
             "equity_drawn": equity_drawn, "loan_drawn": loan_drawn,
             "loan_available": round(debt - loan_drawn, 2), "loan_balance": loan_drawn,
             "pct_capital_drawn": round(drawn / (debt + equity) * 100, 1) if (debt + equity) else 0.0,
+            "interest_rate": rate, "accrued_interest": accrued,
+            "loan_start": loan_start.isoformat() if loan_start else None,
+            "outstanding_with_interest": round(loan_drawn + accrued, 2),
             "invoice_count": len(invs)}
 
 
@@ -340,9 +369,29 @@ def construction_draws(pid: str, db: Session = Depends(get_db)):
     cf = pb.cashflow(db, pid)
     invs = _me.list_records(db, "owner_invoice", pid, limit=1_000_000) if "owner_invoice" in _me.TABLES else []
     billed = round(sum(pb._n((r.get("data") or {}).get("amount")) for r in invs), 2)
+
+    # per-cost-code draw composition — what the construction draw is *for*, from the SOV's
+    # completed-to-date grouped by cost code (the draw rides the same budget-seeded SOV lines)
+    cc_meta = {r["id"]: (r.get("data") or {}) for r in _me.list_records(db, "cost_code", pid, limit=1_000_000)} \
+        if "cost_code" in _me.TABLES else {}
+    by_cc: dict[str, dict] = {}
+    for r in (_me.list_records(db, "sov", pid, limit=1_000_000) if "sov" in _me.TABLES else []):
+        d = r.get("data") or {}
+        completed = pb._n(d.get("completed_prev")) + pb._n(d.get("completed_this")) + pb._n(d.get("materials_stored"))
+        if completed <= 0:
+            continue
+        cc = d.get("cost_code")
+        meta = cc_meta.get(cc, {})
+        key = meta.get("code") or d.get("description") or "Uncoded"
+        b = by_cc.setdefault(key, {"code": key, "description": meta.get("description") or d.get("description"),
+                                   "division": meta.get("division"), "billed": 0.0})
+        b["billed"] = round(b["billed"] + completed, 2)
+    cost_code_draws = sorted(by_cc.values(), key=lambda x: -x["billed"])
+
     return {"projected_total": cf["total"], "months": cf["months"], "peak_month_cost": cf["peak_month_cost"],
             "series": cf["series"], "actual_billed": billed, "invoice_count": len(invs),
-            "pct_billed": round(billed / cf["total"] * 100, 1) if cf["total"] else 0.0}
+            "pct_billed": round(billed / cf["total"] * 100, 1) if cf["total"] else 0.0,
+            "by_cost_code": cost_code_draws}
 
 
 @router.get("/projects/{pid}/dev-budget/cost-lines")
