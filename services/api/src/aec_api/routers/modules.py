@@ -298,6 +298,19 @@ def delete_view(pid: str, key: str, vid: str, db: Session = Depends(get_db),
     return {"deleted": bool(v)}
 
 
+@router.get("/projects/{pid}/enum-options")
+def list_enum_options(pid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
+    """E1 — project-level custom select options, nested {module: {field: [values]}}."""
+    return mod_engine.list_enum_options(db, pid)
+
+
+@router.post("/projects/{pid}/modules/{key}/enum/{field}", status_code=201)
+def add_enum_option(pid: str, key: str, field: str, value: str = Body(..., embed=True),
+                    db: Session = Depends(get_db), user: str = Depends(current_user)):
+    """E1 — add a custom option to a module field's select enum (no JSON edit)."""
+    return mod_engine.add_enum_option(db, pid, key, field, value, user)
+
+
 @router.get("/projects/{pid}/search")
 def search(pid: str, q: str, limit: int = 50, db: Session = Depends(get_db),
            _: str = Depends(require_role("viewer"))):

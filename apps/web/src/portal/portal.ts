@@ -662,6 +662,25 @@ export class PortalUI {
       const recs = await this.host.api.moduleRecords(pid, f.module!);
       refOpts.set(f.name, recs.map((r) => ({ id: r.id, label: `${r.ref} — ${r.title ?? ""}` })));
     }));
+    // E1 — project-level custom select options, merged into the module.json options below
+    const custom = await this.host.api.enumOptions(pid).catch(() => ({} as Record<string, Record<string, string[]>>));
+    const optsFor = (f: ModuleDef["fields"][number]) => [...(f.options ?? []), ...((custom[m.key]?.[f.name]) ?? [])];
+    // "＋ option" button: add a new enum value to a select/multiselect without editing JSON
+    const addOptBtn = (f: ModuleDef["fields"][number], selEl: HTMLSelectElement) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "pf-addopt";
+      b.textContent = "＋ option"; b.title = `Add a new ${f.label} option`;
+      b.onclick = async () => {
+        const val = prompt(`New ${f.label} option:`); if (!val || !val.trim()) return;
+        try {
+          const res = await this.host.api.addEnumOption(pid, m.key, f.name, val.trim());
+          let opt = [...selEl.options].find((o) => o.value === res.value);
+          if (!opt) { opt = document.createElement("option"); opt.value = opt.textContent = res.value; selEl.appendChild(opt); }
+          if (selEl.multiple) opt.selected = true; else selEl.value = res.value;
+          toast(`Added ${f.label}: ${res.value}`, "info");
+        } catch (e) { toast(`could not add option: ${(e as Error).message}`, "error"); }
+      };
+      return b;
+    };
 
     this.root.innerHTML = "";
     this.root.appendChild(this.bar(`${editing ? "Edit" : "New"} ${m.name}`,
@@ -688,12 +707,14 @@ export class PortalUI {
       if (f.type === "textarea") { el = document.createElement("textarea"); el.value = String(cur(f.name) ?? ""); }
       else if (f.type === "select") {
         el = document.createElement("select");
-        for (const o of f.options ?? []) { const opt = document.createElement("option"); opt.value = opt.textContent = o; el.appendChild(opt); }
+        const blank = document.createElement("option"); blank.value = ""; blank.textContent = "— select —"; el.appendChild(blank);
+        for (const o of optsFor(f)) { const opt = document.createElement("option"); opt.value = opt.textContent = o; el.appendChild(opt); }
         if (cur(f.name) != null) el.value = String(cur(f.name));
       } else if (f.type === "multiselect") {
-        el = document.createElement("select"); el.multiple = true; el.size = Math.min((f.options ?? []).length, 5);
+        const opts = optsFor(f);
+        el = document.createElement("select"); el.multiple = true; el.size = Math.min(opts.length, 5);
         const chosen = new Set(Array.isArray(cur(f.name)) ? (cur(f.name) as string[]) : []);
-        for (const o of f.options ?? []) { const opt = document.createElement("option"); opt.value = opt.textContent = o; opt.selected = chosen.has(o); el.appendChild(opt); }
+        for (const o of opts) { const opt = document.createElement("option"); opt.value = opt.textContent = o; opt.selected = chosen.has(o); el.appendChild(opt); }
       } else if (f.type === "reference") {
         const sel = document.createElement("select"); el = sel;
         const none = document.createElement("option"); none.value = ""; none.textContent = `— none —`; sel.appendChild(none);
@@ -720,7 +741,9 @@ export class PortalUI {
           } catch { toast(`could not create ${tgt?.name ?? f.module}`, "error"); }
         });
       } else { el = document.createElement("input"); (el as HTMLInputElement).type = (f.type === "number" || f.type === "currency") ? "number" : f.type === "date" ? "date" : "text"; if (f.type === "currency") (el as HTMLInputElement).step = "0.01"; (el as HTMLInputElement).value = String(cur(f.name) ?? ""); }
-      inputs[f.name] = el; wrap.appendChild(el); this.root.appendChild(wrap);
+      inputs[f.name] = el; wrap.appendChild(el);
+      if (f.type === "select" || f.type === "multiselect") wrap.appendChild(addOptBtn(f, el as HTMLSelectElement));
+      this.root.appendChild(wrap);
     }
     // assignee (drives the cross-module "My work" queue) — set at creation
     const asg = document.createElement("input"); asg.type = "text"; asg.placeholder = "user id";

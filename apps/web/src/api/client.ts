@@ -583,6 +583,14 @@ export class ApiClient {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/link`, {
       method: "POST", body: JSON.stringify({ module, id }) });
   }
+  // E1 — project-level custom select options, nested {module: {field: [values]}}
+  enumOptions(pid: string) {
+    return this.json<Record<string, Record<string, string[]>>>(`/projects/${pid}/enum-options`);
+  }
+  addEnumOption(pid: string, key: string, field: string, value: string) {
+    return this.json<{ module: string; field: string; value: string; options: string[] }>(
+      `/projects/${pid}/modules/${key}/enum/${field}`, { method: "POST", body: JSON.stringify({ value }) });
+  }
   addComment(pid: string, key: string, rid: string, text: string) {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/comments`, {
       method: "POST", body: JSON.stringify({ text }) });
