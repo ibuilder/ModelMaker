@@ -63,6 +63,47 @@ def staffing_cost(data: dict) -> float:
     return round(count * rate * units, 2)
 
 
+def _month_list(s: date, f: date) -> list[str]:
+    """Inclusive YYYY-MM months spanning s→f."""
+    out, y, m = [], s.year, s.month
+    while (y, m) <= (f.year, f.month):
+        out.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+    return out
+
+
+def cashflow(db: Session, pid: str) -> dict:
+    """Cost-loaded schedule → monthly cash-flow / draw curve (the construction S-curve). Each schedule
+    activity's budgeted cost is spread evenly across its start→finish months; buckets roll to a
+    cumulative curve. This is where on-schedule meets on-budget — the PX's monthly cash need."""
+    buckets: dict[str, float] = {}
+    total = 0.0
+    loaded = 0
+    for r in _records(db, "schedule_activity", pid):
+        d = r.get("data") or {}
+        bud = _n(d.get("budget"))
+        s = _pdate(d.get("start")) or _pdate(d.get("actual_start"))
+        f = _pdate(d.get("finish")) or _pdate(d.get("actual_finish")) or s
+        if not bud or not s:
+            continue
+        months = _month_list(s, f)
+        per = bud / len(months)
+        for m in months:
+            buckets[m] = buckets.get(m, 0.0) + per
+        total += bud
+        loaded += 1
+    series, cum = [], 0.0
+    for m in sorted(buckets):
+        cum += buckets[m]
+        series.append({"month": m, "cost": round(buckets[m], 2), "cumulative": round(cum, 2),
+                       "pct": round(cum / total * 100, 1) if total else 0.0})
+    peak = max((b["cost"] for b in series), default=0.0)
+    return {"total": round(total, 2), "months": len(series), "loaded_activities": loaded,
+            "peak_month_cost": round(peak, 2), "series": series}
+
+
 def _line(name: str, budget: float, committed: float = 0.0, actual: float = 0.0,
           eac: float | None = None, **extra: Any) -> dict:
     # EAC (estimate at completion) = the PX's keyed forecast if any, else the worst of

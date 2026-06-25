@@ -59,6 +59,15 @@ def gmp_budget(pid: str, db: Session = Depends(get_db), _: str = Depends(require
     return project_budget.gmp_budget(db, pid, proforma_hard=hard)
 
 
+@router.get("/projects/{pid}/budget/cashflow")
+def budget_cashflow(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Cost-loaded schedule → monthly cash-flow / draw curve. Spreads each schedule activity's
+    budgeted cost across its start→finish months for the cumulative construction S-curve — where the
+    Schedule and Budget destinations meet (the PX's monthly cash need)."""
+    from .. import project_budget
+    return project_budget.cashflow(db, pid)
+
+
 @router.post("/projects/{pid}/cost/sov/from-budget", status_code=201)
 def sov_from_budget(pid: str, replace: bool = False, db: Session = Depends(get_db),
                     actor: str = Depends(require_role("editor"))):

@@ -817,6 +817,12 @@ export class ApiClient {
       proforma: { hard_cost: number; gmp_vs_hard: number } | null;
     }>(`/projects/${pid}/budget/gmp`);
   }
+  /** Cost-loaded schedule → monthly cash-flow / draw curve (construction S-curve). */
+  budgetCashflow(pid: string) {
+    return this.json<{ total: number; months: number; loaded_activities: number; peak_month_cost: number;
+      series: { month: string; cost: number; cumulative: number; pct: number }[] }>(
+      `/projects/${pid}/budget/cashflow`);
+  }
   /** Seed the owner pay-app SOV from the GMP budget lines (idempotent unless replace). */
   sovFromBudget(pid: string, replace = false) {
     return this.json<{ created: number; lines?: number; scheduled_value?: number; skipped?: number; note?: string }>(

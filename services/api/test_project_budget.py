@@ -111,6 +111,17 @@ with TestClient(app) as c:
     assert c.post(f"/projects/{pid}/cost/sov/from-budget").json()["created"] == 0
     assert c.post(f"/projects/{pid}/cost/sov/from-budget?replace=true").json()["created"] == seed["created"]
 
+    # cost-loaded schedule → monthly cash-flow / draw curve (on-schedule × on-budget)
+    mk(c, pid, "schedule_activity", {"name": "Foundations", "cost_code": cc_conc,
+                                     "budget": 600_000, "start": "2026-02-01", "finish": "2026-04-30"})
+    mk(c, pid, "schedule_activity", {"name": "Superstructure", "cost_code": cc_conc,
+                                     "budget": 1_200_000, "start": "2026-04-01", "finish": "2026-09-30"})
+    cf = c.get(f"/projects/{pid}/budget/cashflow").json()
+    assert cf["loaded_activities"] == 2 and cf["total"] == 1_800_000, cf
+    assert cf["months"] >= 6 and cf["series"][-1]["pct"] == 100.0, cf["series"][-1]
+    cums = [m["cumulative"] for m in cf["series"]]
+    assert cums == sorted(cums) and abs(cums[-1] - 1_800_000) < 1, cums          # monotonic S-curve
+
     print(f"PROJECT BUDGET OK - GMP computed ${b['gmp']['computed']:,.0f} (cost of work ${cow:,.0f}); "
           f"direct/GC/GR + OH/fee/contingency; bid packages + staffing + proforma reconciled; "
           f"owner SOV seeded from budget ({seed['created']} lines = ${seed['scheduled_value']:,.0f})")
