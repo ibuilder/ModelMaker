@@ -32,7 +32,7 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 |---|---|---|---|
 | **N1** | **Persistent navigation rail** — sections → modules, always visible; module content loads in a content pane instead of replacing the whole panel | jumping between 73 modules currently requires going "back" each time | ▶ **building now** |
 | **X1** | **Cost-code links everywhere** — add `reference → cost_code` to RFI, change_event, cor, daily_cost, PO/commitment, material/equipment logs | Procore tags RFIs/COs with cost codes so impacts roll to budget | ✅ rfi·cor·change_event·pco_request·proposal (more in tier-2) |
-| **A1** | **Ball-in-court / assignee on every actionable module** — explicit `assignee` + ball-in-court party so super/PM instantly see *who owes what* | Procore requires Assignees to open an RFI; "ball in court" is the core metric | planned |
+| **A1** | **Ball-in-court / assignee on every actionable module** — explicit `assignee` + ball-in-court party so super/PM instantly see *who owes what* | Procore requires Assignees to open an RFI; "ball in court" is the core metric | ✅ ball-in-court party (computed from workflow transitions) shows as a column in every module list **and** in the record detail header, on top of the existing inline-editable assignee |
 | **F1** | **Fieldsets** — group a module's fields into labeled sections in the form (e.g. RFI → *Question / Response / Impacts*) | long flat forms are slow on a phone in the field | planned (schema: add `fieldset` to fields) |
 | **D1** | **Inline "add new" from reference dropdowns** — create a cost code / location / sub without leaving the form | supers shouldn't navigate away mid-entry | ✅ done (any reference field) |
 | **R1** | **Super vs PM views** — per-role default columns + favorites + which fields show first (field-first vs office-first) | a super needs manpower/weather/safety; a PM needs RFI/submittal/cost/change | planned |
@@ -74,6 +74,6 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 ## Phasing
 1. **N1 navigation rail** (this pass) — unblocks navigating everything.
 2. **D1 add-from-dropdown + X1 cost-code links** — the cost-code workflow end-to-end.
-3. **A1 ball-in-court + R1 super/PM views** — the "who owes what" layer both roles live in.
+3. **A1 ball-in-court** ✅ **+ R1 super/PM views** — the "who owes what" layer both roles live in.
 4. **Tier-1 field completeness** (rfi → submittal → cor → daily → punchlist → inspection), then F1 fieldsets.
 5. **C1 conversions + E1 extendable enums**, then Tier 2/3 field depth.

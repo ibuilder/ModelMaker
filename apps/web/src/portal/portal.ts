@@ -494,7 +494,7 @@ export class PortalUI {
     };
     th("Ref", "ref"); th("Title", "title");
     for (const c of cols) th(c.label, c.name);
-    th("Assignee", "assignee"); th("Status", "status");
+    th("Assignee", "assignee"); th("Ball", ""); th("Status", "status");
     const thead = document.createElement("thead"); thead.appendChild(headRow); table.appendChild(thead);
 
     const tb = document.createElement("tbody");
@@ -508,12 +508,31 @@ export class PortalUI {
       cell(r.ref); cell(r.title ?? "");
       for (const c of cols) cell(this.fmtCell(c, r.data[c.name]));
       tr.appendChild(this.assigneeCell(pid, m, r));   // inline-editable
+      tr.appendChild(this.ballCell(m, r));            // ball-in-court party (who owes the next move)
       tr.appendChild(this.statusCell(pid, m, r));     // inline workflow transition
       tr.onclick = () => this.openRecord(m, r.id);
       tb.appendChild(tr);
     }
     table.appendChild(tb);
     this.root.appendChild(table);
+  }
+
+  /** Ball-in-court: which party(ies) own the next action from the current state, read straight from
+   *  the workflow transitions. The "who owes the next move" signal both supers and PMs scan for. */
+  private ballInCourt(m: ModuleDef, state: string): string[] {
+    const parties = new Set<string>();
+    for (const t of m.workflow?.transitions ?? []) {
+      if (t.from === state) (t.party ?? []).forEach((p) => p && parties.add(p));
+    }
+    return [...parties];
+  }
+  private ballCell(m: ModuleDef, r: ModuleRecord): HTMLTableCellElement {
+    const td = document.createElement("td");
+    const parties = this.ballInCourt(m, r.workflow_state);
+    td.innerHTML = parties.length
+      ? parties.map((p) => `<span class="ball-badge">${p}</span>`).join(" ")
+      : `<span class="meta">—</span>`;
+    return td;
   }
 
   /** Format a field value for a compact table cell. */
@@ -699,8 +718,11 @@ export class PortalUI {
     this.root.appendChild(this.bar(`${r.ref}`, () => this.openModule(m)));
 
     const head = document.createElement("div");
+    const ball = this.ballInCourt(m, r.workflow_state);
     head.innerHTML = `<div class="portal-rec-title">${r.title ?? r.ref}</div>` +
-      `<div class="meta">status <span class="badge">${r.workflow_state}</span> · ${r.party_owner ?? ""}</div>`;
+      `<div class="meta">status <span class="badge">${r.workflow_state}</span> · ${r.party_owner ?? ""}` +
+      (ball.length ? ` · ball-in-court ${ball.map((p) => `<span class="ball-badge">${p}</span>`).join(" ")}` : "") +
+      `</div>`;
     // revision chain: this record's number + links to prior / superseding revision
     if (r.revision && (r.revision.number || r.revision.revises || r.revision.superseded_by)) {
       const rev = document.createElement("div"); rev.className = "meta";
