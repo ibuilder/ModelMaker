@@ -756,6 +756,24 @@ export class ProformaUI {
         + `${worst.level === "info" ? "✓ within market bands" : (worst.level === "high" ? "⚠ check assumptions" : "△ review") + ` · ${worst.message.slice(0, 60)}…`}</span>`;
     }
     bar.innerHTML = html;
+
+    // construction status from the GC (GMP + draws) — the developer's on-cost view next to returns,
+    // so the returns bar answers "on returns AND on cost?" the way the PX band does on-schedule/budget
+    const pid = this.projectId();
+    if (pid) {
+      const chip = document.createElement("span"); chip.className = "pf-guard ok"; chip.textContent = "construction…";
+      bar.appendChild(chip);
+      void Promise.all([
+        this.api.gmpReconciliation(pid).catch(() => null),
+        this.api.constructionDraws(pid).catch(() => null),
+      ]).then(([g, d]) => {
+        if (!g || !g.gc_gmp) { chip.remove(); return; }
+        const sync = g.in_sync ? "in sync" : (g.delta > 0 ? `GMP +${money(Math.abs(g.delta))}` : `GMP −${money(Math.abs(g.delta))}`);
+        chip.className = `pf-guard ${g.in_sync ? "ok" : "med"}`;
+        chip.textContent = `🏗 GMP ${money(g.gc_gmp)} · ${sync}` + (d && d.projected_total ? ` · draws ${d.pct_billed}% billed` : "");
+        chip.title = `GC GMP ${money(g.gc_gmp)} · EAC ${money(g.gmp_eac)} · committed ${money(g.gmp_committed)} · VAC ${money(g.gmp_variance_at_completion)}`;
+      });
+    }
   }
 
   /** Cheap placeholder with a Run button — Monte Carlo (~1000 solves) runs only when asked,
