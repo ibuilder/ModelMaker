@@ -91,6 +91,44 @@ def lookahead(pid: str, weeks: int = 3, start: str | None = None, db: Session = 
             "count": total, "weeks_detail": [{"week": k, "activities": buckets[k]} for k in sorted(buckets)]}
 
 
+@router.get("/projects/{pid}/schedule/earned-value")
+def earned_value(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Schedule **earned value** over the activities that carry a budgeted cost. For each:
+    BAC = Σ budget; **EV (BCWP)** = Σ %·budget (work earned); **PV (BCWS)** = Σ planned-fraction·budget
+    (where today sits in [start, finish]). **SPI** = EV/PV and the schedule variance **SV** = EV−PV
+    tell you, in dollars, whether the job is ahead of or behind plan. AC/CPI need cost actuals and are
+    left to the cost engine."""
+    today = date.today()
+    rows = me.list_records(db, "schedule_activity", pid, limit=1_000_000)
+    bac = ev = pv = 0.0
+    lines = []
+    for r in rows:
+        data = r.get("data") or {}
+        budget = float(data.get("budget") or 0)
+        if budget <= 0:
+            continue
+        pct = max(0.0, min(100.0, float(data.get("percent") or 0))) / 100.0
+        s, f = _d(data.get("start")) or _d(data.get("actual_start")), _d(data.get("finish")) or _d(data.get("actual_finish"))
+        if s and f and f > s:
+            planned = max(0.0, min(1.0, (today - s).days / (f - s).days))
+        elif f:
+            planned = 1.0 if today >= f else 0.0
+        else:
+            planned = 0.0
+        a_ev, a_pv = pct * budget, planned * budget
+        bac += budget; ev += a_ev; pv += a_pv
+        lines.append({"ref": r.get("ref"), "name": r.get("title") or data.get("name"),
+                      "budget": round(budget, 2), "percent": round(pct * 100, 1),
+                      "ev": round(a_ev, 2), "pv": round(a_pv, 2), "sv": round(a_ev - a_pv, 2)})
+    spi = round(ev / pv, 3) if pv else None
+    status = "no_data" if not lines else (
+        "ahead" if spi and spi > 1.05 else "behind" if spi and spi < 0.95 else "on_track")
+    lines.sort(key=lambda x: x["sv"])               # worst schedule variance first
+    return {"bac": round(bac, 2), "ev": round(ev, 2), "pv": round(pv, 2),
+            "sv": round(ev - pv, 2), "spi": spi, "percent_complete": round(ev / bac * 100, 1) if bac else 0.0,
+            "status": status, "activity_count": len(lines), "activities": lines}
+
+
 @router.get("/projects/{pid}/schedule/milestones")
 def milestones(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """**Milestone schedule**: the key dates — activities typed `Milestone` (or zero-duration),
