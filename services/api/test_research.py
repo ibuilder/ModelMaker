@@ -199,5 +199,18 @@ with TestClient(app) as c:
     assert "Pour slab L2" not in names, "non-milestone task excluded from milestone schedule"
     assert ms["milestones"] == sorted(ms["milestones"], key=lambda x: x["date"]), "milestones date-sorted"
 
+    # earned value: BAC/EV/PV/SPI over activities that carry a budgeted cost
+    done = (t0 - _td(days=20)).isoformat(); midend = (t0 - _td(days=10)).isoformat()
+    midstart = (t0 - _td(days=10)).isoformat(); future = (t0 + _td(days=10)).isoformat()
+    c.post(f"/projects/{pid}/modules/schedule_activity",
+           json={"data": {"name": "Foundation EV", "budget": 50000, "percent": 100, "start": done, "finish": midend}})
+    c.post(f"/projects/{pid}/modules/schedule_activity",
+           json={"data": {"name": "Frame EV", "budget": 50000, "percent": 20, "start": midstart, "finish": future}})
+    ev = c.get(f"/projects/{pid}/schedule/earned-value").json()
+    assert ev["bac"] == 100000 and ev["ev"] == 60000 and ev["pv"] == 75000, ev   # 50k done + 10k of frame; PV 50k+25k
+    assert ev["spi"] == 0.8 and ev["status"] == "behind", ev                     # EV/PV = 0.8 → behind schedule
+    assert ev["sv"] == -15000 and ev["activity_count"] == 2, ev                  # only the two budgeted activities
+    assert ev["activities"][0]["name"] == "Frame EV", ev["activities"]           # worst variance first
+
 print(f"RESEARCH OK - takt {p['duration_days']}d / {p['floors_per_week']} fl-wk / {len(p['delivery_plan'])} JIT deliveries; "
       f"lean PPC {m['ppc']} ({m['rating']}); benchmarks + weekly_plan + comparable modules + endpoints verified")

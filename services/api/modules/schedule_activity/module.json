@@ -103,6 +103,12 @@
       "type": "reference",
       "module": "cost_code",
       "fieldset": "Links"
+    },
+    {
+      "name": "budget",
+      "label": "Budgeted Cost",
+      "type": "currency",
+      "fieldset": "Links"
     }
   ],
   "workflow": {

@@ -508,6 +508,19 @@ export class PortalUI {
         + `<span class="meta">Critical: ${cp}</span>`;
     }).catch(() => { cpmBox.textContent = "CPM unavailable."; });
 
+    // Earned value (schedule performance) — SPI + dollar schedule variance
+    const evBox = document.createElement("div"); evBox.className = "meta"; evBox.style.margin = "0 0 8px";
+    evBox.textContent = "Computing earned value…"; this.root.appendChild(evBox);
+    void this.host.api.scheduleEarnedValue(pid).then((e) => {
+      if (!e.activity_count) { evBox.textContent = "Earned value: add a Budgeted Cost + % to activities."; return; }
+      const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
+      const col = e.status === "ahead" ? "#33d17a" : e.status === "behind" ? "#e2554a" : "#ffd479";
+      evBox.innerHTML = `<b>Earned value</b>: ${e.percent_complete}% complete · `
+        + `SPI <b style="color:${col}">${e.spi ?? "—"}</b> (${e.status.replace("_", " ")}) · `
+        + `schedule variance <span style="color:${e.sv < 0 ? "#e2554a" : "#33d17a"}">${usd(e.sv)}</span><br>`
+        + `<span class="meta">EV ${usd(e.ev)} · PV ${usd(e.pv)} · BAC ${usd(e.bac)}</span>`;
+    }).catch(() => { evBox.textContent = "Earned value unavailable."; });
+
     // Gantt + Line-of-Balance, fetched as inline SVG
     for (const [kind, title] of [["gantt", "Gantt"], ["lob", "Line of Balance (linear)"]] as const) {
       const card = document.createElement("div"); card.className = "dash-card"; card.style.marginBottom = "10px";

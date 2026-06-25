@@ -756,6 +756,13 @@ export class ApiClient {
       frames: { day: number; new: number; completed_cumulative: number; pct: number; date?: string; new_guids: string[] }[] }>(
       `/projects/${pid}/schedule/4d${source ? `?source=${source}` : ""}`);
   }
+  /** Schedule earned value: BAC / EV / PV / SPI + per-activity schedule variance. */
+  scheduleEarnedValue(pid: string) {
+    return this.json<{ bac: number; ev: number; pv: number; sv: number; spi: number | null;
+      percent_complete: number; status: string; activity_count: number;
+      activities: { ref: string; name: string; budget: number; percent: number; ev: number; pv: number; sv: number }[] }>(
+      `/projects/${pid}/schedule/earned-value`);
+  }
   /** Short-interval lookahead: near-term activities grouped by week (the field's 3-/6-week plan). */
   scheduleLookahead(pid: string, weeks = 3) {
     return this.json<{ start: string; finish: string; weeks: number; count: number;
