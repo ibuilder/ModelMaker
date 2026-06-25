@@ -100,6 +100,20 @@ with TestClient(app) as c:
     assert b["proforma"]["gmp_vs_hard"] == round(b["gmp"]["computed"] - 3_200_000, 2), b["proforma"]
     assert len(b["bid_packages"]) == 1 and b["staffing"]["projected"] > 0, (b["bid_packages"], b["staffing"])
 
+    # developer ↔ GC tie: reconcile the proforma hard cost against the live GMP (the REVISED GMP,
+    # i.e. incl. approved change orders), then sync it
+    revised_gmp = b["gmp"]["revised"]
+    recon = c.get(f"/projects/{pid}/dev-budget/gmp-reconciliation").json()
+    assert recon["dev_hard_cost"] == 3_200_000 and recon["gc_gmp"] == revised_gmp, recon
+    assert recon["delta"] == round(revised_gmp - 3_200_000, 2) and recon["in_sync"] is False, recon
+    sync = c.post(f"/projects/{pid}/dev-budget/sync-gmp").json()
+    assert sync["synced"] and sync["hard_cost"] == revised_gmp, sync
+    recon2 = c.get(f"/projects/{pid}/dev-budget/gmp-reconciliation").json()
+    assert recon2["in_sync"] is True and recon2["dev_hard_cost"] == revised_gmp, recon2
+    # sync replaced hard lines (one synced line), left soft/acquisition untouched
+    hard_lines = [ln for ln in sync["budget"]["lines"] if ln.get("category") == "hard"]
+    assert len(hard_lines) == 1 and "GMP" in hard_lines[0]["description"], hard_lines
+
     # owner pay-app SOV seeded from the GMP — the G702/G703 draws from the same budget lines
     seed = c.post(f"/projects/{pid}/cost/sov/from-budget").json()
     assert seed["created"] > 0 and abs(seed["scheduled_value"] - b["totals"]["budget"]) < 1.0, seed

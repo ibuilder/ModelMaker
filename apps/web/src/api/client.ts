@@ -904,6 +904,17 @@ export class ApiClient {
   saveDevBudget(pid: string, budget: { lines: DevBudgetLine[]; contingency: Record<string, number> }) {
     return this.json<DevBudgetResponse>(`/projects/${pid}/dev-budget`, { method: "PUT", body: JSON.stringify(budget) });
   }
+  /** Reconcile the developer's construction hard cost against the GC's live GMP. */
+  gmpReconciliation(pid: string) {
+    return this.json<{ dev_hard_cost: number; gc_gmp: number; delta: number; in_sync: boolean;
+      gmp_committed: number; gmp_eac: number; gmp_variance_at_completion: number }>(
+      `/projects/${pid}/dev-budget/gmp-reconciliation`);
+  }
+  /** Set the developer hard cost to the GC's GMP (replaces hard lines with one synced line). */
+  syncGmpToHard(pid: string) {
+    return this.json<{ synced: boolean; hard_cost: number; budget: { lines: DevBudgetLine[]; contingency: Record<string, number> }; summary: DevBudgetSummary }>(
+      `/projects/${pid}/dev-budget/sync-gmp`, { method: "POST" });
+  }
   devBudgetCostLines(pid: string) {
     return this.json<{ cost_lines: { category: string; name: string; amount: number; curve: string }[]; summary: DevBudgetSummary }>(
       `/projects/${pid}/dev-budget/cost-lines`);
