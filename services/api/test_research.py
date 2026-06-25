@@ -212,5 +212,23 @@ with TestClient(app) as c:
     assert ev["sv"] == -15000 and ev["activity_count"] == 2, ev                  # only the two budgeted activities
     assert ev["activities"][0]["name"] == "Frame EV", ev["activities"]           # worst variance first
 
+    # baseline + variance: snapshot the plan, then measure slip against it
+    assert c.get(f"/projects/{pid}/schedule/variance").status_code == 409        # no baseline yet
+    a = c.post(f"/projects/{pid}/modules/schedule_activity",
+               json={"data": {"name": "BL-A", "start": "2026-05-01", "finish": "2026-05-20"}}).json()
+    bl = c.post(f"/projects/{pid}/schedule/baseline").json()
+    assert bl["count"] >= 1, bl
+    var0 = c.get(f"/projects/{pid}/schedule/variance").json()
+    assert any(x["name"] == "BL-A" and x["status"] == "on_baseline" for x in var0["activities"]), var0
+    # slip BL-A's finish by 6 days, and add a new activity after the baseline
+    c.patch(f"/projects/{pid}/modules/schedule_activity/{a['id']}", json={"finish": "2026-05-26"})
+    c.post(f"/projects/{pid}/modules/schedule_activity", json={"data": {"name": "BL-late-add", "start": "2026-06-01", "finish": "2026-06-10"}})
+    var = c.get(f"/projects/{pid}/schedule/variance").json()
+    bla = next(x for x in var["activities"] if x["name"] == "BL-A")
+    assert bla["finish_var"] == 6 and bla["status"] == "slipped", bla
+    assert any(x["name"] == "BL-late-add" and x["status"] == "added" for x in var["activities"]), var
+    assert var["summary"]["slipped"] >= 1 and var["summary"]["max_slip_days"] >= 6, var["summary"]
+    assert var["activities"][0]["finish_var"] is not None, "biggest slip sorted first"
+
 print(f"RESEARCH OK - takt {p['duration_days']}d / {p['floors_per_week']} fl-wk / {len(p['delivery_plan'])} JIT deliveries; "
       f"lean PPC {m['ppc']} ({m['rating']}); benchmarks + weekly_plan + comparable modules + endpoints verified")
