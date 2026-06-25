@@ -60,20 +60,34 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
   agency/spec + NCR/deficiency rollups). *Remaining:* fail → punchlist conversion (C1).
 
 ### Tier 2 — weekly / cost / safety
-`submittal` log analytics, `meeting` (agenda/minutes/action-items→action_item), `coordination_issue`
-(BCF round-trip), `incident`/`observation`/`jha`/`pretask_plan` (OSHA fields + photos), `commitment`/
-`subcontract`/`prime_contract` (SOV link, retainage, exhibits), `budget`/`direct_cost`/`change_event`
-(cost-code rollups), `manpower_log`/`timesheet`/`production_quantity` (cost-code + per-trade).
+- ✅ **incident** — full OSHA-recordable log (injured person/employer, body part, injury type,
+  witnesses, recordable flag, days-away/restricted, reported-to, root cause + corrective action,
+  photos) in Incident / People / OSHA / Investigation fieldsets; list shows recordable.
+- ✅ **meeting** — agenda, attendees, old business, distribution, next-meeting + expanded type list;
+  Meeting / Content / Follow-up fieldsets (already rolls up action items).
+- ✅ **subcontract** — scope, retainage %, cost_code, executed date, insurance expiry, bond-required.
+- ✅ **prime_contract** — owner, type expansion, executed date, retainage %, substantial completion,
+  liquidated-damages/day (keeps invoiced + SOV rollups).
+- ✅ **commitment** — type (PO/Subcontract/Work-Auth), PO date, retainage % (keeps cost_code + rollup).
+- ✅ **timesheet / production_quantity** — already carry `cost_code` + trade (goal already met).
+- *Remaining:* `submittal` log analytics, `coordination_issue` BCF round-trip, `observation`/`jha`/
+  `pretask_plan` OSHA photos, `budget`/`direct_cost` cost-code rollup views.
 
 ### Tier 3 — preconstruction, closeout, sustainability
-`bid_package`/`bid_solicitation`/`bid_submission`/`prequalification`/`comparable` (leveling), `coi`/`permit`/
-`noc`/`directive` (compliance dates + expiry alerts), `warranty`/`om_manual`/`as_built`/`asset_register`/
-`completion_certificate`/`commissioning` (closeout package — already folds to COBie), `leed_credit`/
-`waste_diversion`/`environmental_monitoring` (sustainability tracking).
+- ✅ **coi / permit** — consolidated the duplicate `expires`/`expiry` date to the canonical `expires`
+  (warranty/COBie convention) so expiry alerts key off one field; coi got coverage-type + endorsements,
+  permit got a real type enum + status + fee. Regression-locked (no module may carry both date names).
+- *Remaining:* `bid_package`/`bid_submission`/`prequalification`/`comparable` (leveling), `noc`/
+  `directive` compliance dates, `warranty`/`om_manual`/`as_built`/`asset_register` (closeout → COBie),
+  `leed_credit`/`waste_diversion`/`environmental_monitoring` (sustainability). A unified
+  **compliance-expiring** endpoint (coi/permit, mirroring `warranties_expiring`) is a good follow-up.
 
 ## Phasing
 1. **N1 navigation rail** (this pass) — unblocks navigating everything.
 2. **D1 add-from-dropdown + X1 cost-code links** — the cost-code workflow end-to-end.
 3. **A1 ball-in-court** ✅ **+ R1 super/PM views** — the "who owes what" layer both roles live in.
 4. **Tier-1 field completeness** ✅ (rfi → submittal → cor → daily → punchlist → inspection) + **F1 fieldsets** ✅.
-5. **C1 conversions** ✅ **+ E1 extendable enums** ✅. **All cross-cutting themes (N1·X1·D1·A1·F1·C1·E1) done.** → Tier 2/3 field depth next.
+5. **C1 conversions** ✅ **+ E1 extendable enums** ✅. **All cross-cutting themes (N1·X1·D1·A1·F1·C1·E1) done.**
+6. **Tier-2 depth** ✅ incident(OSHA)·meeting·subcontract·prime_contract·commitment; **Tier-3** ✅ coi·permit
+   expiry cleanup. Remaining Tier-2/3 = bid leveling, closeout (warranty/O&M/as-built), sustainability,
+   coordination BCF, + a unified compliance-expiring endpoint.
