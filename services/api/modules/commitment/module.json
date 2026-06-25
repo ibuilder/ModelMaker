@@ -11,30 +11,58 @@
       "name": "description",
       "label": "Description",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Commitment"
     },
     {
-      "name": "cost_code",
-      "label": "Cost code",
-      "type": "reference",
-      "module": "cost_code"
+      "name": "type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Purchase Order",
+        "Subcontract",
+        "Work Authorization"
+      ],
+      "fieldset": "Commitment"
     },
     {
       "name": "vendor",
       "label": "Vendor / Sub",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Commitment"
+    },
+    {
+      "name": "po_date",
+      "label": "PO Date",
+      "type": "date",
+      "fieldset": "Commitment"
     },
     {
       "name": "amount",
       "label": "Committed Amount",
       "type": "currency",
-      "required": true
+      "required": true,
+      "fieldset": "Cost"
+    },
+    {
+      "name": "retainage_pct",
+      "label": "Retainage %",
+      "type": "number",
+      "fieldset": "Cost"
+    },
+    {
+      "name": "cost_code",
+      "label": "Cost code",
+      "type": "reference",
+      "module": "cost_code",
+      "fieldset": "Cost"
     },
     {
       "name": "subcontract",
       "label": "Subcontract",
       "type": "reference",
-      "module": "subcontract"
+      "module": "subcontract",
+      "fieldset": "Cost"
     },
     {
       "name": "spent",
