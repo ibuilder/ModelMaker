@@ -614,10 +614,30 @@ export class PortalUI {
         const chosen = new Set(Array.isArray(cur(f.name)) ? (cur(f.name) as string[]) : []);
         for (const o of f.options ?? []) { const opt = document.createElement("option"); opt.value = opt.textContent = o; opt.selected = chosen.has(o); el.appendChild(opt); }
       } else if (f.type === "reference") {
-        el = document.createElement("select");
-        const none = document.createElement("option"); none.value = ""; none.textContent = `— none —`; el.appendChild(none);
-        for (const o of refOpts.get(f.name) ?? []) { const opt = document.createElement("option"); opt.value = o.id; opt.textContent = o.label; el.appendChild(opt); }
-        if (cur(f.name) != null) el.value = String(cur(f.name));
+        const sel = document.createElement("select"); el = sel;
+        const none = document.createElement("option"); none.value = ""; none.textContent = `— none —`; sel.appendChild(none);
+        for (const o of refOpts.get(f.name) ?? []) { const opt = document.createElement("option"); opt.value = o.id; opt.textContent = o.label; sel.appendChild(opt); }
+        // D1: inline "add new" — create the referenced record (e.g. a cost code) without leaving the form
+        const tgt = this.mods.find((x) => x.key === f.module);
+        const addOpt = document.createElement("option"); addOpt.value = "__new__";
+        addOpt.textContent = `＋ Add new ${tgt?.name ?? f.module}…`; sel.appendChild(addOpt);
+        if (cur(f.name) != null) sel.value = String(cur(f.name));
+        sel.addEventListener("change", async () => {
+          if (sel.value !== "__new__") return;
+          // the field to set on the new record: the module's title_field, else its first required
+          // (or first) field — so e.g. a Cost Code gets `code`, not a non-existent `title`.
+          const tgtFields = (tgt?.fields ?? []).filter((x) => x.type !== "rollup");
+          const tf = tgt?.title_field || tgtFields.find((x) => x.required)?.name || tgtFields[0]?.name || "title";
+          const val = prompt(`New ${tgt?.name ?? f.module} — ${tf}:`);
+          sel.value = String(cur(f.name) ?? "");
+          if (!val || !val.trim()) return;
+          try {
+            const rec = await this.host.api.createModuleRecord(pid, f.module!, { data: { [tf]: val.trim() } });
+            const opt = document.createElement("option"); opt.value = rec.id; opt.textContent = `${rec.ref} — ${val.trim()}`;
+            sel.insertBefore(opt, addOpt); sel.value = rec.id;
+            toast(`Added ${tgt?.name ?? f.module}: ${val.trim()}`, "info");
+          } catch { toast(`could not create ${tgt?.name ?? f.module}`, "error"); }
+        });
       } else { el = document.createElement("input"); (el as HTMLInputElement).type = (f.type === "number" || f.type === "currency") ? "number" : f.type === "date" ? "date" : "text"; if (f.type === "currency") (el as HTMLInputElement).step = "0.01"; (el as HTMLInputElement).value = String(cur(f.name) ?? ""); }
       inputs[f.name] = el; wrap.appendChild(el); this.root.appendChild(wrap);
     }

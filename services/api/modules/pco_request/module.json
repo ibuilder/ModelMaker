@@ -46,6 +46,12 @@
       "label": "Change Event",
       "type": "reference",
       "module": "change_event"
+    },
+    {
+      "name": "cost_code",
+      "label": "Cost Code",
+      "type": "reference",
+      "module": "cost_code"
     }
   ],
   "workflow": {

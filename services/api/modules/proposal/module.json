@@ -20,6 +20,12 @@
       "required": true
     },
     {
+      "name": "cost_code",
+      "label": "Cost Code",
+      "type": "reference",
+      "module": "cost_code"
+    },
+    {
       "name": "breakdown",
       "label": "Cost Breakdown",
       "type": "textarea"

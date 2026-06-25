@@ -31,10 +31,10 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 | # | Improvement | Why (field benchmark) | Status |
 |---|---|---|---|
 | **N1** | **Persistent navigation rail** — sections → modules, always visible; module content loads in a content pane instead of replacing the whole panel | jumping between 73 modules currently requires going "back" each time | ▶ **building now** |
-| **X1** | **Cost-code links everywhere** — add `reference → cost_code` to RFI, change_event, cor, daily_cost, PO/commitment, material/equipment logs | Procore tags RFIs/COs with cost codes so impacts roll to budget | planned |
+| **X1** | **Cost-code links everywhere** — add `reference → cost_code` to RFI, change_event, cor, daily_cost, PO/commitment, material/equipment logs | Procore tags RFIs/COs with cost codes so impacts roll to budget | ✅ rfi·cor·change_event·pco_request·proposal (more in tier-2) |
 | **A1** | **Ball-in-court / assignee on every actionable module** — explicit `assignee` + ball-in-court party so super/PM instantly see *who owes what* | Procore requires Assignees to open an RFI; "ball in court" is the core metric | planned |
 | **F1** | **Fieldsets** — group a module's fields into labeled sections in the form (e.g. RFI → *Question / Response / Impacts*) | long flat forms are slow on a phone in the field | planned (schema: add `fieldset` to fields) |
-| **D1** | **Inline "add new" from reference dropdowns** — create a cost code / location / sub without leaving the form | supers shouldn't navigate away mid-entry | planned |
+| **D1** | **Inline "add new" from reference dropdowns** — create a cost code / location / sub without leaving the form | supers shouldn't navigate away mid-entry | ✅ done (any reference field) |
 | **R1** | **Super vs PM views** — per-role default columns + favorites + which fields show first (field-first vs office-first) | a super needs manpower/weather/safety; a PM needs RFI/submittal/cost/change | planned |
 | **C1** | **Cross-module conversions** — RFI → Change Event/COR, Observation → NCR, Inspection fail → Punchlist | Procore "convert RFI to PCO" is a daily move | planned |
 | **E1** | **Extendable `select` options** — admin can add an enum value (discipline, trade, type) without editing JSON | every firm's trade list differs | planned |

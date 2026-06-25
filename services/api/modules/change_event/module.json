@@ -52,6 +52,12 @@
       "source_module": "pco_request",
       "source_field": "rough_cost",
       "op": "count"
+    },
+    {
+      "name": "cost_code",
+      "label": "Cost Code",
+      "type": "reference",
+      "module": "cost_code"
     }
   ],
   "workflow": {
