@@ -82,6 +82,19 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
   `leed_credit`/`waste_diversion`/`environmental_monitoring` (sustainability). A unified
   **compliance-expiring** endpoint (coi/permit, mirroring `warranties_expiring`) is a good follow-up.
 
+## Builder-readiness review (how a real super/PM uses this daily)
+A pass over whether the tools fit batch-oriented field work, not just one-record-at-a-time office use:
+- ✅ **Bulk photo/file upload** — drag-drop a *batch* of site photos onto any record (was one-at-a-time);
+  image attachments show as a thumbnail gallery. `POST …/attachments/bulk`.
+- ✅ **Bulk record actions** — multi-select + **select-all** in every list → assign / transition / delete
+  many at once (e.g. close a whole location's punch list); bulk transition now lists the module's
+  valid actions instead of blind typing.
+- ✅ **Tie model elements** — select in 3D, tie to a record (exact 4D, or "what this RFI concerns").
+- Already builder-ready: kanban **boards**, saved **views**, filters, inline-edit assignee/status,
+  ball-in-court, persona (super vs PM) nav, add-from-dropdown, fieldset-grouped forms.
+- *Remaining builder polish:* per-record photo capture from mobile, offline queue, push/email digests
+  (digest infra exists), and a few modules still want a `photos`/attachment-first layout.
+
 ## Phasing
 1. **N1 navigation rail** (this pass) — unblocks navigating everything.
 2. **D1 add-from-dropdown + X1 cost-code links** — the cost-code workflow end-to-end.
