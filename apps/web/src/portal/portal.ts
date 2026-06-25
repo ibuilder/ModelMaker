@@ -266,6 +266,16 @@ export class PortalUI {
           + `(${l.completed}/${l.commitments} commitments${l.missed ? ` · ${l.missed} missed` : ""})`
           + (top ? ` · top reason: ${top.reason}` : "");
       }).catch(() => {});
+      // compliance: COI / permit expiries — don't let insurance or permits lapse silently
+      const comp = el("div", "meta"); comp.style.margin = "2px 0"; health.appendChild(comp);
+      void this.host.api.complianceExpiring(pid, 30).then((cc) => {
+        if (!cc.count) { comp.textContent = "Compliance: no COI/permit expiries ✓"; return; }
+        const color = cc.expired.length ? "#e2554a" : "#ffd479";
+        comp.innerHTML = `Compliance: <b style="color:${color}">${cc.expired.length} expired · ${cc.expiring.length} expiring</b> (COI/permit) `;
+        const a = document.createElement("a"); a.href = "#"; a.className = "ref-link"; a.textContent = "review";
+        a.onclick = (e) => { e.preventDefault(); const m = this.mods.find((x) => x.key === (cc.expired[0] ?? cc.expiring[0])?.module); if (m) this.openModule(m); };
+        comp.appendChild(a);
+      }).catch(() => {});
 
       // SIDE — charts (status mix + busiest sections)
       const states = new Map<string, number>(); const sections = new Map<string, number>();

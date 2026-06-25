@@ -51,6 +51,40 @@ def warranties_expiring(pid: str, within_days: int = 90, db: Session = Depends(g
             "total_warranties": len(me.list_records(db, "warranty", pid, limit=1_000_000))}
 
 
+@router.get("/projects/{pid}/compliance/expiring")
+def compliance_expiring(pid: str, within_days: int = 30, db: Session = Depends(get_db),
+                        _: str = Depends(require_role("viewer"))):
+    """Insurance certificates (COI) and permits expiring within `within_days`, plus any already
+    expired — so a super sees lapsing compliance before it bites. Both key off the canonical
+    `expires` date; closed permits are ignored."""
+    today = date.today()
+    horizon = today + timedelta(days=max(0, within_days))
+    out: dict[str, list] = {"expired": [], "expiring": []}
+    sources = [("coi", "vendor", lambda d: True),
+               ("permit", "name", lambda d: str(d.get("status", "")).lower() != "closed")]
+    for key, label_field, keep in sources:
+        if key not in me.TABLES:
+            continue
+        for r in me.list_records(db, key, pid, limit=1_000_000):
+            d = r.get("data") or {}
+            if not keep(d):
+                continue
+            exp = _parse_date(d.get("expires"))
+            if exp is None:
+                continue
+            item = {"module": key, "ref": r.get("ref"),
+                    "name": r.get("title") or d.get(label_field), "expires": d.get("expires"),
+                    "days_left": (exp - today).days}
+            if exp < today:
+                out["expired"].append(item)
+            elif exp <= horizon:
+                out["expiring"].append(item)
+    out["expiring"].sort(key=lambda x: x["days_left"])
+    out["expired"].sort(key=lambda x: x["days_left"])
+    return {"within_days": within_days, **out,
+            "count": len(out["expired"]) + len(out["expiring"])}
+
+
 @router.post("/projects/{pid}/cost/pay-app/advance")
 def payapp_advance(pid: str, db: Session = Depends(get_db),
                    actor: str = Depends(require_role("editor"))):

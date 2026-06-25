@@ -74,6 +74,17 @@ with TestClient(app) as c:
     assert any(x["name"] == "HVAC 1yr" for x in w["expiring"]), w["expiring"]
     assert any(x["name"] == "Sealant" for x in w["expired"]), w["expired"]
 
+    # --- compliance expiry: COI + permit on the canonical `expires` date ------
+    c.post(f"/projects/{pid}/modules/coi", json={"data": {"vendor": "SubGuard Ins", "expires": soon}}, headers=H)
+    c.post(f"/projects/{pid}/modules/permit", json={"data": {"name": "Building Permit", "expires": past, "status": "Issued"}}, headers=H)
+    # a CLOSED permit is ignored even if its expires date is past
+    c.post(f"/projects/{pid}/modules/permit", json={"data": {"name": "Old Demo Permit", "expires": past, "status": "Closed"}}, headers=H)
+    comp = c.get(f"/projects/{pid}/compliance/expiring?within_days=30", headers=H).json()
+    assert any(x["name"] == "SubGuard Ins" and x["module"] == "coi" for x in comp["expiring"]), comp["expiring"]
+    assert any(x["name"] == "Building Permit" and x["module"] == "permit" for x in comp["expired"]), comp["expired"]
+    assert not any(x["name"] == "Old Demo Permit" for x in comp["expired"] + comp["expiring"]), "closed permit must be ignored"
+    assert comp["count"] == len(comp["expired"]) + len(comp["expiring"])
+
     # --- multi-period pay app + lien waiver (realistic flow: bill -> waiver -> advance) ---
     c.post(f"/projects/{pid}/modules/sov", json={"data": {"item_no": "01", "description": "Concrete",
            "scheduled_value": 1_000_000, "completed_this": 250_000, "retainage_pct": 5}}, headers=H)
