@@ -54,6 +54,24 @@
       "fieldset": "Cost"
     },
     {
+      "name": "overhead_pct",
+      "label": "Overhead %",
+      "type": "number",
+      "fieldset": "GMP markups"
+    },
+    {
+      "name": "fee_pct",
+      "label": "Fee / Profit %",
+      "type": "number",
+      "fieldset": "GMP markups"
+    },
+    {
+      "name": "contingency_pct",
+      "label": "GC Contingency %",
+      "type": "number",
+      "fieldset": "GMP markups"
+    },
+    {
       "name": "substantial_completion",
       "label": "Substantial Completion",
       "type": "date",
