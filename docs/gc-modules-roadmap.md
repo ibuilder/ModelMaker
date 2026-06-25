@@ -77,10 +77,17 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 - ✅ **coi / permit** — consolidated the duplicate `expires`/`expiry` date to the canonical `expires`
   (warranty/COBie convention) so expiry alerts key off one field; coi got coverage-type + endorsements,
   permit got a real type enum + status + fee. Regression-locked (no module may carry both date names).
-- *Remaining:* `bid_package`/`bid_submission`/`prequalification`/`comparable` (leveling), `noc`/
-  `directive` compliance dates, `warranty`/`om_manual`/`as_built`/`asset_register` (closeout → COBie),
-  `leed_credit`/`waste_diversion`/`environmental_monitoring` (sustainability). A unified
-  **compliance-expiring** endpoint (coi/permit, mirroring `warranties_expiring`) is a good follow-up.
+- ✅ **bid leveling** — `bid_submission` (base bid, alternates, unit prices, inclusions/exclusions/
+  qualifications, bond), `bid_package` (scope, spec sections, walkthrough/RFI dates), `prequalification`
+  (contact, revenue, references, expiry).
+- ✅ **closeout depth** — `warranty` (type, start, term-years), `asset_register` (install date, service
+  contact, barcode — **fixed a duplicate `warranty_expires`/`warranty_expiry`**), `commissioning`
+  (Cx agent, test type, result, deficiencies), `om_manual` (spec section, responsible).
+- ✅ **sustainability** — `leed_credit` (points targeted vs achieved), `waste_diversion` (hauler,
+  destination, diversion %), `environmental_monitoring` (location, compliant/exceedance status).
+- ✅ **coordination_issue BCF round-trip** — export/import `.bcfzip` with Solibri/ACC/BIMcollab.
+- *Remaining:* `noc`/`directive` compliance dates, `as_built` depth; a unified **compliance-expiring**
+  endpoint already covers coi/permit.
 
 ## Builder-readiness review (how a real super/PM uses this daily)
 A pass over whether the tools fit batch-oriented field work, not just one-record-at-a-time office use:

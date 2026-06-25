@@ -11,23 +11,20 @@
       "name": "metric",
       "label": "Metric",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Reading"
     },
     {
       "name": "value",
       "label": "Value",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Reading"
     },
     {
       "name": "date",
       "label": "Date",
-      "type": "date"
-    },
-    {
-      "name": "permit",
-      "label": "Permit",
-      "type": "reference",
-      "module": "permit"
+      "type": "date",
+      "fieldset": "Reading"
     },
     {
       "name": "parameter",
@@ -39,17 +36,44 @@
         "Stormwater",
         "Air",
         "Vibration"
-      ]
+      ],
+      "fieldset": "Reading"
     },
     {
       "name": "unit",
       "label": "Unit",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Reading"
+    },
+    {
+      "name": "location",
+      "label": "Location",
+      "type": "text",
+      "fieldset": "Reading"
+    },
+    {
+      "name": "permit",
+      "label": "Permit",
+      "type": "reference",
+      "module": "permit",
+      "fieldset": "Compliance"
     },
     {
       "name": "threshold",
       "label": "Threshold",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Compliance"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Compliant",
+        "Exceedance",
+        "Pending"
+      ],
+      "fieldset": "Compliance"
     }
   ],
   "workflow": {

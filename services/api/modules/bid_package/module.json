@@ -11,27 +11,62 @@
       "name": "name",
       "label": "Package",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Package"
     },
     {
       "name": "trade",
       "label": "Trade",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Package"
     },
     {
       "name": "budget",
       "label": "Budget",
-      "type": "currency"
-    },
-    {
-      "name": "due_date",
-      "label": "Due Date",
-      "type": "date"
+      "type": "currency",
+      "fieldset": "Package"
     },
     {
       "name": "estimate",
       "label": "Estimate",
-      "type": "currency"
+      "type": "currency",
+      "fieldset": "Package"
+    },
+    {
+      "name": "bidders_invited",
+      "label": "# Bidders Invited",
+      "type": "number",
+      "fieldset": "Package"
+    },
+    {
+      "name": "spec_sections",
+      "label": "Spec Sections",
+      "type": "text",
+      "fieldset": "Scope"
+    },
+    {
+      "name": "scope",
+      "label": "Scope of Work",
+      "type": "textarea",
+      "fieldset": "Scope"
+    },
+    {
+      "name": "due_date",
+      "label": "Due Date",
+      "type": "date",
+      "fieldset": "Schedule"
+    },
+    {
+      "name": "walkthrough_date",
+      "label": "Pre-Bid Walkthrough",
+      "type": "date",
+      "fieldset": "Schedule"
+    },
+    {
+      "name": "rfi_deadline",
+      "label": "Bidder RFI Deadline",
+      "type": "date",
+      "fieldset": "Schedule"
     },
     {
       "name": "submission_count",

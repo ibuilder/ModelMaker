@@ -2,7 +2,7 @@
   "key": "warranty",
   "name": "Warranties",
   "section": "Closeout",
-  "icon": "\u25a3",
+  "icon": "▣",
   "ref_prefix": "WAR",
   "title_field": "name",
   "pinnable": false,
@@ -11,29 +11,64 @@
       "name": "name",
       "label": "Warranty",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Warranty"
     },
     {
       "name": "vendor",
       "label": "Vendor",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Warranty"
+    },
+    {
+      "name": "warranty_type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+        "Manufacturer",
+        "Workmanship",
+        "System",
+        "Extended"
+      ],
+      "fieldset": "Warranty"
+    },
+    {
+      "name": "contact",
+      "label": "Warranty Contact",
+      "type": "text",
+      "fieldset": "Warranty"
     },
     {
       "name": "expires",
       "label": "Expires",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Term"
+    },
+    {
+      "name": "start_date",
+      "label": "Start Date",
+      "type": "date",
+      "fieldset": "Term"
+    },
+    {
+      "name": "term_years",
+      "label": "Term (years)",
+      "type": "number",
+      "fieldset": "Term"
     },
     {
       "name": "submittal",
       "label": "Backed by submittal",
       "type": "reference",
-      "module": "submittal"
+      "module": "submittal",
+      "fieldset": "Links"
     },
     {
       "name": "asset",
       "label": "Asset",
       "type": "reference",
-      "module": "asset_register"
+      "module": "asset_register",
+      "fieldset": "Links"
     }
   ],
   "workflow": {

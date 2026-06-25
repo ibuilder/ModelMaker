@@ -74,6 +74,26 @@ with TestClient(app) as c:
     for k, m in mods.items():
         nm = {f["name"] for f in m["fields"]}
         assert not ({"expires", "expiry"} <= nm), f"{k} has both expires+expiry (duplicate date field)"
+        # no module should carry a <x>_expires AND <x>_expiry pair either (asset_register had one)
+        prefixes = {n[:-len("_expires")] for n in nm if n.endswith("_expires")}
+        for pre in prefixes:
+            assert f"{pre}_expiry" not in nm, f"{k}: {pre}_expires and {pre}_expiry duplicate"
+
+    # Tier-3 field depth (bid leveling, closeout, sustainability) + fieldset contiguity
+    assert {"base_bid", "inclusions", "exclusions", "qualifications"} <= fnames("bid_submission")
+    assert {"scope", "walkthrough_date", "rfi_deadline"} <= fnames("bid_package")
+    assert {"warranty_type", "start_date", "term_years"} <= fnames("warranty")
+    assert {"install_date", "warranty_expires"} <= fnames("asset_register") and "warranty_expiry" not in fnames("asset_register")
+    assert {"cx_agent", "result", "test_type"} <= fnames("commissioning")
+    assert {"points_targeted", "points_achieved"} <= fnames("leed_credit")
+    assert {"hauler", "destination", "diversion_pct"} <= fnames("waste_diversion")
+    assert {"location", "status"} <= fnames("environmental_monitoring")
+    for k in ("bid_submission", "bid_package", "prequalification", "warranty", "asset_register",
+              "commissioning", "om_manual", "leed_credit", "waste_diversion", "environmental_monitoring"):
+        seq = [f.get("fieldset") for f in mods[k]["fields"] if f["type"] != "rollup"]
+        assert all(seq), f"{k}: every form field should have a fieldset"
+        runs = [fs for i, fs in enumerate(seq) if i == 0 or fs != seq[i - 1]]
+        assert len(runs) == len(set(runs)), f"{k}: fieldsets must be contiguous, got {runs}"
 
     # C1: the web "convert to…" map relies on a back-reference field on each target module so the
     # new record links to its source. Lock those reference fields so the map can't silently break.

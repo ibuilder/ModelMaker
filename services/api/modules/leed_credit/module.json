@@ -11,17 +11,8 @@
       "name": "credit",
       "label": "Credit",
       "type": "text",
-      "required": true
-    },
-    {
-      "name": "points",
-      "label": "Points",
-      "type": "number"
-    },
-    {
-      "name": "status",
-      "label": "Status",
-      "type": "text"
+      "required": true,
+      "fieldset": "Credit"
     },
     {
       "name": "category",
@@ -34,7 +25,44 @@
         "Indoor EQ",
         "Sites",
         "Innovation"
-      ]
+      ],
+      "fieldset": "Credit"
+    },
+    {
+      "name": "points",
+      "label": "Points",
+      "type": "number",
+      "fieldset": "Points"
+    },
+    {
+      "name": "points_targeted",
+      "label": "Points Targeted",
+      "type": "number",
+      "fieldset": "Points"
+    },
+    {
+      "name": "points_achieved",
+      "label": "Points Achieved",
+      "type": "number",
+      "fieldset": "Points"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "text",
+      "fieldset": "Tracking"
+    },
+    {
+      "name": "responsible",
+      "label": "Responsible",
+      "type": "text",
+      "fieldset": "Tracking"
+    },
+    {
+      "name": "documentation",
+      "label": "Documentation",
+      "type": "textarea",
+      "fieldset": "Tracking"
     }
   ],
   "workflow": {

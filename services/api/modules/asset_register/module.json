@@ -11,42 +11,62 @@
       "name": "name",
       "label": "Asset",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Asset"
     },
     {
       "name": "tag",
       "label": "Tag",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Asset"
     },
     {
       "name": "location",
       "label": "Location",
-      "type": "text"
-    },
-    {
-      "name": "warranty_expires",
-      "label": "Warranty Expires",
-      "type": "date"
+      "type": "text",
+      "fieldset": "Asset"
     },
     {
       "name": "serial",
       "label": "Serial #",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Asset"
     },
     {
       "name": "manufacturer",
       "label": "Manufacturer",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Asset"
     },
     {
       "name": "model",
       "label": "Model",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Asset"
     },
     {
-      "name": "warranty_expiry",
-      "label": "Warranty Expiry",
-      "type": "date"
+      "name": "barcode",
+      "label": "Barcode / QR",
+      "type": "text",
+      "fieldset": "Asset"
+    },
+    {
+      "name": "warranty_expires",
+      "label": "Warranty Expires",
+      "type": "date",
+      "fieldset": "Warranty"
+    },
+    {
+      "name": "install_date",
+      "label": "Install Date",
+      "type": "date",
+      "fieldset": "Service"
+    },
+    {
+      "name": "service_contact",
+      "label": "Service Contact",
+      "type": "text",
+      "fieldset": "Service"
     },
     {
       "name": "warranty_count",
