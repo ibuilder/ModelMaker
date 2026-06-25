@@ -165,6 +165,17 @@ with TestClient(app) as c:
     assert len(invs) == 1 and invs[0]["data"]["number"] == "App 1", invs
     assert invs[0]["data"].get("prime_contract"), "owner invoice links the prime contract"
 
+    # actuals loop: bill SOV work → owner invoice → developer construction draws go live
+    draws0 = c.get(f"/projects/{pid}/construction-draws").json()
+    assert draws0["actual_billed"] == 0 and draws0["pct_billed"] == 0, draws0   # nothing billed yet
+    sov_line = c.get(f"/projects/{pid}/modules/sov").json()[0]
+    c.patch(f"/projects/{pid}/modules/sov/{sov_line['id']}", json={"completed_this": 1_000_000})
+    inv2 = c.post(f"/projects/{pid}/cost/pay-app/invoice", json={"app_no": 2}).json()
+    assert inv2["amount"] > 0, inv2                                             # current payment due now > 0
+    draws1 = c.get(f"/projects/{pid}/construction-draws").json()
+    assert draws1["actual_billed"] == round(inv2["amount"], 2) and draws1["pct_billed"] > 0, draws1
+    assert draws1["invoice_count"] == 2, draws1                                 # the $0 App-1 + the billed App-2
+
     # PX executive summary — on-schedule + on-budget in one health view
     pxs = c.get(f"/projects/{pid}/px-summary").json()
     assert pxs["status"] in ("on_track", "at_risk", "behind"), pxs["status"]
