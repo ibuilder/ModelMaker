@@ -95,6 +95,17 @@ export class PortalUI {
     home.onclick = () => { this.activeKey = null; void this.renderHome(); this.buildNav(); };
     nav.appendChild(home);
 
+    // first-class Schedule destination — the planning hub (lookahead / milestones / EV / baseline /
+    // gantt / LOB / CPM) all over the one relational schedule that also drives the 3D 4D model
+    const schedMod = this.mods.find((x) => x.key === "schedule_activity");
+    if (schedMod) {
+      const sched = document.createElement("button");
+      sched.className = "pnav-item pnav-home" + (this.activeKey === "__schedule__" ? " active" : "");
+      sched.innerHTML = `<span class="ic">📅</span> Schedule`;
+      sched.onclick = () => { this.activeKey = "__schedule__"; void this.renderScheduleViews(schedMod); this.buildNav(); };
+      nav.appendChild(sched);
+    }
+
     const filter = document.createElement("input");
     filter.type = "search"; filter.placeholder = "Filter…"; filter.className = "portal-filter pnav-filter";
     nav.appendChild(filter);
@@ -443,11 +454,15 @@ export class PortalUI {
   private async renderScheduleViews(m: ModuleDef) {
     const pid = this.host.projectId()!;
     this.root.innerHTML = "";
-    this.root.appendChild(this.bar("Schedule — views", () => this.openModule(m)));
-    const note = document.createElement("div"); note.className = "meta"; note.style.margin = "2px 0 8px";
-    note.innerHTML = "These render the same <b>Schedule</b> activities that drive the 3D model’s "
-      + "<b>4D sequence</b> (Model → ⏱ 4D sequence) — one relational schedule.";
-    this.root.appendChild(note);
+    this.root.appendChild(this.bar("Schedule", () => { this.activeKey = null; void this.renderHome(); this.buildNav(); }));
+    const intro = document.createElement("div"); intro.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:2px 0 8px";
+    const listBtn = document.createElement("button"); listBtn.className = "tool-btn"; listBtn.textContent = "✎ Activities (list)";
+    listBtn.title = "Open the activity list to add / edit / import tasks";
+    listBtn.onclick = () => { this.activeKey = "schedule_activity"; this.openModule(m); this.buildNav(); };
+    const note = document.createElement("span"); note.className = "meta";
+    note.innerHTML = "One relational schedule — these views + the 3D <b>4D sequence</b> (Model → ⏱ 4D) share the same activities.";
+    intro.append(listBtn, note);
+    this.root.appendChild(intro);
 
     const statusColor = (s: string) =>
       s === "late" ? "#e2554a" : s === "complete" || s === "met" ? "#33d17a"
