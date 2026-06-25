@@ -669,13 +669,27 @@ export class PortalUI {
     };
     bulkBar.append(bulkCount,
       mkBulk("Assign…", "Assigned", async () => { const who = prompt("Assign selected to:"); if (who === null) return null; const n = selected.size; await this.host.api.bulkAction(pid, m.key, [...selected], "assign", who.trim()); return n; }),
-      mkBulk("Transition…", "Transitioned", async () => { const act = prompt("Workflow action to apply:"); if (!act) return null; const n = selected.size; await this.host.api.bulkAction(pid, m.key, [...selected], "transition", act.trim()); return n; }),
+      mkBulk("Transition…", "Transitioned", async () => {
+        const actions = [...new Set((m.workflow.transitions ?? []).map((t) => t.action))];
+        const act = prompt(`Workflow action to apply${actions.length ? ` — one of: ${actions.join(", ")}` : ""}:`);
+        if (!act) return null; const n = selected.size;
+        await this.host.api.bulkAction(pid, m.key, [...selected], "transition", act.trim()); return n;
+      }),
       mkBulk("Delete", "Deleted", async () => { if (!confirm(`Delete ${selected.size} record(s)?`)) return null; const n = selected.size; await this.host.api.bulkAction(pid, m.key, [...selected], "delete"); return n; }));
     this.root.appendChild(bulkBar);
 
+    const rowCbs: HTMLInputElement[] = [];
     const table = document.createElement("table"); table.className = "portal-table";
     const headRow = document.createElement("tr");
-    headRow.appendChild(document.createElement("th"));  // checkbox col
+    const selAllTh = document.createElement("th");      // select-all (builders act in batches)
+    const selAll = document.createElement("input"); selAll.type = "checkbox"; selAll.title = "Select all";
+    selAll.onclick = (e) => {
+      e.stopPropagation();
+      for (const r of records) selAll.checked ? selected.add(r.id) : selected.delete(r.id);
+      for (const cb of rowCbs) cb.checked = selAll.checked;
+      syncBulk();
+    };
+    selAllTh.appendChild(selAll); headRow.appendChild(selAllTh);
     const th = (label: string, col: string) => {
       const h = document.createElement("th"); h.textContent = label + (sort?.col === col ? (sort.dir === 1 ? " ▲" : " ▼") : "");
       h.style.cursor = "pointer";
@@ -691,8 +705,8 @@ export class PortalUI {
     for (const r of records) {
       const tr = document.createElement("tr");
       const cbTd = document.createElement("td");
-      const cb = document.createElement("input"); cb.type = "checkbox";
-      cb.onclick = (e) => { e.stopPropagation(); if (cb.checked) selected.add(r.id); else selected.delete(r.id); syncBulk(); };
+      const cb = document.createElement("input"); cb.type = "checkbox"; rowCbs.push(cb);
+      cb.onclick = (e) => { e.stopPropagation(); if (cb.checked) selected.add(r.id); else selected.delete(r.id); selAll.checked = selected.size === records.length; syncBulk(); };
       cbTd.appendChild(cb); cbTd.onclick = (e) => e.stopPropagation(); tr.appendChild(cbTd);
       const cell = (html: string) => { const td = document.createElement("td"); td.innerHTML = html; tr.appendChild(td); };
       cell(r.ref); cell(r.title ?? "");
