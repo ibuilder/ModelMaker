@@ -106,6 +106,13 @@ export class PortalUI {
       nav.appendChild(sched);
     }
 
+    // first-class Budget destination — the GMP project budget (the other half of on-schedule/on-budget)
+    const budget = document.createElement("button");
+    budget.className = "pnav-item pnav-home" + (this.activeKey === "__budget__" ? " active" : "");
+    budget.innerHTML = `<span class="ic">💰</span> Budget`;
+    budget.onclick = () => { this.activeKey = "__budget__"; void this.renderBudget(); this.buildNav(); };
+    nav.appendChild(budget);
+
     const filter = document.createElement("input");
     filter.type = "search"; filter.placeholder = "Filter…"; filter.className = "portal-filter pnav-filter";
     nav.appendChild(filter);
@@ -447,6 +454,109 @@ export class PortalUI {
   private skeleton(label: string) {
     this.root.innerHTML = `<div class="section-title">${label}</div>`
       + `<div>${'<div class="skel-row"></div>'.repeat(6)}</div>`;
+  }
+
+  /** First-class Budget destination — the GC's GMP project budget. Direct trade work (by CSI
+   *  division + bid package) + General Conditions / Requirements (incl. staffing) + Overhead + Fee
+   *  + Contingency = GMP, each line budget vs committed (buyout) vs variance, reconciled to the
+   *  prime contract value and the developer proforma's construction hard cost. The on-budget half of
+   *  what a project executive lives in, next to the Schedule destination. */
+  private async renderBudget() {
+    const pid = this.host.projectId()!;
+    this.root.innerHTML = "";
+    this.root.appendChild(this.bar("Budget", () => { this.activeKey = null; void this.renderHome(); this.buildNav(); }));
+    const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
+    const vcol = (v: number) => v < 0 ? "#e2554a" : v > 0 ? "#33d17a" : "var(--muted)";
+    const jumpTo = (k: string) => { const tm = this.mods.find((x) => x.key === k); if (tm) { this.activeKey = k; this.openModule(tm); this.buildNav(); } };
+
+    const intro = document.createElement("div"); intro.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:2px 0 8px";
+    const jump = document.createElement("select"); jump.className = "sb-sel"; jump.title = "Open a budget input list";
+    jump.innerHTML = `<option value="">＋ edit inputs…</option><option value="cost_code">Cost codes</option>`
+      + `<option value="budget">Budget lines</option><option value="staffing">Staffing plan</option>`
+      + `<option value="commitment">Commitments / POs</option><option value="bid_package">Bid packages</option>`
+      + `<option value="prime_contract">Prime contract (markups)</option>`;
+    jump.onchange = () => { if (jump.value) jumpTo(jump.value); };
+    const note = document.createElement("span"); note.className = "meta";
+    note.innerHTML = "The agreed <b>GMP</b> broken to every cost code & bid package + GC/GR, overhead, fee & contingency — budget vs committed vs actual.";
+    intro.append(jump, note); this.root.appendChild(intro);
+
+    const status = document.createElement("div"); status.className = "meta"; status.textContent = "loading budget…";
+    this.root.appendChild(status);
+
+    void this.host.api.gmpBudget(pid).then((b) => {
+      status.remove();
+      const g = b.gmp;
+      // headline KPI row
+      const kpis = document.createElement("div"); kpis.className = "dash-cols"; kpis.style.marginBottom = "10px";
+      const kpi = (label: string, val: string, color?: string) => {
+        const c = document.createElement("div"); c.className = "dash-card"; c.style.flex = "1";
+        c.innerHTML = `<div class="meta">${label}</div><div style="font-size:18px;font-weight:700${color ? `;color:${color}` : ""}">${val}</div>`;
+        return c;
+      };
+      kpis.append(
+        kpi("GMP (computed)", usd(g.computed)),
+        kpi("Cost of work", usd(g.cost_of_work)),
+        kpi("Committed (buyout)", usd(b.totals.committed)),
+        kpi("Variance", usd(b.totals.variance), vcol(b.totals.variance)),
+      );
+      this.root.appendChild(kpis);
+
+      if (g.contract_value || b.proforma) {
+        const recon = document.createElement("div"); recon.className = "meta"; recon.style.margin = "0 0 8px";
+        recon.innerHTML = (g.contract_value
+          ? `Contract GMP <b>${usd(g.contract_value)}</b> · reconciliation <span style="color:${vcol(g.reconciliation ?? 0)}">${usd(g.reconciliation ?? 0)}</span>` : "")
+          + (b.proforma ? `${g.contract_value ? " · " : ""}vs developer proforma hard cost <b>${usd(b.proforma.hard_cost)}</b> `
+              + `<span style="color:${vcol(-b.proforma.gmp_vs_hard)}">(${b.proforma.gmp_vs_hard > 0 ? "+" : ""}${usd(b.proforma.gmp_vs_hard)})</span>` : "");
+        this.root.appendChild(recon);
+      }
+
+      // category table, with expandable direct-work division groups
+      const card = document.createElement("div"); card.className = "dash-card"; card.style.marginBottom = "10px";
+      card.appendChild(Object.assign(document.createElement("div"), { className: "section-title", textContent: "Budget by category" }));
+      const tbl = document.createElement("table"); tbl.className = "portal-table"; tbl.style.fontSize = "11px";
+      tbl.innerHTML = `<thead><tr><th>Category</th><th style="text-align:right">Budget</th>`
+        + `<th style="text-align:right">Committed</th><th style="text-align:right">Actual</th><th style="text-align:right">Variance</th></tr></thead>`;
+      const tb = document.createElement("tbody");
+      const row = (name: string, c: { budget: number; committed: number; actual: number; variance: number }, opts: { bold?: boolean; indent?: boolean } = {}) => {
+        const tr = document.createElement("tr"); if (opts.bold) tr.style.fontWeight = "700";
+        tr.innerHTML = `<td style="${opts.indent ? "padding-left:16px;color:var(--muted)" : ""}">${name}</td>`
+          + `<td style="text-align:right">${usd(c.budget)}</td><td style="text-align:right">${usd(c.committed)}</td>`
+          + `<td style="text-align:right">${usd(c.actual)}</td><td style="text-align:right;color:${vcol(c.variance)}">${usd(c.variance)}</td>`;
+        return tr;
+      };
+      for (const cat of b.categories) {
+        tb.appendChild(row(cat.name, cat, { bold: cat.key === "direct" }));
+        if (cat.key === "direct") for (const grp of (cat.groups ?? [])) {       // division breakdown
+          tb.appendChild(row(grp.name, { budget: grp.budget, committed: 0, actual: 0, variance: 0 } as any, { indent: true }));
+        }
+      }
+      tb.appendChild(row("Total (GMP)", b.totals, { bold: true }));
+      tbl.appendChild(tb); card.appendChild(tbl); this.root.appendChild(card);
+
+      // bid-package buyout
+      const bc = document.createElement("div"); bc.className = "dash-card"; bc.style.marginBottom = "10px";
+      const bh = document.createElement("div"); bh.className = "section-title";
+      bh.style.cssText = "display:flex;justify-content:space-between;align-items:center";
+      bh.append(Object.assign(document.createElement("span"), { textContent: `Bid-package buyout (${b.bid_packages.length})` }));
+      const openBp = document.createElement("button"); openBp.className = "tool-btn"; openBp.textContent = "open"; openBp.onclick = () => jumpTo("bid_package");
+      bh.appendChild(openBp); bc.appendChild(bh);
+      if (b.bid_packages.length) {
+        for (const bp of b.bid_packages) {
+          const r = document.createElement("div"); r.className = "meta"; r.style.margin = "1px 0";
+          r.innerHTML = `${bp.name ?? bp.ref}${bp.trade ? ` · ${bp.trade}` : ""} · budget <b>${usd(bp.budget)}</b> · ${bp.submissions || 0} bids`;
+          bc.appendChild(r);
+        }
+      } else { bc.appendChild(Object.assign(document.createElement("div"), { className: "meta", textContent: "No bid packages yet." })); }
+      this.root.appendChild(bc);
+
+      const foot = document.createElement("div"); foot.className = "meta"; foot.style.marginTop = "2px";
+      foot.innerHTML = `Staffing projection ${usd(b.staffing.projected)} across ${b.staffing.headcount_roles} roles · `
+        + `markups: ${g.markups.overhead_pct}% OH · ${g.markups.fee_pct}% fee · ${g.markups.contingency_pct}% contingency`;
+      this.root.appendChild(foot);
+    }).catch(() => {
+      status.className = "empty-state";
+      status.innerHTML = `Budget not available yet<span class="es-hint">Add cost codes + budget lines, a staffing plan, bid packages, and a prime contract with markup % — then the GMP assembles here.</span>`;
+    });
   }
 
   /** Unified schedule visuals for the GC Schedule module: Gantt + Line-of-Balance (the same
