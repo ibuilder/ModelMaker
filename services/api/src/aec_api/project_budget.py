@@ -127,7 +127,7 @@ def gmp_budget(db: Session, pid: str, proforma_hard: float | None = None) -> dic
         line = _line(f"{code} {d.get('description') or ''}".strip(),
                      budget_by_cc.get(cid, 0.0), committed_by_cc.get(cid, 0.0),
                      actual_by_cc.get(cid, 0.0), eac=forecast_by_cc.get(cid) or None,
-                     code=code, division=div, ref=r.get("ref"))
+                     code=code, division=div, ref=r.get("ref"), cost_code_id=cid)
         if div[:2] in ("00", "01"):
             gr_costcode_lines.append(line)
         else:

@@ -91,5 +91,17 @@ with TestClient(app) as c:
     assert b["proforma"]["gmp_vs_hard"] == round(b["gmp"]["computed"] - 3_200_000, 2), b["proforma"]
     assert len(b["bid_packages"]) == 1 and b["staffing"]["projected"] > 0, (b["bid_packages"], b["staffing"])
 
+    # owner pay-app SOV seeded from the GMP — the G702/G703 draws from the same budget lines
+    seed = c.post(f"/projects/{pid}/cost/sov/from-budget").json()
+    assert seed["created"] > 0 and abs(seed["scheduled_value"] - b["totals"]["budget"]) < 1.0, seed
+    g703 = c.get(f"/projects/{pid}/cost/g703").json()
+    assert abs(g703["totals"]["scheduled"] - b["totals"]["budget"]) < 1.0, g703["totals"]   # SOV = GMP
+    sov = c.get(f"/projects/{pid}/modules/sov").json()
+    assert any(s["data"].get("cost_code") for s in sov), "direct SOV lines carry their cost-code link"
+    # idempotent without replace; rebuilds with replace
+    assert c.post(f"/projects/{pid}/cost/sov/from-budget").json()["created"] == 0
+    assert c.post(f"/projects/{pid}/cost/sov/from-budget?replace=true").json()["created"] == seed["created"]
+
     print(f"PROJECT BUDGET OK - GMP computed ${b['gmp']['computed']:,.0f} (cost of work ${cow:,.0f}); "
-          f"direct/GC/GR + OH/fee/contingency; bid packages + staffing + proforma hard-cost reconciled")
+          f"direct/GC/GR + OH/fee/contingency; bid packages + staffing + proforma reconciled; "
+          f"owner SOV seeded from budget ({seed['created']} lines = ${seed['scheduled_value']:,.0f})")

@@ -59,6 +59,52 @@ def gmp_budget(pid: str, db: Session = Depends(get_db), _: str = Depends(require
     return project_budget.gmp_budget(db, pid, proforma_hard=hard)
 
 
+@router.post("/projects/{pid}/cost/sov/from-budget", status_code=201)
+def sov_from_budget(pid: str, replace: bool = False, db: Session = Depends(get_db),
+                    actor: str = Depends(require_role("editor"))):
+    """Seed the owner pay-app **Schedule of Values** from the GMP budget — one SOV line per cost-code
+    budget line (carrying its cost-code link), plus General Conditions / Requirements / Overhead /
+    Fee / Contingency, each at its GMP value. So the G702/G703 the owner is billed on draws from the
+    same relational budget the PX manages. Idempotent: no-op if the SOV already has lines unless
+    `?replace=true` rebuilds it. Retainage comes from the prime contract."""
+    from .. import project_budget as pb
+    if "sov" not in me.TABLES:
+        raise HTTPException(409, "SOV module not loaded")
+    existing = me.list_records(db, "sov", pid, limit=1_000_000)
+    if existing and not replace:
+        return {"created": 0, "skipped": len(existing),
+                "note": "SOV already has lines — pass ?replace=true to rebuild from the budget"}
+    for r in existing:
+        me.delete_record(db, "sov", pid, r["id"], actor, "GC")
+
+    b = pb.gmp_budget(db, pid)
+    pc = next((r for r in me.list_records(db, "prime_contract", pid, limit=1)), None)
+    ret = float(((pc or {}).get("data") or {}).get("retainage_pct") or 0)
+
+    rows: list[tuple] = []
+    for cat in b["categories"]:
+        if cat["key"] == "direct":
+            for grp in cat.get("groups", []):
+                for ln in grp["lines"]:
+                    if ln["budget"] > 0:
+                        rows.append((ln["name"], ln.get("cost_code_id"), ln["budget"]))
+        else:
+            for ln in cat["lines"]:
+                if ln["budget"] > 0:
+                    rows.append((ln["name"], ln.get("cost_code_id"), ln["budget"]))
+
+    created = 0
+    for i, (desc, ccid, val) in enumerate(rows, 1):
+        data = {"item_no": f"{i:02d}", "description": desc[:120],
+                "scheduled_value": round(val, 2), "retainage_pct": ret}
+        if ccid:
+            data["cost_code"] = ccid
+        me.create_record(db, "sov", pid, {"data": data}, actor, "GC")
+        created += 1
+    return {"created": created, "lines": len(rows),
+            "scheduled_value": round(sum(v for _, _, v in rows), 2)}
+
+
 @router.get("/projects/{pid}/estimate/from-model")
 def estimate_from_model(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """Conceptual estimate from the IFC quantity takeoff × unit rates — priced line items by element
