@@ -583,6 +583,13 @@ export class ApiClient {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/link`, {
       method: "POST", body: JSON.stringify({ module, id }) });
   }
+  // compliance expiry: COI + permit certs expiring soon / already expired
+  complianceExpiring(pid: string, withinDays = 30) {
+    return this.json<{ within_days: number; count: number;
+      expired: { module: string; ref: string; name: string; expires: string; days_left: number }[];
+      expiring: { module: string; ref: string; name: string; expires: string; days_left: number }[]; }>(
+      `/projects/${pid}/compliance/expiring?within_days=${withinDays}`);
+  }
   // E1 — project-level custom select options, nested {module: {field: [values]}}
   enumOptions(pid: string) {
     return this.json<Record<string, Record<string, string[]>>>(`/projects/${pid}/enum-options`);
