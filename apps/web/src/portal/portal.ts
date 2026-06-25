@@ -493,13 +493,24 @@ export class PortalUI {
         c.innerHTML = `<div class="meta">${label}</div><div style="font-size:18px;font-weight:700${color ? `;color:${color}` : ""}">${val}</div>`;
         return c;
       };
+      // defensive defaults so the page renders against any API version (new fields fill once present)
+      const comp = b.completion ?? { eac: b.totals.forecast, etc: 0, actual_to_date: b.totals.actual,
+        projected_over_under: b.totals.variance, pct_spent: 0, bac: b.totals.budget };
+      const buyout = b.buyout ?? { packages: b.bid_packages.length, bought_out: 0, budget: 0, awarded: 0, savings: 0 };
       kpis.append(
         kpi("GMP (computed)", usd(g.computed)),
-        kpi("Cost of work", usd(g.cost_of_work)),
         kpi("Committed (buyout)", usd(b.totals.committed)),
-        kpi("Variance", usd(b.totals.variance), vcol(b.totals.variance)),
+        kpi("Forecast at completion", usd(comp.eac)),
+        kpi("Projected variance", usd(comp.projected_over_under), vcol(comp.projected_over_under)),
       );
       this.root.appendChild(kpis);
+
+      // cost-to-complete + buyout savings line
+      const ctc = document.createElement("div"); ctc.className = "meta"; ctc.style.margin = "0 0 6px";
+      ctc.innerHTML = `Cost to complete (ETC) <b>${usd(comp.etc)}</b> · spent ${usd(comp.actual_to_date)} (${comp.pct_spent}%)`
+        + (buyout.bought_out
+            ? ` · buyout ${buyout.bought_out}/${buyout.packages} · savings <span style="color:${vcol(buyout.savings)}">${usd(buyout.savings)}</span>` : "");
+      this.root.appendChild(ctc);
 
       if (g.contract_value || b.proforma) {
         const recon = document.createElement("div"); recon.className = "meta"; recon.style.margin = "0 0 8px";
@@ -515,13 +526,15 @@ export class PortalUI {
       card.appendChild(Object.assign(document.createElement("div"), { className: "section-title", textContent: "Budget by category" }));
       const tbl = document.createElement("table"); tbl.className = "portal-table"; tbl.style.fontSize = "11px";
       tbl.innerHTML = `<thead><tr><th>Category</th><th style="text-align:right">Budget</th>`
-        + `<th style="text-align:right">Committed</th><th style="text-align:right">Actual</th><th style="text-align:right">Variance</th></tr></thead>`;
+        + `<th style="text-align:right">Committed</th><th style="text-align:right">Actual</th>`
+        + `<th style="text-align:right">Forecast (EAC)</th><th style="text-align:right">Variance</th></tr></thead>`;
       const tb = document.createElement("tbody");
-      const row = (name: string, c: { budget: number; committed: number; actual: number; variance: number }, opts: { bold?: boolean; indent?: boolean } = {}) => {
+      const row = (name: string, c: { budget: number; committed: number; actual: number; eac?: number; variance: number }, opts: { bold?: boolean; indent?: boolean } = {}) => {
         const tr = document.createElement("tr"); if (opts.bold) tr.style.fontWeight = "700";
         tr.innerHTML = `<td style="${opts.indent ? "padding-left:16px;color:var(--muted)" : ""}">${name}</td>`
           + `<td style="text-align:right">${usd(c.budget)}</td><td style="text-align:right">${usd(c.committed)}</td>`
-          + `<td style="text-align:right">${usd(c.actual)}</td><td style="text-align:right;color:${vcol(c.variance)}">${usd(c.variance)}</td>`;
+          + `<td style="text-align:right">${usd(c.actual)}</td><td style="text-align:right">${usd(c.eac ?? c.budget)}</td>`
+          + `<td style="text-align:right;color:${vcol(c.variance)}">${usd(c.variance)}</td>`;
         return tr;
       };
       for (const cat of b.categories) {
@@ -538,12 +551,17 @@ export class PortalUI {
       const bh = document.createElement("div"); bh.className = "section-title";
       bh.style.cssText = "display:flex;justify-content:space-between;align-items:center";
       bh.append(Object.assign(document.createElement("span"), { textContent: `Bid-package buyout (${b.bid_packages.length})` }));
+      bh.append(Object.assign(document.createElement("span"), { className: "meta",
+        textContent: buyout.bought_out ? ` ${buyout.bought_out} bought out · savings ${usd(buyout.savings)}` : "" }));
       const openBp = document.createElement("button"); openBp.className = "tool-btn"; openBp.textContent = "open"; openBp.onclick = () => jumpTo("bid_package");
       bh.appendChild(openBp); bc.appendChild(bh);
       if (b.bid_packages.length) {
         for (const bp of b.bid_packages) {
           const r = document.createElement("div"); r.className = "meta"; r.style.margin = "1px 0";
-          r.innerHTML = `${bp.name ?? bp.ref}${bp.trade ? ` · ${bp.trade}` : ""} · budget <b>${usd(bp.budget)}</b> · ${bp.submissions || 0} bids`;
+          r.innerHTML = `${bp.name ?? bp.ref}${bp.trade ? ` · ${bp.trade}` : ""} · budget <b>${usd(bp.budget)}</b>`
+            + (bp.bought_out
+                ? ` · awarded <b>${usd(bp.awarded)}</b> · savings <span style="color:${vcol(bp.savings)}">${usd(bp.savings)}</span>`
+                : ` · ${bp.submissions || 0} bids · <span style="color:#ffd479">not bought out</span>`);
           bc.appendChild(r);
         }
       } else { bc.appendChild(Object.assign(document.createElement("div"), { className: "meta", textContent: "No bid packages yet." })); }

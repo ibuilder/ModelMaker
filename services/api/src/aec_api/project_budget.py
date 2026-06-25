@@ -64,16 +64,25 @@ def staffing_cost(data: dict) -> float:
 
 
 def _line(name: str, budget: float, committed: float = 0.0, actual: float = 0.0,
-          **extra: Any) -> dict:
-    forecast = round(max(committed, actual, 0.0) or budget, 2)
+          eac: float | None = None, **extra: Any) -> dict:
+    # EAC (estimate at completion) = the PX's keyed forecast if any, else the worst of
+    # committed/actual/budget once anything is committed or spent, else the budget. ETC = left to go.
+    if eac and eac > 0:
+        eac_val = eac
+    elif committed or actual:
+        eac_val = max(committed, actual, budget)
+    else:
+        eac_val = budget
+    eac_val = round(eac_val, 2)
+    etc = round(max(eac_val - actual, 0.0), 2)
     return {"name": name, "budget": round(budget, 2), "committed": round(committed, 2),
-            "actual": round(actual, 2), "forecast": forecast,
-            "variance": round(budget - forecast, 2), **extra}
+            "actual": round(actual, 2), "forecast": eac_val, "eac": eac_val, "etc": etc,
+            "variance": round(budget - eac_val, 2), **extra}
 
 
 def _category(key: str, name: str, lines: list[dict], **extra: Any) -> dict:
-    agg = {k: round(sum(_n(l[k]) for l in lines), 2) for k in ("budget", "committed", "actual", "forecast")}
-    agg["variance"] = round(agg["budget"] - agg["forecast"], 2)
+    agg = {k: round(sum(_n(l[k]) for l in lines), 2) for k in ("budget", "committed", "actual", "forecast", "eac", "etc")}
+    agg["variance"] = round(agg["budget"] - agg["eac"], 2)
     return {"key": key, "name": name, "lines": lines, **agg, **extra}
 
 
@@ -82,12 +91,14 @@ def gmp_budget(db: Session, pid: str, proforma_hard: float | None = None) -> dic
     reconciliation line (the caller passes it from the project's dev_budget)."""
     # --- maps keyed by the referenced cost_code record id -----------------------
     budget_by_cc: dict[str, float] = {}
+    forecast_by_cc: dict[str, float] = {}      # PX's keyed cost-at-completion per cost code (EAC)
     for r in _records(db, "budget", pid):
         d = r.get("data") or {}
         cc = d.get("cost_code")
         amt = _n(d.get("revised")) or _n(d.get("original")) or _n(d.get("budget"))
         if cc:
             budget_by_cc[cc] = budget_by_cc.get(cc, 0.0) + amt
+            forecast_by_cc[cc] = forecast_by_cc.get(cc, 0.0) + _n(d.get("forecast"))
 
     committed_by_cc: dict[str, float] = {}
     for r in _records(db, "commitment", pid):
@@ -115,7 +126,8 @@ def gmp_budget(db: Session, pid: str, proforma_hard: float | None = None) -> dic
         code = d.get("code") or r.get("ref") or ""
         line = _line(f"{code} {d.get('description') or ''}".strip(),
                      budget_by_cc.get(cid, 0.0), committed_by_cc.get(cid, 0.0),
-                     actual_by_cc.get(cid, 0.0), code=code, division=div, ref=r.get("ref"))
+                     actual_by_cc.get(cid, 0.0), eac=forecast_by_cc.get(cid) or None,
+                     code=code, division=div, ref=r.get("ref"))
         if div[:2] in ("00", "01"):
             gr_costcode_lines.append(line)
         else:
@@ -159,18 +171,40 @@ def gmp_budget(db: Session, pid: str, proforma_hard: float | None = None) -> dic
 
     categories = [direct, general_requirements, general_conditions, overhead, fee, contingency]
     totals = {k: round(sum(_n(c[k]) for c in categories), 2)
-              for k in ("budget", "committed", "actual", "forecast")}
-    totals["variance"] = round(totals["budget"] - totals["forecast"], 2)
+              for k in ("budget", "committed", "actual", "forecast", "eac", "etc")}
+    totals["variance"] = round(totals["budget"] - totals["eac"], 2)     # variance at completion (VAC)
     gmp_computed = totals["budget"]
+    # forward-looking completion picture: cost-to-complete (ETC) + projected over/under at finish
+    completion = {"bac": totals["budget"], "eac": totals["eac"], "etc": totals["etc"],
+                  "actual_to_date": totals["actual"],
+                  "projected_over_under": round(totals["budget"] - totals["eac"], 2),
+                  "pct_spent": round(totals["actual"] / totals["eac"] * 100, 1) if totals["eac"] else 0.0}
 
-    # --- bid-package buyout tracking (relational to every package) ---------------
+    # --- bid-package buyout tracking + savings (estimate vs awarded bid) ----------
+    awarded_by_pkg: dict[str, float] = {}
+    for r in _records(db, "bid_submission", pid):
+        d = r.get("data") or {}
+        if d.get("status") == "Awarded" and d.get("package"):
+            amt = _n(d.get("amount")) or _n(d.get("base_bid"))
+            awarded_by_pkg[d["package"]] = awarded_by_pkg.get(d["package"], 0.0) + amt
     bid_packages = []
     for r in _records(db, "bid_package", pid):
         d = r.get("data") or {}
         bud = _n(d.get("budget")) or _n(d.get("estimate"))
+        awarded = round(awarded_by_pkg.get(r.get("id"), 0.0), 2)
         bid_packages.append({"ref": r.get("ref"), "name": r.get("title") or d.get("name"),
                              "trade": d.get("trade"), "budget": round(bud, 2),
+                             "awarded": awarded, "bought_out": awarded > 0,
+                             "savings": round(bud - awarded, 2) if (bud and awarded) else 0.0,
                              "submissions": _n(d.get("submission_count"))})
+    buyout = {
+        "packages": len(bid_packages),
+        "bought_out": sum(1 for b in bid_packages if b["bought_out"]),
+        "budget": round(sum(b["budget"] for b in bid_packages), 2),
+        "awarded": round(sum(b["awarded"] for b in bid_packages), 2),
+        # savings on bought-out packages roll to contingency (negative = overrun on buyout)
+        "savings": round(sum(b["savings"] for b in bid_packages), 2),
+    }
 
     return {
         "gmp": {"contract_value": round(gmp_value, 2), "computed": round(gmp_computed, 2),
@@ -179,7 +213,9 @@ def gmp_budget(db: Session, pid: str, proforma_hard: float | None = None) -> dic
                 "markups": {"overhead_pct": oh_pct, "fee_pct": fee_pct, "contingency_pct": cont_pct}},
         "categories": categories,
         "totals": totals,
+        "completion": completion,
         "bid_packages": bid_packages,
+        "buyout": buyout,
         "staffing": {"projected": round(general_conditions["budget"] + sum(_n(l["budget"]) for l in gr_staff), 2),
                      "headcount_roles": len(gc_staff) + len(gr_staff)},
         "proforma": ({"hard_cost": round(_n(proforma_hard), 2),
