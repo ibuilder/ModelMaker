@@ -41,6 +41,24 @@ def summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require_ro
     return cost.summary(db, pid)
 
 
+@router.get("/projects/{pid}/budget/gmp")
+def gmp_budget(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Full GC project budget (GMP): direct trade work (by CSI division + bid package) + General
+    Conditions / Requirements (incl. staffing projections) + Overhead + Fee + Contingency, each
+    tracked budget vs committed vs actual vs variance. Reconciles to the prime-contract value and to
+    the developer proforma's construction hard-cost line — the PX's on-budget view, under Schedule."""
+    from .. import project_budget
+    p = db.get(Project, pid)
+    if p is None:
+        raise HTTPException(404, "project not found")
+    hard = None
+    if p.dev_budget:
+        lines = (p.dev_budget or {}).get("lines") or []
+        hard = sum(float(ln.get("amount") or float(ln.get("unit_cost") or 0) * float(ln.get("quantity") or 1))
+                   for ln in lines if ln.get("category") == "hard")
+    return project_budget.gmp_budget(db, pid, proforma_hard=hard)
+
+
 @router.get("/projects/{pid}/estimate/from-model")
 def estimate_from_model(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """Conceptual estimate from the IFC quantity takeoff × unit rates — priced line items by element

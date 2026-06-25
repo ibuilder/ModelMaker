@@ -1,0 +1,116 @@
+{
+  "key": "staffing",
+  "name": "Staffing Plan",
+  "section": "Cost",
+  "icon": "👷",
+  "ref_prefix": "STF",
+  "title_field": "role",
+  "pinnable": false,
+  "fields": [
+    {
+      "name": "role",
+      "label": "Role",
+      "type": "select",
+      "options": [
+        "Project Executive",
+        "Senior Project Manager",
+        "Project Manager",
+        "Assistant Project Manager",
+        "Project Engineer",
+        "General Superintendent",
+        "Superintendent",
+        "Assistant Superintendent",
+        "Field Engineer",
+        "Safety Manager",
+        "Quality Manager",
+        "Scheduler",
+        "Project Accountant",
+        "Project Coordinator",
+        "MEP Coordinator"
+      ],
+      "required": true,
+      "fieldset": "Role"
+    },
+    {
+      "name": "category",
+      "label": "Budget Category",
+      "type": "select",
+      "options": [
+        "General Conditions",
+        "General Requirements"
+      ],
+      "required": true,
+      "fieldset": "Role"
+    },
+    {
+      "name": "count",
+      "label": "Headcount",
+      "type": "number",
+      "fieldset": "Role"
+    },
+    {
+      "name": "rate",
+      "label": "Rate",
+      "type": "currency",
+      "fieldset": "Cost"
+    },
+    {
+      "name": "rate_period",
+      "label": "Per",
+      "type": "select",
+      "options": [
+        "Month",
+        "Week",
+        "Hour"
+      ],
+      "fieldset": "Cost"
+    },
+    {
+      "name": "start",
+      "label": "On Site",
+      "type": "date",
+      "fieldset": "Duration"
+    },
+    {
+      "name": "finish",
+      "label": "Off Site",
+      "type": "date",
+      "fieldset": "Duration"
+    },
+    {
+      "name": "cost_code",
+      "label": "Cost Code",
+      "type": "reference",
+      "module": "cost_code",
+      "fieldset": "Cost"
+    }
+  ],
+  "workflow": {
+    "initial": "planned",
+    "states": [
+      "planned",
+      "active",
+      "demobilized"
+    ],
+    "transitions": [
+      {
+        "from": "planned",
+        "to": "active",
+        "action": "mobilize",
+        "party": ["GC"]
+      },
+      {
+        "from": "active",
+        "to": "demobilized",
+        "action": "demobilize",
+        "party": ["GC"]
+      }
+    ]
+  },
+  "list_columns": [
+    "category",
+    "count",
+    "rate",
+    "start"
+  ]
+}
