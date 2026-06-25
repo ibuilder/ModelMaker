@@ -747,6 +747,12 @@ export class ApiClient {
       frames: { day: number; new: number; completed_cumulative: number; pct: number; date?: string; new_guids: string[] }[] }>(
       `/projects/${pid}/schedule/4d${source ? `?source=${source}` : ""}`);
   }
+  /** Schedule visual (Gantt or Line-of-Balance) as inline SVG text, over the schedule_activity records. */
+  async scheduleSvg(pid: string, kind: "gantt" | "lob") {
+    const res = await fetch(this.url(`/projects/${pid}/schedule/${kind}.svg`), { headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`schedule ${kind}: ${res.status}`);
+    return res.text();
+  }
   /** Import a Primavera P6 .xer so the 4D scrub reports real calendar dates. */
   async importXer(pid: string, file: File) {
     const fd = new FormData(); fd.append("file", file);
