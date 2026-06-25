@@ -2,7 +2,7 @@
   "key": "cor",
   "name": "Change Order Requests",
   "section": "Change Management",
-  "icon": "\u271a",
+  "icon": "✚",
   "ref_prefix": "COR",
   "title_field": "subject",
   "pinnable": true,
@@ -11,13 +11,15 @@
       "name": "subject",
       "label": "Subject",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Change"
     },
     {
       "name": "amount",
       "label": "Amount",
       "type": "currency",
-      "required": true
+      "required": true,
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "reason",
@@ -31,40 +33,47 @@
         "Code / AHJ",
         "Errors & Omissions",
         "Allowance Reconciliation"
-      ]
+      ],
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "received_from",
       "label": "Received From",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "cost_code",
       "label": "Cost Code",
       "type": "reference",
-      "module": "cost_code"
+      "module": "cost_code",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "schedule_days",
       "label": "Schedule Days",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "justification",
       "label": "Justification",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Detail"
     },
     {
       "name": "pco",
       "label": "Source PCO",
       "type": "reference",
-      "module": "pco_request"
+      "module": "pco_request",
+      "fieldset": "Links"
     },
     {
       "name": "subcontract",
       "label": "Subcontract",
       "type": "reference",
-      "module": "subcontract"
+      "module": "subcontract",
+      "fieldset": "Links"
     }
   ],
   "workflow": {

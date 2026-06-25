@@ -11,23 +11,27 @@
       "name": "description",
       "label": "Item",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Item"
     },
     {
       "name": "location",
       "label": "Location",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Item"
     },
     {
       "name": "trade",
       "label": "Trade",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Item"
     },
     {
       "name": "observation",
       "label": "Source Observation",
       "type": "reference",
-      "module": "observation"
+      "module": "observation",
+      "fieldset": "Assignment"
     },
     {
       "name": "priority",
@@ -37,32 +41,38 @@
         "Low",
         "Medium",
         "High"
-      ]
+      ],
+      "fieldset": "Assignment"
     },
     {
       "name": "responsible",
       "label": "Responsible",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Assignment"
     },
     {
       "name": "due_date",
       "label": "Due Date",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Assignment"
     },
     {
       "name": "cost",
       "label": "Est. Cost",
-      "type": "currency"
+      "type": "currency",
+      "fieldset": "Closeout"
     },
     {
       "name": "verified_by",
       "label": "Verified By",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Closeout"
     },
     {
       "name": "photos",
       "label": "Photos (before / after)",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Closeout"
     }
   ],
   "workflow": {

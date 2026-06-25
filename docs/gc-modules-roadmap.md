@@ -33,7 +33,7 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 | **N1** | **Persistent navigation rail** — sections → modules, always visible; module content loads in a content pane instead of replacing the whole panel | jumping between 73 modules currently requires going "back" each time | ▶ **building now** |
 | **X1** | **Cost-code links everywhere** — add `reference → cost_code` to RFI, change_event, cor, daily_cost, PO/commitment, material/equipment logs | Procore tags RFIs/COs with cost codes so impacts roll to budget | ✅ rfi·cor·change_event·pco_request·proposal (more in tier-2) |
 | **A1** | **Ball-in-court / assignee on every actionable module** — explicit `assignee` + ball-in-court party so super/PM instantly see *who owes what* | Procore requires Assignees to open an RFI; "ball in court" is the core metric | ✅ ball-in-court party (computed from workflow transitions) shows as a column in every module list **and** in the record detail header, on top of the existing inline-editable assignee |
-| **F1** | **Fieldsets** — group a module's fields into labeled sections in the form (e.g. RFI → *Question / Response / Impacts*) | long flat forms are slow on a phone in the field | planned (schema: add `fieldset` to fields) |
+| **F1** | **Fieldsets** — group a module's fields into labeled sections in the form (e.g. RFI → *Question / Response / Impacts*) | long flat forms are slow on a phone in the field | ✅ `fieldset` on each field; form renderer emits a labeled header per contiguous run. Applied to all 8 tier-1 modules |
 | **D1** | **Inline "add new" from reference dropdowns** — create a cost code / location / sub without leaving the form | supers shouldn't navigate away mid-entry | ✅ done (any reference field) |
 | **R1** | **Super vs PM views** — per-role default columns + favorites + which fields show first (field-first vs office-first) | a super needs manpower/weather/safety; a PM needs RFI/submittal/cost/change | planned |
 | **C1** | **Cross-module conversions** — RFI → Change Event/COR, Observation → NCR, Inspection fail → Punchlist | Procore "convert RFI to PCO" is a daily move | planned |
@@ -41,23 +41,23 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 
 ## Per-module priorities (research-backed)
 
-### Tier 1 — daily drivers (do first)
-- **rfi** — add `assignee`/ball-in-court, `cost_code`, `drawing_ref` (reference), `location`, `rfi_manager`;
-  convert→change_event; fieldsets (Question / Response / Impacts). *(Procore required: Subject, Assignees,
-  Due Date, Question — we're missing Assignees.)*
-- **submittal** — add `rev` (revision), `submittal_type` (Product Data/Shop Drawing/Sample/Mock-up),
-  `ball_in_court`, `lead_time_days`, `required_on_site` (date), `received`/`returned` dates; status set
-  (Submitted/Under Review/Approved/Approved-as-Noted/Revise-&-Resubmit/Rejected); spec_section + cost_code.
-- **cor / change_event / pco_request** — `cost_code`, `reason` (Design/Owner/Unforeseen/Field), `received_from`,
-  `rom_amount` (currency), `schedule_impact_days`; link from RFI; tie to SOV/pay-app.
-- **daily_report** — `weather` + `temp` + `weather_impact`, `work_completed`, `deliveries`, `delays`,
-  `equipment_on_site`, `visitors`, `safety_note`, `photos`; summarize/link `manpower_log`. *(The super's #1
-  tool — Procore/Fieldwire: date, author, weather+impact, who-was-on-site, work, deliveries, delays, photos.)*
-- **punchlist** — `location` (reference), `responsible_sub`/`trade`, `priority`, `due_date`, `verified_by`,
-  before/after `photo`; status (Open/Ready-for-Review/Verified/Closed).
-- **sov / pay app** — link `cost_code`, per-line `change_order_amount` + retainage; already has G702/G703.
-- **inspection** — `inspection_type`, `inspector`, `result` (Pass/Fail/Conditional), `location`,
-  `reinspection_date`, `photo`; fail → punchlist.
+### Tier 1 — daily drivers (✅ field completeness done in v0.1.54; ball-in-court via A1)
+- **rfi** ✅ — `cost_code` + `drawing` refs (X1), ball-in-court (A1); added `priority`, `location`
+  (reference), `rfi_manager`, `received_from`, richer discipline list. *Remaining:* convert→change_event
+  (C1), fieldsets Question/Response/Impacts (F1).
+- **submittal** ✅ — added `rev`, `responsible_contractor`, `required_on_site`/`date_received`/
+  `date_returned`, `cost_code`, expanded type + disposition enums. Strong workflow already
+  (draft→submitted→gc_review→ae_review→returned→closed) + `revisable`. *Remaining:* lead-time analytics (Tier 2).
+- **cor / change_event / pco_request** ✅ — `reason`, `received_from` on all; `scope_status` +
+  `schedule_impact_days` on change_event; `schedule_impact_days` on pco. Already had `cost_code` (X1) +
+  cross-links. *Remaining:* tie to SOV/pay-app (Tier 2).
+- **daily_report** ✅ — weather as enum + `temp_f`, `weather_impact`, `equipment_on_site`, `delays`,
+  `visitors`, `safety_note`, `photos`; list surfaces weather impact; still rolls up manpower/equipment.
+- **punchlist** ✅ — added `verified_by` + before/after `photos` (already had location/trade/priority/
+  due_date/responsible + verify-requires-attachment). *Remaining:* location→reference (C1).
+- **sov / pay app** — link `cost_code`, per-line `change_order_amount` + retainage; already has G702/G703. *(Tier 2)*
+- **inspection** ✅ — added `reinspection_date` + `photos` (already had type/inspector/result/location/
+  agency/spec + NCR/deficiency rollups). *Remaining:* fail → punchlist conversion (C1).
 
 ### Tier 2 — weekly / cost / safety
 `submittal` log analytics, `meeting` (agenda/minutes/action-items→action_item), `coordination_issue`
@@ -75,5 +75,5 @@ logs** with a cost code so impacts roll to the budget. → add `cost_code` refer
 1. **N1 navigation rail** (this pass) — unblocks navigating everything.
 2. **D1 add-from-dropdown + X1 cost-code links** — the cost-code workflow end-to-end.
 3. **A1 ball-in-court** ✅ **+ R1 super/PM views** — the "who owes what" layer both roles live in.
-4. **Tier-1 field completeness** (rfi → submittal → cor → daily → punchlist → inspection), then F1 fieldsets.
-5. **C1 conversions + E1 extendable enums**, then Tier 2/3 field depth.
+4. **Tier-1 field completeness** ✅ (rfi → submittal → cor → daily → punchlist → inspection) + **F1 fieldsets** ✅.
+5. **C1 conversions + E1 extendable enums** ◀ next, then Tier 2/3 field depth.

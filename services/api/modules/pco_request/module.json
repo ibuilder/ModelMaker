@@ -2,7 +2,7 @@
   "key": "pco_request",
   "name": "PCO Requests",
   "section": "Change Management",
-  "icon": "\u2691",
+  "icon": "⚑",
   "ref_prefix": "PCO",
   "title_field": "subject",
   "pinnable": true,
@@ -11,13 +11,15 @@
       "name": "subject",
       "label": "Subject",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Change"
     },
     {
       "name": "description",
       "label": "Description of Change",
       "type": "textarea",
-      "required": true
+      "required": true,
+      "fieldset": "Change"
     },
     {
       "name": "origin",
@@ -28,40 +30,47 @@
         "RFI",
         "Design Change",
         "Owner Request"
-      ]
+      ],
+      "fieldset": "Change"
     },
     {
       "name": "rough_cost",
       "label": "Rough Order Cost",
-      "type": "currency"
+      "type": "currency",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "schedule_impact_days",
       "label": "Schedule Impact (days)",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "received_from",
       "label": "Received From",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Cost & schedule"
     },
     {
       "name": "source_rfi",
       "label": "Source RFI",
       "type": "reference",
-      "module": "rfi"
+      "module": "rfi",
+      "fieldset": "Links"
     },
     {
       "name": "change_event",
       "label": "Change Event",
       "type": "reference",
-      "module": "change_event"
+      "module": "change_event",
+      "fieldset": "Links"
     },
     {
       "name": "cost_code",
       "label": "Cost Code",
       "type": "reference",
-      "module": "cost_code"
+      "module": "cost_code",
+      "fieldset": "Links"
     }
   ],
   "workflow": {

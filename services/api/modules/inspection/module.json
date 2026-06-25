@@ -11,12 +11,14 @@
       "name": "subject",
       "label": "Inspection",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Inspection"
     },
     {
       "name": "location",
       "label": "Location",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Inspection"
     },
     {
       "name": "result",
@@ -26,7 +28,8 @@
         "Pass",
         "Fail",
         "Conditional"
-      ]
+      ],
+      "fieldset": "Result"
     },
     {
       "name": "inspection_type",
@@ -38,38 +41,45 @@
         "Final",
         "Agency",
         "Commissioning"
-      ]
+      ],
+      "fieldset": "Result"
     },
     {
       "name": "inspector",
       "label": "Inspector",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Result"
     },
     {
       "name": "date",
       "label": "Date",
       "type": "date",
-      "required": true
+      "required": true,
+      "fieldset": "Result"
     },
     {
       "name": "agency",
       "label": "Agency",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Result"
     },
     {
       "name": "spec_section",
       "label": "Spec Section",
-      "type": "text"
+      "type": "text",
+      "fieldset": "Record"
     },
     {
       "name": "reinspection_date",
       "label": "Re-inspection Date",
-      "type": "date"
+      "type": "date",
+      "fieldset": "Record"
     },
     {
       "name": "photos",
       "label": "Photos",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Record"
     },
     {
       "name": "ncr_count",

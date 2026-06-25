@@ -51,6 +51,14 @@ with TestClient(app) as c:
     assert {"verified_by", "photos"} <= fnames("punchlist")
     assert {"reinspection_date", "photos"} <= fnames("inspection")
 
+    # F1: tier-1 forms group fields into labeled fieldsets, and each fieldset is a single
+    # contiguous run (the web renderer emits one header per run — non-contiguous would duplicate).
+    for k in ("rfi", "submittal", "daily_report", "cor", "change_event", "pco_request", "punchlist", "inspection"):
+        seq = [f.get("fieldset") for f in mods[k]["fields"] if f["type"] != "rollup"]
+        assert all(seq), f"{k}: every form field should have a fieldset, got {seq}"
+        runs = [fs for i, fs in enumerate(seq) if i == 0 or fs != seq[i - 1]]
+        assert len(runs) == len(set(runs)), f"{k}: fieldsets must be contiguous, got {runs}"
+
     # project created by GC (creator → admin + GC party)
     pid = c.post("/projects", json={"name": "Mega Tower"}, headers=H("gc")).json()["id"]
     # assign party roles

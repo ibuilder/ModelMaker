@@ -11,64 +11,92 @@
       "name": "report_date",
       "label": "Date",
       "type": "date",
-      "required": true
+      "required": true,
+      "fieldset": "Conditions"
     },
     {
       "name": "weather",
       "label": "Weather",
       "type": "select",
-      "options": ["Clear", "Partly Cloudy", "Overcast", "Rain", "Snow", "Wind", "Fog", "Extreme Heat", "Freezing"]
+      "options": [
+        "Clear",
+        "Partly Cloudy",
+        "Overcast",
+        "Rain",
+        "Snow",
+        "Wind",
+        "Fog",
+        "Extreme Heat",
+        "Freezing"
+      ],
+      "fieldset": "Conditions"
     },
     {
       "name": "temp_f",
       "label": "Temp (°F)",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Conditions"
     },
     {
       "name": "weather_impact",
       "label": "Weather Impact",
       "type": "select",
-      "options": ["None", "Minor Delay", "Half-Day Lost", "Full-Day Lost", "Stoppage"]
+      "options": [
+        "None",
+        "Minor Delay",
+        "Half-Day Lost",
+        "Full-Day Lost",
+        "Stoppage"
+      ],
+      "fieldset": "Conditions"
     },
     {
       "name": "manpower",
       "label": "Manpower Count",
-      "type": "number"
+      "type": "number",
+      "fieldset": "Work"
     },
     {
       "name": "work_performed",
       "label": "Work Performed",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Work"
     },
     {
       "name": "deliveries",
       "label": "Deliveries Received",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Site"
     },
     {
       "name": "equipment_on_site",
       "label": "Equipment On Site",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Site"
     },
     {
       "name": "delays",
       "label": "Delays / Disruptions",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Site"
     },
     {
       "name": "visitors",
       "label": "Visitors / Inspections",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Safety & record"
     },
     {
       "name": "safety_note",
       "label": "Safety Observations",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Safety & record"
     },
     {
       "name": "photos",
       "label": "Photo Links",
-      "type": "textarea"
+      "type": "textarea",
+      "fieldset": "Safety & record"
     },
     {
       "name": "crew_total",
@@ -87,7 +115,12 @@
       "op": "sum"
     }
   ],
-  "list_columns": ["report_date", "weather", "manpower", "weather_impact"],
+  "list_columns": [
+    "report_date",
+    "weather",
+    "manpower",
+    "weather_impact"
+  ],
   "workflow": {
     "initial": "draft",
     "states": [
