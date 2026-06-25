@@ -11,7 +11,14 @@
       "name": "name",
       "label": "Contract",
       "type": "text",
-      "required": true
+      "required": true,
+      "fieldset": "Contract"
+    },
+    {
+      "name": "owner",
+      "label": "Owner / Client",
+      "type": "text",
+      "fieldset": "Contract"
     },
     {
       "name": "type",
@@ -21,13 +28,42 @@
         "GMP",
         "Cost Plus",
         "Lump Sum",
-        "CMAR"
-      ]
+        "CMAR",
+        "Design-Build",
+        "Unit Price",
+        "IPD"
+      ],
+      "fieldset": "Contract"
+    },
+    {
+      "name": "executed_date",
+      "label": "Executed Date",
+      "type": "date",
+      "fieldset": "Contract"
     },
     {
       "name": "value",
-      "label": "Value",
-      "type": "currency"
+      "label": "Original Value",
+      "type": "currency",
+      "fieldset": "Cost"
+    },
+    {
+      "name": "retainage_pct",
+      "label": "Retainage %",
+      "type": "number",
+      "fieldset": "Cost"
+    },
+    {
+      "name": "substantial_completion",
+      "label": "Substantial Completion",
+      "type": "date",
+      "fieldset": "Schedule"
+    },
+    {
+      "name": "ld_per_day",
+      "label": "Liquidated Damages / day",
+      "type": "currency",
+      "fieldset": "Schedule"
     },
     {
       "name": "invoiced",
