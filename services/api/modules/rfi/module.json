@@ -56,6 +56,12 @@
       ]
     },
     {
+      "name": "cost_code",
+      "label": "Cost Code",
+      "type": "reference",
+      "module": "cost_code"
+    },
+    {
       "name": "schedule_impact",
       "label": "Schedule Impact",
       "type": "select",

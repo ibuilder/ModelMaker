@@ -20,6 +20,12 @@
       "required": true
     },
     {
+      "name": "cost_code",
+      "label": "Cost Code",
+      "type": "reference",
+      "module": "cost_code"
+    },
+    {
       "name": "schedule_days",
       "label": "Schedule Days",
       "type": "number"

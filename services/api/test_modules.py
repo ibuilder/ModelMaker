@@ -23,6 +23,12 @@ with TestClient(app) as c:
     # module catalog loaded from module.json files
     mods = {m["key"]: m for m in c.get("/modules").json()}
     assert {"rfi", "submittal", "pco_request", "noc", "directive", "proposal", "cor", "eticket"} <= set(mods)
+    # /modules exposes title_field (the web uses it for inline "add new" from reference dropdowns)
+    assert mods["cost_code"]["title_field"] == "code", mods["cost_code"].get("title_field")
+    # X1: cost-impacting modules carry a cost_code reference so impacts roll to the budget
+    for k in ("rfi", "cor", "change_event", "pco_request", "proposal"):
+        refs = [f for f in mods[k]["fields"] if f.get("type") == "reference" and f.get("module") == "cost_code"]
+        assert refs, f"{k} should reference cost_code"
 
     # project created by GC (creator → admin + GC party)
     pid = c.post("/projects", json={"name": "Mega Tower"}, headers=H("gc")).json()["id"]

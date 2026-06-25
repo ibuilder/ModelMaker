@@ -48,6 +48,7 @@ def list_modules():
     return [
         {"key": m["key"], "name": m["name"], "section": m.get("section"), "revisable": m.get("revisable", False),
          "icon": m.get("icon"), "pinnable": m.get("pinnable", False),
+         "title_field": m.get("title_field"), "ref_prefix": m.get("ref_prefix"),
          "fields": m.get("fields", []), "workflow": m.get("workflow", {}),
          "relations": m.get("relations", []), "list_columns": m.get("list_columns")}
         for m in mod_engine.REGISTRY.values()

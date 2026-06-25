@@ -100,6 +100,7 @@ export interface ModuleField {
 }
 export interface ModuleDef {
   key: string; name: string; section: string; icon: string; pinnable: boolean;
+  title_field?: string; ref_prefix?: string;
   fields: ModuleField[];
   workflow: { initial: string; states: string[]; transitions: WorkflowTransition[] };
   relations?: { label: string; module: string }[];

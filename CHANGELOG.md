@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.51 — cost-code workflow: inline add + wider links (roadmap D1 + X1)
+- **Inline "add new" from reference dropdowns (D1)** — every reference field (cost code, location, sub…)
+  now has a "＋ Add new …" option that creates the record without leaving the form and selects it. So
+  while coding a budget line you add the cost code on the spot. Falls back to the target module's
+  required field, so a new Cost Code is created with its `code`.
+- **Cost-code links on cost-impacting modules (X1)** — RFIs, CORs, change events, PCO requests and
+  proposals gained a `cost_code` reference, so impacts tag a code and roll up to the budget (joining
+  budget/commitment/direct-cost/timesheet). `/modules` now exposes `title_field`/`ref_prefix`.
+
 ## v0.1.50 — GC portal navigation rail + module improvement roadmap
 - **Persistent left nav rail in the GC portal** — opening a module used to replace the whole panel, so
   moving between the 73 modules meant going "back" every time. Now a sticky left rail (Dashboard +
