@@ -914,14 +914,16 @@ export class ApiClient {
   constructionDraws(pid: string) {
     return this.json<{ projected_total: number; months: number; peak_month_cost: number;
       series: { month: string; cost: number; cumulative: number; pct: number }[];
-      actual_billed: number; invoice_count: number; pct_billed: number }>(
+      actual_billed: number; invoice_count: number; pct_billed: number;
+      by_cost_code: { code: string; description: string | null; division: string | null; billed: number }[] }>(
       `/projects/${pid}/construction-draws`);
   }
   /** Construction-loan draw status: owner invoices funded equity-first then debt vs the sized stack. */
   loanDraws(pid: string) {
     return this.json<{ loan_amount: number; equity: number; drawn_to_date: number; equity_drawn: number;
-      loan_drawn: number; loan_available: number; loan_balance: number; pct_capital_drawn: number; invoice_count: number }>(
-      `/projects/${pid}/loan-draws`);
+      loan_drawn: number; loan_available: number; loan_balance: number; pct_capital_drawn: number;
+      interest_rate: number; accrued_interest: number; loan_start: string | null; outstanding_with_interest: number;
+      invoice_count: number }>(`/projects/${pid}/loan-draws`);
   }
   /** Lender draw-request PDF (the bank-facing submission) as an auth'd blob. */
   async loanDrawRequestPdf(pid: string, appNo = 1) {

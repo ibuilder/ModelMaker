@@ -183,6 +183,25 @@ with TestClient(app) as c:
     assert round(ld["equity_drawn"] + ld["loan_drawn"], 2) == ld["drawn_to_date"], ld   # split sums to drawn
     assert ld["equity_drawn"] == min(ld["drawn_to_date"], ld["equity"]), ld             # equity-first
     assert ld["loan_available"] == round(ld["loan_amount"] - ld["loan_drawn"], 2), ld
+    assert ld["accrued_interest"] == 0, "no loan-funded draws yet → no interest"   # $950k < equity
+
+    # push past equity with a back-dated draw → loan balance accrues interest from its draw date
+    from datetime import date as _date, timedelta as _td
+    backdated = (_date.today() - _td(days=180)).isoformat()
+    c.post(f"/projects/{pid}/modules/owner_invoice",
+           json={"data": {"number": "App 3", "amount": 2_000_000, "period": backdated, "status": "submitted"}})
+    ld2 = c.get(f"/projects/{pid}/loan-draws").json()
+    assert ld2["loan_drawn"] > 0, ld2                                              # now over equity
+    assert ld2["accrued_interest"] > 0 and ld2["loan_start"] == backdated, ld2     # simple interest from draw date
+    # ~ loan_drawn × 7.5% × 180/365 (the $2M tranche is what crossed onto the loan)
+    expect = round(ld2["loan_drawn"] * 0.075 * 180 / 365, 2)
+    assert abs(ld2["accrued_interest"] - expect) < 1.0, (ld2["accrued_interest"], expect)
+    assert ld2["outstanding_with_interest"] == round(ld2["loan_drawn"] + ld2["accrued_interest"], 2), ld2
+
+    # per-cost-code draw composition — the construction draw broken out by cost code (from the SOV)
+    cd = c.get(f"/projects/{pid}/construction-draws").json()
+    assert cd["by_cost_code"], "draw composition by cost code"
+    assert any(x["billed"] == 1_000_000 for x in cd["by_cost_code"]), cd["by_cost_code"]   # the billed concrete line
 
     # PX executive summary — on-schedule + on-budget in one health view
     pxs = c.get(f"/projects/{pid}/px-summary").json()
