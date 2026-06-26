@@ -1027,6 +1027,19 @@ export class ApiClient {
     if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || `upload -> ${res.status}`); }
     return res.json() as Promise<{ source_ifc: string; publish?: string }>;
   }
+  /** Is the optional paid Revit→IFC bridge configured? (+ cost warning / free alternative text). */
+  rvtBridgeStatus() {
+    return this.json<{ enabled: boolean; activity_configured: boolean; cost_warning: string;
+      free_alternative: string; message: string }>(`/bridge/rvt/status`);
+  }
+  /** Import a native .rvt via the paid APS bridge (must confirm cost). 501 off · 402 unconfirmed. */
+  async importRvt(pid: string, file: File, confirmCost: boolean) {
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(this.url(`/projects/${pid}/import/rvt?confirm_cost=${confirmCost}`), {
+      method: "POST", body: fd, headers: this.authHeaders() });
+    if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || `rvt import -> ${res.status}`); }
+    return res.json() as Promise<{ source_ifc: string; size: number; source: string; publish?: string }>;
+  }
   editIfc(pid: string, recipe: string, params: Record<string, unknown>, publish = true) {
     return this.json<{ recipe: string; changed: number | string; published: unknown }>(
       `/projects/${pid}/edit`, { method: "POST", body: JSON.stringify({ recipe, params, publish }) });

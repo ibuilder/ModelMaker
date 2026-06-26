@@ -61,7 +61,7 @@ buildMenu("open-menu", "Open ▾", [
   { label: "BasicHouse", onClick: () => withViewer((v) => void v.loadSample("/basichouse.frag", "BasicHouse")) },
   { label: "Import from Revit / CAD", sep: true },
   { label: "Free: export IFC from Revit (no bridge)…", onClick: () => showFreeImportHelp() },
-  { label: "Revit (.rvt) — paid Autodesk bridge…", onClick: () => withViewer((v) => v.triggerOpen("convert")) },
+  { label: "Revit (.rvt) — paid Autodesk bridge…", onClick: () => void importRvtFlow() },
   { label: "AutoCAD (.dwg) — paid bridge…", onClick: () => withViewer((v) => v.triggerOpen("convert")) },
   { label: "Navisworks (.nwc) — paid bridge…", onClick: () => withViewer((v) => v.triggerOpen("convert")) },
 ], () => void ensureViewer());
@@ -115,6 +115,26 @@ function showFreeImportHelp() {
     links.appendChild(a);
   }
   card.appendChild(links);
+}
+
+/** Paid Revit (.rvt) → IFC via the APS bridge. Off by default → routes to the free IFC-export help;
+ *  when configured, warns about the per-conversion cost before picking a .rvt and converting. */
+async function importRvtFlow() {
+  if (!projectId) { toast("Open or create a project first", "info"); return; }
+  let st;
+  try { st = await api.rvtBridgeStatus(); } catch { toast("Couldn't reach the RVT bridge", "error"); return; }
+  if (!st.enabled) { showFreeImportHelp(); return; }      // bridge off → the free path is the answer
+  if (!confirm(`${st.cost_warning}\n\nPick a .rvt and convert it now?`)) return;
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".rvt";
+  inp.onchange = async () => {
+    const f = inp.files?.[0]; if (!f || !projectId) return;
+    toast(`Converting ${f.name} via Autodesk APS…`, "info");
+    try {
+      const r = await api.importRvt(projectId, f, true);
+      toast(`Converted to IFC (${Math.round(r.size / 1024)} KB) — ${r.publish === "running" ? "publishing…" : "done"}`, "info");
+    } catch (e) { toast(`RVT import: ${(e as Error).message}`, "error"); }
+  };
+  inp.click();
 }
 
 /** Save the whole project (geometry + all data + blobs) as a portable .mmproj bundle. */
