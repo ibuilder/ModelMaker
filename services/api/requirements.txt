@@ -19,6 +19,7 @@ scipy>=1.11
 networkx>=3.0
 shapely>=2.0
 reportlab>=4.0
+pyhanko>=0.25            # PAdES certificate-based PDF digital signatures (esign.py)
 
 # optional AI assists (Draft RFI) — only used when ANTHROPIC_API_KEY is set; lazy-imported
 anthropic>=0.69

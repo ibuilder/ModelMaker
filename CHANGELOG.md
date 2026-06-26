@@ -4,6 +4,16 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased — PDF digital signatures (PAdES) + e-sign options
+- **Digitally sign (PAdES)** — a contract/CO can be signed with a certificate-based **PAdES** digital
+  signature (Bluebeam's model) via **pyHanko**: the document is rendered, signed (tamper-evident,
+  self-validating), attached, and the signer + cert **fingerprint** recorded. Uses a self-signed
+  platform certificate by default (offline, no cost); set `ESIGN_P12` to sign with your own / a CA cert.
+- **3rd-party bridge (feature-flagged)** — `esign_bridge.py` + `GET /esign/status` scope DocuSign /
+  Dropbox Sign / self-hosted DocuSeal·Documenso for legally-binding multi-party signing (off until
+  `ESIGN_PROVIDER` is configured). Decision write-up in **docs/esign-options.md** (electronic vs
+  digital vs SaaS vs OSS; eIDAS / ESIGN Act / UETA; recommendation).
+
 ## Unreleased — Report Center (detailed, exportable reports)
 - **📊 Report Center** — a catalog of detailed reports, each downloadable as **PDF or Excel**:
   **Executive Summary** (CPI/SPI/EAC, % complete, open RFIs/submittals/COs, safety), **Cost Report**

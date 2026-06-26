@@ -8,12 +8,21 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
-from .. import audit, contracts, scope_library
+from .. import audit, contracts, esign, esign_bridge, scope_library
 from .. import modules as me
 from ..db import get_db
 from ..rbac import current_user, require_role
 
 router = APIRouter()
+
+# contract module -> the document it generates (for one-click digital signing)
+_DEFAULT_DOC = {"prime_contract": "prime", "subcontract": "agreement", "commitment": "agreement", "cor": "co"}
+
+
+@router.get("/esign/status")
+def esign_status(_: str = Depends(current_user)):
+    """Digital-signature capability: built-in PAdES (always available) + the optional 3rd-party bridge."""
+    return {"pades": esign.status(), "bridge": esign_bridge.status()}
 
 
 @router.get("/scope-library")
@@ -61,3 +70,30 @@ def sign_contract(pid: str, key: str, rid: str, body: dict = Body(...),
                  path=f"/projects/{pid}/contracts/{key}/{rid}/sign", detail={"party": party})
     db.commit()
     return {"signatures": (out.get("data") or {}).get("signatures", [])}
+
+
+@router.post("/projects/{pid}/contracts/{key}/{rid}/digital-sign")
+def digital_sign(pid: str, key: str, rid: str, body: dict = Body(default={}),
+                 db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
+    """Apply a certificate-based PAdES digital signature to the contract/CO document — tamper-evident,
+    self-validating. Renders the document, signs it, attaches the signed PDF, and records the signer +
+    cert fingerprint on the record (audit). Falls back cleanly if signing isn't available."""
+    from datetime import datetime, timezone
+    doc = (body or {}).get("doc") or _DEFAULT_DOC.get(key, "agreement")
+    clause_ids = [c for c in ((body or {}).get("clauses") or "").split(",") if c] or None
+    try:
+        pdf = contracts.render(db, key, pid, rid, doc, clause_ids)
+        signed = esign.digitally_sign(pdf, reason="Executed", name=user)
+        fp = esign.signer_fingerprint()
+    except Exception as e:  # noqa: BLE001 — never 500 the request over a signing failure
+        raise HTTPException(503, f"digital signing unavailable: {e}")
+    me.add_attachment(db, key, pid, rid, f"{doc}-signed-{rid}.pdf", "application/pdf", signed, user)
+    rec = me.get_record(db, key, pid, rid)
+    ds = list((rec.get("data") or {}).get("digital_signatures") or [])
+    ds.append({"signer": user, "fingerprint": fp, "kind": esign.status()["kind"], "doc": doc,
+               "signed_at": datetime.now(timezone.utc).isoformat()})
+    me.update_record(db, key, pid, rid, {"digital_signatures": ds}, user, None)
+    audit.record(db, action="contract.digital_sign", actor=user, method="POST",
+                 path=f"/projects/{pid}/contracts/{key}/{rid}/digital-sign", detail={"doc": doc, "fingerprint": fp})
+    db.commit()
+    return {"signed": True, "fingerprint": fp, "kind": esign.status()["kind"]}

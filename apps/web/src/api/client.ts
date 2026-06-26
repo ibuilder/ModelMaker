@@ -370,6 +370,11 @@ export class ApiClient {
     return this.json<{ signatures: { party: string; name: string; signed_at: string; method: string }[] }>(
       `/projects/${pid}/contracts/${key}/${rid}/sign`, { method: "POST", body: JSON.stringify({ party, name }) });
   }
+  /** Apply a certificate-based PAdES digital signature to the contract document (tamper-evident). */
+  digitalSignContract(pid: string, key: string, rid: string) {
+    return this.json<{ signed: boolean; fingerprint: string; kind: string }>(
+      `/projects/${pid}/contracts/${key}/${rid}/digital-sign`, { method: "POST", body: "{}" });
+  }
   /** Draft a Bill of Quantities from a plain-text project description (AI; stub without a key). */
   aiEstimate(pid: string, description: string) {
     return this.json<{ lines: { description: string; quantity: number; unit: string; rate: number; amount?: number; division?: string }[];

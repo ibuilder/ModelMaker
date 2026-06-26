@@ -1383,10 +1383,21 @@ export class PortalUI {
       } catch (e) { toast(`couldn't open document: ${(e as Error).message}`, "error"); }
     });
     btn("✍ Sign", "Record a party's signature", () => void this.signContract(m, r, rid));
+    btn("🔏 Digitally sign", "Apply a tamper-evident PAdES digital signature to the document", async () => {
+      try {
+        const res = await api.digitalSignContract(pid, m.key, rid);
+        toast(`digitally signed (${res.kind}) · cert ${res.fingerprint.slice(0, 8)}…`, "success");
+        void this.openRecord(m, rid);
+      } catch (e) { toast(`digital sign failed: ${(e as Error).message}`, "error"); }
+    });
     const sigs = (r.data?.signatures as { party: string; name: string }[] | undefined) ?? [];
-    if (sigs.length) {
+    const dsigs = (r.data?.digital_signatures as { signer: string; fingerprint: string }[] | undefined) ?? [];
+    if (sigs.length || dsigs.length) {
       const s = document.createElement("span"); s.className = "meta"; s.style.marginLeft = "6px";
-      s.textContent = "✓ signed: " + sigs.map((x) => `${x.party} (${x.name})`).join(", ");
+      const parts = [];
+      if (sigs.length) parts.push("✓ signed: " + sigs.map((x) => `${x.party} (${x.name})`).join(", "));
+      if (dsigs.length) parts.push("🔏 digitally signed (" + dsigs.length + ")");
+      s.textContent = parts.join(" · ");
       tools.appendChild(s);
     }
   }
