@@ -52,5 +52,14 @@ with TestClient(app) as c:
     # ai.estimate_boq seam: amounts roll up from quantity x rate (verified on a synthetic line set)
     assert ai.estimate_boq("")["source"] == "empty"
 
+    # RFI triage: stub path returns a usable classification + ball-in-court + draft (no key)
+    rid = c.post(f"/projects/{pid}/modules/rfi", json={"data": {"subject": "Beam clash at C4",
+                 "question": "Please advise.", "discipline": "Structural", "cost_impact": "Yes"}}).json()["id"]
+    tr = c.post(f"/projects/{pid}/ai/triage-rfi", json={"rid": rid}).json()
+    assert tr["ai_enabled"] is False and tr["source"] == "template", tr
+    assert tr["discipline"] == "Structural" and tr["urgency"] == "high", tr
+    assert tr["ball_in_court"] in ("GC", "Owner", "OwnersRep", "Consultant", "Subcontractor"), tr
+    assert tr["draft_response"], tr
+
 print("AI OK - ask + estimate endpoints ground/degrade gracefully with no key, reject empty input; "
       "ai.ask + ai.estimate_boq seams verified")

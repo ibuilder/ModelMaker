@@ -375,6 +375,12 @@ export class ApiClient {
     return this.json<{ signed: boolean; fingerprint: string; kind: string }>(
       `/projects/${pid}/contracts/${key}/${rid}/digital-sign`, { method: "POST", body: "{}" });
   }
+  /** Triage an RFI (AI): category / discipline / urgency / ball-in-court + a draft response. */
+  triageRfi(pid: string, rid: string) {
+    return this.json<{ ai_enabled: boolean; source: string; discipline: string; category: string;
+      urgency: string; ball_in_court: string; draft_response: string }>(
+      `/projects/${pid}/ai/triage-rfi`, { method: "POST", body: JSON.stringify({ rid }) });
+  }
   /** Draft a Bill of Quantities from a plain-text project description (AI; stub without a key). */
   aiEstimate(pid: string, description: string) {
     return this.json<{ lines: { description: string; quantity: number; unit: string; rate: number; amount?: number; division?: string }[];

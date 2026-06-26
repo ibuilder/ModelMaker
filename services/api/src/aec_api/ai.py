@@ -247,3 +247,54 @@ def estimate_boq(description: str) -> dict[str, Any]:
         _log.warning("AI BOQ draft failed (%s)", e)
         return {"lines": [], "total": 0.0, "source": "error",
                 "message": "Couldn't reach the AI service just now — try again shortly."}
+
+
+# --- RFI triage (auto-categorize + ball-in-court + draft response) -----------
+_TRIAGE_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "required": ["discipline", "category", "urgency", "ball_in_court", "draft_response"],
+    "properties": {
+        "discipline": {"type": "string"},
+        "category": {"type": "string", "enum": ["Design", "Field Condition", "Coordination", "Submittal", "Other"]},
+        "urgency": {"type": "string", "enum": ["low", "medium", "high"]},
+        "ball_in_court": {"type": "string", "enum": ["GC", "Owner", "OwnersRep", "Consultant", "Subcontractor"]},
+        "draft_response": {"type": "string"},
+    },
+}
+_TRIAGE_SYSTEM = (
+    "You triage construction RFIs. From the RFI's subject/question/discipline, classify it, judge "
+    "urgency, name the party whose court the ball is in (who must respond), and draft a concise, "
+    "professional response or the question the responder must answer. Be specific and conservative.")
+
+
+def _triage_template(rfi: dict[str, Any]) -> dict[str, Any]:
+    ci = str(rfi.get("cost_impact") or "").lower()
+    urgency = "high" if ci in ("yes", "high") else "medium" if ci in ("possible", "maybe") else "low"
+    return {"discipline": rfi.get("discipline") or "General",
+            "category": "Design", "urgency": urgency, "ball_in_court": "Consultant",
+            "draft_response": "Pending design-team review; a formal response will follow.",
+            "source": "template"}
+
+
+def triage_rfi(rfi: dict[str, Any]) -> dict[str, Any]:
+    """Categorize an RFI (discipline/category/urgency), name the ball-in-court party, and draft a
+    response. Uses Claude when configured; a deterministic template otherwise."""
+    if not ai_enabled():
+        return _triage_template(rfi)
+    try:
+        from anthropic import Anthropic  # lazy
+
+        client = Anthropic(api_key=settings_store.get("ANTHROPIC_API_KEY"))
+        msg = ("RFI (JSON):\n" + json.dumps({k: rfi.get(k) for k in ("subject", "question", "discipline", "cost_impact", "location")})
+               + "\n\nTriage it. Return JSON only.")
+        resp = client.messages.create(
+            model=settings_store.get("AEC_AI_MODEL", "claude-opus-4-8"), max_tokens=1024,
+            system=_TRIAGE_SYSTEM, messages=[{"role": "user", "content": msg}],
+            output_config={"format": {"type": "json_schema", "schema": _TRIAGE_SCHEMA}, "effort": "low"})
+        text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", None) == "text")
+        data = json.loads(text)
+        data["source"] = "claude"
+        return data
+    except Exception as e:  # noqa: BLE001 — never fail the request over an AI assist
+        _log.warning("AI RFI triage failed (%s); using template", e)
+        return _triage_template(rfi)

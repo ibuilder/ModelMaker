@@ -1452,6 +1452,19 @@ export class PortalUI {
     card.append(Object.assign(document.createElement("div"), { className: "meta", textContent: "Record a typed signature:" }), party, name, go);
   }
 
+  private async rfiTriage(rid: string) {
+    const pid = this.host.projectId()!;
+    let t;
+    try { t = await this.host.api.triageRfi(pid, rid); }
+    catch (e) { toast(`triage failed: ${(e as Error).message}`, "error"); return; }
+    const { card } = modalShell("RFI triage (AI)", 360);
+    if (!t.ai_enabled) card.append(Object.assign(document.createElement("div"), { className: "meta", textContent: "AI not configured — showing a template suggestion." }));
+    const kv = (k: string, v: string) => { const d = document.createElement("div"); d.className = "meta"; d.innerHTML = `<b>${k}:</b> `; d.append(v); card.appendChild(d); };
+    kv("Discipline", t.discipline); kv("Category", t.category); kv("Urgency", t.urgency); kv("Ball-in-court", t.ball_in_court);
+    const h = document.createElement("div"); h.className = "meta"; h.style.marginTop = "6px"; h.innerHTML = "<b>Draft response:</b>"; card.appendChild(h);
+    const body = document.createElement("div"); body.style.cssText = "white-space:pre-wrap;font-size:12.5px"; body.textContent = t.draft_response; card.appendChild(body);
+  }
+
   private async openRecord(m: ModuleDef, rid: string) {
     const pid = this.host.projectId()!;
     const r = await this.host.api.moduleRecord(pid, m.key, rid);
@@ -1520,6 +1533,12 @@ export class PortalUI {
       tools.append(cb);
     }
     this.contractActions(m, r, rid, tools);
+    if (m.key === "rfi") {
+      const tb = document.createElement("button");
+      tb.className = "tool-btn"; tb.textContent = "✨ Triage (AI)"; tb.title = "AI: categorize + ball-in-court + draft response";
+      tb.onclick = () => void this.rfiTriage(rid);
+      tools.appendChild(tb);
+    }
     this.root.appendChild(tools);
 
     // photo-heavy field modules put photos up top (the super's first action on the record)

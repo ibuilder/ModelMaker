@@ -179,6 +179,22 @@ def draft_rfi(pid: str, element: dict = Body(default={}, embed=True),
     return {"ai_enabled": ai.ai_enabled(), **draft}
 
 
+@router.post("/projects/{pid}/ai/triage-rfi")
+def triage_rfi(pid: str, rid: str | None = Body(default=None, embed=True),
+               rfi: dict = Body(default={}, embed=True),
+               db: Session = Depends(get_db), _: str = Depends(require_role("reviewer"))):
+    """Triage an RFI — auto-categorize (discipline / category / urgency), name the ball-in-court party,
+    and draft a response. Pass `rid` to triage an existing RFI record, or `rfi` data directly. Uses
+    Claude when configured; a deterministic template otherwise."""
+    data = rfi or {}
+    if rid:
+        try:
+            data = mod_engine.get_record(db, "rfi", pid, rid).get("data") or {}
+        except HTTPException:
+            pass
+    return {"ai_enabled": ai.ai_enabled(), **ai.triage_rfi(data)}
+
+
 @router.get("/projects/{pid}/my-work")
 def my_work(pid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
     """Cross-module work queue for the current user (assigned + ball-in-court)."""
