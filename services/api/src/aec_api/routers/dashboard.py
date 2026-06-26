@@ -62,15 +62,26 @@ def executive_portfolio(db: Session = Depends(get_db), _: str = Depends(rbac.cur
     plus portfolio totals and a status tally. The 'how's the whole book doing?' view, built on the
     same px-summary each project's dashboard shows."""
     from .. import px
+    from ..models import Scenario
+
+    # latest solved scenario per project → developer returns (IRR / EM) alongside the GC status
+    returns_by_proj: dict[str, dict] = {}
+    for s in db.query(Scenario).order_by(Scenario.created_at).all():
+        if s.project_id and s.result:
+            returns_by_proj[s.project_id] = s.result.get("returns", {}) or {}
+
     rows = []
-    tot = {"gmp": 0.0, "eac": 0.0, "variance_at_completion": 0.0, "committed": 0.0}
+    tot = {"gmp": 0.0, "eac": 0.0, "variance_at_completion": 0.0, "committed": 0.0, "equity": 0.0}
     tally = {"on_track": 0, "at_risk": 0, "behind": 0}
+    w_eq = w_irr = 0.0
     for p in db.query(Project).all():
         try:
             s = px.summary(db, p.id)
         except Exception:                              # noqa: BLE001 — a project with no data still lists
             s = {"status": "on_track", "schedule": {}, "budget": {}}
         sched, bud = s.get("schedule", {}), s.get("budget", {})
+        ret = returns_by_proj.get(p.id, {})
+        irr, em = ret.get("equity_irr"), ret.get("equity_multiple")
         rows.append({
             "id": p.id, "name": p.name, "status": s.get("status"),
             "spi": sched.get("spi"), "pct_complete": sched.get("pct_complete", 0),
@@ -78,13 +89,19 @@ def executive_portfolio(db: Session = Depends(get_db), _: str = Depends(rbac.cur
             "milestones_late": (sched.get("milestones") or {}).get("late", 0),
             "gmp": bud.get("gmp", 0), "eac": bud.get("eac", 0),
             "variance_at_completion": bud.get("variance_at_completion", 0),
-            "committed_pct": bud.get("committed_pct", 0)})
+            "committed_pct": bud.get("committed_pct", 0),
+            "equity_irr": irr, "equity_multiple": em})
         tot["gmp"] += bud.get("gmp", 0); tot["eac"] += bud.get("eac", 0)
         tot["variance_at_completion"] += bud.get("variance_at_completion", 0)
         tot["committed"] += bud.get("committed", 0)
         if s.get("status") in tally:
             tally[s["status"]] += 1
+        eq = float((ret or {}).get("total_contributions") or 0)
+        if irr is not None and eq:
+            w_eq += eq; w_irr += irr * eq
+            tot["equity"] += eq
     tot = {k: round(v, 2) for k, v in tot.items()}
+    tot["blended_equity_irr"] = round(w_irr / w_eq, 4) if w_eq else None
     rows.sort(key=lambda r: (r["status"] != "behind", r["status"] != "at_risk", r["variance_at_completion"]))
     return {"projects": rows, "totals": tot, "status_tally": tally, "project_count": len(rows)}
 

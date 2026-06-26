@@ -532,10 +532,12 @@ export class PortalUI {
         c.innerHTML = `<div class="meta">${label}</div><div style="font-size:18px;font-weight:700${color ? `;color:${color}` : ""}">${val}</div>`;
         return c;
       };
+      const irrPct = (v: number | null) => v == null ? "—" : `${(v * 100).toFixed(1)}%`;
       kpis.append(
         kpi("Projects", String(pf.project_count)),
         kpi("Portfolio GMP", usd(t.gmp)),
         kpi("Variance at completion", usd(t.variance_at_completion), vcol(t.variance_at_completion)),
+        kpi("Blended equity IRR", irrPct(t.blended_equity_irr)),
         kpi("Status", `${ta.on_track}✓ ${ta.at_risk}△ ${ta.behind}⚠`),
       );
       this.root.appendChild(kpis);
@@ -544,25 +546,27 @@ export class PortalUI {
       const tbl = document.createElement("table"); tbl.className = "portal-table"; tbl.style.fontSize = "11px";
       tbl.innerHTML = `<thead><tr><th>Project</th><th>Status</th><th style="text-align:right">SPI</th>`
         + `<th style="text-align:right">% cmpl</th><th style="text-align:right">GMP</th>`
-        + `<th style="text-align:right">EAC</th><th style="text-align:right">VAC</th><th style="text-align:right">Late MS</th></tr></thead>`;
+        + `<th style="text-align:right">VAC</th><th style="text-align:right">Equity IRR</th><th style="text-align:right">EM</th><th style="text-align:right">Late MS</th></tr></thead>`;
       const tb = document.createElement("tbody");
       for (const p of pf.projects) {
         const tr = document.createElement("tr"); tr.className = "kpi-click";
         if (p.id === here) tr.style.fontWeight = "700";
         const [lbl, col] = pill[p.status] ?? ["—", "var(--muted)"];
+        const irrCol = p.equity_irr == null ? "var(--muted)" : p.equity_irr >= 0.15 ? "#33d17a" : p.equity_irr >= 0.12 ? "#ffd479" : "#e2554a";
         tr.innerHTML = `<td>${p.name}${p.id === here ? " ·" : ""}</td>`
           + `<td><span class="ball-badge" style="background:${col}22;color:${col};border-color:${col}">${lbl}</span></td>`
           + `<td style="text-align:right;color:${p.spi == null ? "var(--muted)" : p.spi >= 0.95 ? "#33d17a" : "#e2554a"}">${p.spi ?? "—"}</td>`
           + `<td style="text-align:right">${p.pct_complete}%</td><td style="text-align:right">${usd(p.gmp)}</td>`
-          + `<td style="text-align:right">${usd(p.eac)}</td>`
           + `<td style="text-align:right;color:${vcol(p.variance_at_completion)}">${usd(p.variance_at_completion)}</td>`
+          + `<td style="text-align:right;color:${irrCol}">${irrPct(p.equity_irr)}</td>`
+          + `<td style="text-align:right">${p.equity_multiple == null ? "—" : p.equity_multiple + "×"}</td>`
           + `<td style="text-align:right;color:${p.milestones_late ? "#e2554a" : "var(--muted)"}">${p.milestones_late || "—"}</td>`;
         tr.onclick = () => { if (p.id !== here) window.location.search = `?project=${p.id}`; };
         tb.appendChild(tr);
       }
       tbl.appendChild(tb); card.appendChild(tbl); this.root.appendChild(card);
       this.root.appendChild(Object.assign(document.createElement("div"), { className: "meta",
-        textContent: "Click a project to switch to it. On-schedule (SPI / % complete / late milestones) + on-budget (GMP / EAC / variance) across the book." }));
+        textContent: "Click a project to switch to it. On-schedule (SPI / % complete / late milestones) + on-budget (GMP / variance) + developer returns (IRR / EM) across the book." }));
     }).catch(() => { status.className = "empty-state"; status.innerHTML = `Portfolio unavailable<span class="es-hint">Needs at least one project with schedule/budget data.</span>`; });
   }
 
