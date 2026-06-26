@@ -45,6 +45,11 @@ export class DrawingsUI {
     this.root.classList.add("dwg-wrap");
     const side = document.createElement("div"); side.className = "dwg-side";
     side.innerHTML = `<div class="section-title">Drawing set</div>`;
+    const takeoff = document.createElement("button");
+    takeoff.className = "file-btn"; takeoff.textContent = "📄 PDF Takeoff"; takeoff.title = "Measure & mark up a PDF drawing";
+    takeoff.style.cssText = "margin-bottom:8px;width:100%";
+    takeoff.onclick = () => void import("./pdfTakeoff").then((m) => m.openPdfTakeoff());
+    side.appendChild(takeoff);
     const list = document.createElement("div"); list.id = "dwg-list"; side.appendChild(list);
 
     const main = document.createElement("div"); main.className = "dwg-main";

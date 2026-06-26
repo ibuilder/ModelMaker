@@ -4,6 +4,13 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased — PDF takeoff & markup
+- **PDF takeoff** — **Drawings → 📄 PDF Takeoff** opens a PDF drawing (pdf.js, offline worker),
+  lets you **calibrate the scale** (draw a line, enter its real length), then **measure distance /
+  area**, **count** items, and drop **rectangle** annotations directly on the sheet — with a running
+  Σ length / area / count panel, an editable measurement list, and **CSV export** of the takeoff
+  lines. Coordinates are stored in PDF user-space so measurements stay correct as you zoom.
+
 ## Unreleased — GIS / topography layer
 - **Import GIS & topography** — **Open ▾ → Open mesh / point cloud / GIS…** now also opens
   **GeoJSON** (parcels, contours, site vectors → points/lines/filled polygons) and **GeoTIFF DEMs**
