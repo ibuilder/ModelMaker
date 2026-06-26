@@ -709,6 +709,15 @@ export class ProformaUI {
         + `loan ${money(l.loan_drawn)}/${money(l.loan_amount)} · available ${money(l.loan_available)}`
         + (l.accrued_interest ? ` · <span style="color:#e2554a">accrued interest ${money(l.accrued_interest)}</span> @ ${(l.interest_rate * 100).toFixed(2)}% (outstanding ${money(l.outstanding_with_interest)})` : "")
         + ` `;
+      // interest re-forecast vs the underwritten reserve — is the live carrying cost on plan?
+      if (l.budgeted_interest_reserve || l.forecast_interest) {
+        const iv = l.interest_variance;
+        const ic = iv < 0 ? "#e2554a" : "#33d17a";
+        const il = document.createElement("div"); il.style.marginTop = "2px";
+        il.innerHTML = `↳ Interest re-forecast: reserve <b>${money(l.budgeted_interest_reserve)}</b> vs forecast <b>${money(l.forecast_interest)}</b> `
+          + `(accrued ${money(l.accrued_interest)} + to-go) · <span style="color:${ic}">${iv >= 0 ? "under" : "over"} ${money(Math.abs(iv))}</span>`;
+        ld.appendChild(il);
+      }
       const dr = document.createElement("button"); dr.className = "tool-btn"; dr.textContent = "⬇ Lender draw request (PDF)";
       dr.style.fontSize = "10px"; dr.onclick = async () => {
         try { const blob = await this.api.loanDrawRequestPdf(pid, 1);

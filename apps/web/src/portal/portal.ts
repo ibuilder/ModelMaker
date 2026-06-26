@@ -674,6 +674,28 @@ export class PortalUI {
         textContent: "The G702/G703 pay app and owner invoice draw from this same budget-seeded Schedule of Values." }));
       this.root.appendChild(billing);
 
+      // subcontractor billing — the GC-pays-subs mirror of owner billing
+      const subc = document.createElement("div"); subc.className = "dash-card"; subc.style.marginBottom = "10px";
+      const sh = document.createElement("div"); sh.className = "section-title";
+      sh.style.cssText = "display:flex;justify-content:space-between;align-items:center";
+      sh.append(Object.assign(document.createElement("span"), { textContent: "Subcontractor billing" }));
+      const openSi = document.createElement("button"); openSi.className = "tool-btn"; openSi.textContent = "open"; openSi.onclick = () => jumpTo("sub_invoice");
+      sh.appendChild(openSi); subc.appendChild(sh);
+      const sbody = document.createElement("div"); sbody.innerHTML = `<div class="meta">loading…</div>`;
+      subc.appendChild(sbody); this.root.appendChild(subc);
+      void this.host.api.subcontractorBilling(pid).then((sb) => {
+        if (!sb.invoice_count) { sbody.innerHTML = `<div class="meta">No subcontractor invoices yet — log them in Subcontractor Invoices.</div>`; return; }
+        const t = sb.totals;
+        sbody.innerHTML = `<div class="meta" style="margin-bottom:4px">${sb.subs.length} subs · billed <b>${usd(t.billed)}</b> of ${usd(t.contract_value)} `
+          + `· retainage ${usd(t.retainage)} · paid ${usd(t.paid)} · remaining ${usd(t.remaining)}</div>`;
+        for (const s of sb.subs.slice(0, 8)) {
+          const r = document.createElement("div"); r.className = "meta"; r.style.margin = "1px 0";
+          r.innerHTML = `${s.vendor ?? s.subcontract_ref ?? "—"}${s.trade ? ` · ${s.trade}` : ""}: billed <b>${usd(s.billed)}</b>`
+            + (s.contract_value ? ` / ${usd(s.contract_value)}` : "") + ` · retainage ${usd(s.retainage)} · paid ${usd(s.paid)}`;
+          sbody.appendChild(r);
+        }
+      }).catch(() => { sbody.innerHTML = `<div class="meta">Subcontractor billing unavailable.</div>`; });
+
       // cash-flow / draw curve — the cost-loaded schedule (monthly bars + cumulative S-curve)
       const cfCard = document.createElement("div"); cfCard.className = "dash-card"; cfCard.style.marginBottom = "10px";
       cfCard.appendChild(Object.assign(document.createElement("div"), { className: "section-title", textContent: "Cash flow (cost-loaded schedule)" }));

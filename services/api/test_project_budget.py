@@ -197,11 +197,34 @@ with TestClient(app) as c:
     expect = round(ld2["loan_drawn"] * 0.075 * 180 / 365, 2)
     assert abs(ld2["accrued_interest"] - expect) < 1.0, (ld2["accrued_interest"], expect)
     assert ld2["outstanding_with_interest"] == round(ld2["loan_drawn"] + ld2["accrued_interest"], 2), ld2
+    # interest re-forecast: actual accrued + projected remaining carry vs the underwritten reserve
+    assert ld2["budgeted_interest_reserve"] > 0, ld2
+    assert ld2["forecast_interest"] >= ld2["accrued_interest"], ld2                 # forecast ≥ what's accrued
+    assert ld2["interest_variance"] == round(ld2["budgeted_interest_reserve"] - ld2["forecast_interest"], 2), ld2
 
     # per-cost-code draw composition — the construction draw broken out by cost code (from the SOV)
     cd = c.get(f"/projects/{pid}/construction-draws").json()
     assert cd["by_cost_code"], "draw composition by cost code"
     assert any(x["billed"] == 1_000_000 for x in cd["by_cost_code"]), cd["by_cost_code"]   # the billed concrete line
+
+    # subcontractor billing — the GC-pays-subs mirror: pay apps roll up vs the subcontract value
+    sc = mk(c, pid, "subcontract", {"vendor": "Acme Concrete", "trade": "Concrete", "value": 1_750_000,
+                                     "retainage_pct": 10, "cost_code": cc_conc})
+    c.post(f"/projects/{pid}/modules/subcontract/{sc['id']}/transition", json={"action": "execute"})
+    si1 = mk(c, pid, "sub_invoice", {"vendor": "Acme Concrete", "subcontract": sc["id"],
+                                     "amount": 400_000, "retainage_pct": 10, "cost_code": cc_conc})
+    c.post(f"/projects/{pid}/modules/sub_invoice/{si1['id']}/transition", json={"action": "approve"})
+    c.post(f"/projects/{pid}/modules/sub_invoice/{si1['id']}/transition", json={"action": "pay"})
+    si2 = mk(c, pid, "sub_invoice", {"vendor": "Acme Concrete", "subcontract": sc["id"], "amount": 200_000, "retainage_pct": 10})
+    c.post(f"/projects/{pid}/modules/sub_invoice/{si2['id']}/transition", json={"action": "approve"})
+    mk(c, pid, "sub_invoice", {"vendor": "Acme Concrete", "subcontract": sc["id"], "amount": 99_999})  # submitted → not counted
+    sb = c.get(f"/projects/{pid}/subcontractor-billing").json()
+    assert sb["subcontract_count"] == 1 and sb["invoice_count"] == 3, sb
+    row = sb["subs"][0]
+    assert row["contract_value"] == 1_750_000 and row["billed"] == 600_000, row    # only approved+paid count
+    assert row["retainage"] == 60_000 and row["paid"] == 360_000, row              # 10% retainage; paid = 400k net
+    assert row["remaining"] == 1_150_000, row
+    assert sb["totals"]["billed"] == 600_000 and sb["totals"]["paid"] == 360_000, sb["totals"]
 
     # PX executive summary — on-schedule + on-budget in one health view
     pxs = c.get(f"/projects/{pid}/px-summary").json()
