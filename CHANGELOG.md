@@ -4,6 +4,13 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased — GIS / topography layer
+- **Import GIS & topography** — **Open ▾ → Open mesh / point cloud / GIS…** now also opens
+  **GeoJSON** (parcels, contours, site vectors → points/lines/filled polygons) and **GeoTIFF DEMs**
+  (→ a hypsometric terrain mesh displaced by elevation). Layers are georeferenced (lon/lat projected
+  to metres; projected coords pass through), list in the federation panel, and align with the same
+  ⛭ transform / working-origin as other reference models. Offline (`geotiff` + `earcut`, no CDN).
+
 ## Unreleased — model federation, alignment & federated clash
 - **Navisworks-style model layering** — each reference overlay (mesh / point cloud) now has a ⛭
   transform panel in the federation list: X/Y/Z offset, a **Z-up → Y-up** flip, uniform scale,

@@ -76,7 +76,7 @@ buildMenu("open-menu", "Open ▾", [
   { label: "Open Project (.mmproj)…", onClick: () => void openProjectBundle() },
   { label: "Open IFC…", onClick: () => openModelFile("ifc") },
   { label: "Open Fragments (.frag)…", onClick: () => openModelFile("frag") },
-  { label: "Open mesh / point cloud…", onClick: () => openModelFile("ref") },
+  { label: "Open mesh / point cloud / GIS…", onClick: () => openModelFile("ref") },
   { label: "Sample models", sep: true },
   { label: "School — Structural", onClick: () => withViewer((v) => void v.loadSample("/school_str.frag", "School (Structural)")) },
   { label: "School — Architectural", onClick: () => withViewer((v) => void v.loadSample("/school_arq.frag", "School (Architectural)")) },

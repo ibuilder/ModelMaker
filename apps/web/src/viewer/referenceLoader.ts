@@ -14,14 +14,16 @@ import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
 import { STLLoader } from "three/addons/loaders/STLLoader.js";
 import { XYZLoader } from "three/addons/loaders/XYZLoader.js";
 import { readPointCloud, type PointCloud } from "./pointcloud";
+import { loadGisFile } from "./gis";
 
 export interface RefResult {
   object: THREE.Object3D;
-  kind: "mesh" | "points";
+  kind: "mesh" | "points" | "gis";
   info: string;                   // short human note (point/vertex count, decimation)
 }
 
-export const REF_EXTENSIONS = ["obj", "stl", "ply", "gltf", "glb", "pcd", "xyz", "las", "laz"] as const;
+export const REF_EXTENSIONS = ["obj", "stl", "ply", "gltf", "glb", "pcd", "xyz", "las", "laz",
+                               "geojson", "json", "tif", "tiff"] as const;
 
 function meshFromGeometry(geo: THREE.BufferGeometry, name: string): THREE.Object3D {
   if (!geo.getAttribute("normal")) geo.computeVertexNormals();
@@ -87,6 +89,10 @@ export async function loadReferenceModel(file: File): Promise<RefResult> {
       const pc = await readPointCloud(new Uint8Array(await file.arrayBuffer()), name);
       const info = `${pc.count.toLocaleString()} pts${pc.decimated ? ` (decimated from ${pc.sourceCount.toLocaleString()})` : ""}`;
       return { object: pointsFromGeometry(cloudGeometry(pc), name), kind: "points", info };
+    }
+    case "geojson": case "json": case "tif": case "tiff": {
+      const g = await loadGisFile(file);                 // GeoJSON vectors or a GeoTIFF DEM terrain
+      return { object: g.object, kind: "gis", info: g.info };
     }
     default:
       throw new Error(`unsupported model format ".${ext}"`);

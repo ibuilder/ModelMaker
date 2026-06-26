@@ -31,6 +31,7 @@
     "@thatopen/fragments": "3.4.5",
     "@thatopen/ui": "3.4.3",
     "camera-controls": "3.1.2",
+    "geotiff": "^3.0.5",
     "laz-perf": "^0.0.7",
     "qrcode": "^1.5.4",
     "three": "0.184.0",
