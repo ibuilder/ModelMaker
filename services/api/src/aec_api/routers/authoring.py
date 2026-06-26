@@ -161,6 +161,52 @@ async def upload_source_ifc(pid: str, file: UploadFile = File(...), publish: boo
     return out
 
 
+@router.get("/bridge/rvt/status")
+def rvt_bridge_status(_: str = Depends(current_user)):
+    """Is the optional paid Revit (.rvt) → IFC bridge available? The UI checks this before offering
+    the import, and shows the cost warning + the free IFC-export alternative."""
+    from .. import aps
+    return aps.status()
+
+
+@router.post("/projects/{pid}/import/rvt", status_code=202)
+async def import_rvt(pid: str, file: UploadFile = File(...), confirm_cost: bool = False,
+                     publish: bool = True, db: Session = Depends(get_db),
+                     actor: str = Depends(require_role("editor"))):
+    """Import a native Revit .rvt by converting it to IFC via the paid APS bridge, then treat it like
+    any source IFC (authoring / drawings / analysis / proforma all flow from it). Gated twice: the
+    bridge must be configured (else 501 → use free IFC export), and the caller must `confirm_cost`
+    (else 402) because Autodesk bills per conversion."""
+    from .. import aps
+    p = db.get(Project, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    if not aps.is_enabled():
+        raise HTTPException(501, aps.status()["message"])          # bridge off → free alternative
+    if not confirm_cost:
+        raise HTTPException(402, "RVT conversion incurs Autodesk APS cloud-credit cost. Re-send with "
+                                 "confirm_cost=true to proceed.")
+    data = await file.read()
+    try:
+        ifc = aps.translate_rvt_to_ifc(data, file.filename or "model.rvt")
+    except (RuntimeError, NotImplementedError) as e:
+        raise HTTPException(502, f"RVT→IFC bridge: {e}")           # clear, actionable provisioning error
+    _IFC_DIR.joinpath(pid).mkdir(parents=True, exist_ok=True)
+    ifc_path = _IFC_DIR / pid / "source.ifc"
+    ifc_path.write_bytes(ifc)
+    storage.put(f"{pid}/source.ifc", ifc)
+    p.source_ifc = str(ifc_path)
+    db.commit()
+    audit.record(db, action="ifc.import_rvt", actor=actor, method="POST", path=f"/projects/{pid}/import/rvt",
+                 detail={"rvt": file.filename, "ifc_bytes": len(ifc)})
+    db.commit()
+    out: dict = {"source_ifc": str(ifc_path), "size": len(ifc), "source": "aps_rvt_bridge"}
+    if publish:
+        _publish_bg(pid)
+        out["publish"] = "running"
+    return out
+
+
 def _publish(p: Project, reconvert: bool = True) -> dict:
     from aec_data import properties_index  # type: ignore
 
