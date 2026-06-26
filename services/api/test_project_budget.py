@@ -236,6 +236,14 @@ with TestClient(app) as c:
     assert "variance_at_completion" in pxs["budget"] and pxs["budget"]["committed_pct"] >= 0, pxs["budget"]
     assert pxs["budget"]["buyout"]["packages"] == 1, pxs["budget"]["buyout"]
 
+    # cross-project executive portfolio — this project shows up with its on-schedule/on-budget status
+    pf = c.get("/portfolio/executive").json()
+    assert pf["project_count"] >= 1 and len(pf["projects"]) == pf["project_count"], pf
+    me_row = next((r for r in pf["projects"] if r["id"] == pid), None)
+    assert me_row is not None and me_row["gmp"] == b2["totals"]["budget"], me_row
+    assert me_row["status"] in ("on_track", "at_risk", "behind"), me_row
+    assert sum(pf["status_tally"].values()) == pf["project_count"], pf["status_tally"]
+
     print(f"PROJECT BUDGET OK - GMP computed ${b['gmp']['computed']:,.0f} (cost of work ${cow:,.0f}); "
           f"direct/GC/GR + OH/fee/contingency; bid packages + staffing + proforma reconciled; "
           f"owner SOV seeded from budget ({seed['created']} lines = ${seed['scheduled_value']:,.0f}); "

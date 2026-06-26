@@ -932,6 +932,16 @@ export class ApiClient {
     if (!res.ok) throw new Error(`draw request PDF -> ${res.status}`);
     return res.blob();
   }
+  /** Cross-project executive roll-up: each project's on-schedule + on-budget status + portfolio totals. */
+  executivePortfolio() {
+    return this.json<{
+      projects: { id: string; name: string; status: "on_track" | "at_risk" | "behind"; spi: number | null;
+        pct_complete: number; lookahead_3wk: number; milestones_late: number; gmp: number; eac: number;
+        variance_at_completion: number; committed_pct: number }[];
+      totals: { gmp: number; eac: number; variance_at_completion: number; committed: number };
+      status_tally: { on_track: number; at_risk: number; behind: number }; project_count: number }>(
+      `/portfolio/executive`);
+  }
   /** Subcontractor billing rollup — each subcontract's pay apps vs contract value (GC-pays-subs). */
   subcontractorBilling(pid: string) {
     return this.json<{ subs: { subcontract_ref: string | null; vendor: string | null; trade: string | null;
