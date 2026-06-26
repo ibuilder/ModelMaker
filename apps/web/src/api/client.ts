@@ -345,6 +345,16 @@ export class ApiClient {
     return this.json<{ answer: string; source: string; ai_enabled: boolean; snapshot?: unknown }>(
       `/projects/${pid}/ai/ask`, { method: "POST", body: JSON.stringify({ question }) });
   }
+  // --- report center ---------------------------------------------------------
+  /** Catalog of available reports (id, name, group). */
+  reports() {
+    return this.json<{ reports: { id: string; name: string; group: string }[] }>(`/reports`);
+  }
+  /** URL of a generated report — fmt = pdf | xlsx. */
+  reportUrl(pid: string, report: string, fmt: "pdf" | "xlsx") {
+    return this.url(`/projects/${pid}/reports/${report}.${fmt}`);
+  }
+
   // --- contract documents (generate / scope library / sign) -----------------
   /** URL of a generated contract document — doc = agreement | prime | co | exhibit. */
   contractDocUrl(pid: string, key: string, rid: string, doc: string, clauses?: string, attach = false) {

@@ -103,6 +103,29 @@ function exportCloseoutPackage() {
   window.open(api.url(`/projects/${projectId}/closeout/package.zip`), "_blank");
 }
 
+/** Report Center — a catalog of detailed reports, each exportable as PDF or Excel. */
+async function openReportCenter() {
+  if (!projectId) { toast("Open a project first", "info"); return; }
+  const pid = projectId;
+  let cat;
+  try { cat = (await api.reports()).reports; } catch { toast("couldn't load reports (connect a project)", "error"); return; }
+  const { card } = modalShell("Report Center", 420);
+  card.append(Object.assign(document.createElement("div"), { className: "meta", textContent: "Detailed reports — download as PDF or Excel:" }));
+  const groups = [...new Set(cat.map((r) => r.group))];
+  for (const g of groups) {
+    const h = document.createElement("div"); h.className = "section-title"; h.textContent = g; h.style.marginTop = "8px"; card.appendChild(h);
+    for (const rep of cat.filter((r) => r.group === g)) {
+      const row = document.createElement("div"); row.className = "layer-row";
+      const name = document.createElement("span"); name.className = "name"; name.textContent = rep.name;
+      const pdf = document.createElement("button"); pdf.className = "tool-btn"; pdf.textContent = "⬇ PDF";
+      pdf.onclick = () => window.open(api.reportUrl(pid, rep.id, "pdf"), "_blank");
+      const xls = document.createElement("button"); xls.className = "tool-btn"; xls.textContent = "⬇ Excel";
+      xls.onclick = () => window.open(api.reportUrl(pid, rep.id, "xlsx"), "_blank");
+      row.append(name, pdf, xls); card.appendChild(row);
+    }
+  }
+}
+
 /**
  * The free, offline way to get a Revit/CAD model into the viewer — IFC is the source of truth, so
  * users don't need the paid Autodesk bridge: export IFC from Revit (built-in) or batch it with the
@@ -725,6 +748,10 @@ async function startup() {
     conn.className = "tool-btn"; conn.style.marginLeft = "6px"; conn.textContent = "🗄"; conn.title = "Data connections";
     conn.onclick = () => void import("./connections/connectionsUI").then((m) => m.openConnectionsModal(api, () => projectId));
     toolbar.insertBefore(conn, statusEl);
+    const reports = document.createElement("button");
+    reports.className = "tool-btn"; reports.style.marginLeft = "6px"; reports.textContent = "📊"; reports.title = "Report Center — exportable reports";
+    reports.onclick = () => void openReportCenter();
+    toolbar.insertBefore(reports, statusEl);
     const gear = document.createElement("button");
     gear.className = "tool-btn"; gear.style.marginLeft = "6px"; gear.textContent = "⚙"; gear.title = "Settings";
     gear.onclick = settingsModal;

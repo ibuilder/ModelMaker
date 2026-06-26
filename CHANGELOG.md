@@ -4,6 +4,14 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased — Report Center (detailed, exportable reports)
+- **📊 Report Center** — a catalog of detailed reports, each downloadable as **PDF or Excel**:
+  **Executive Summary** (CPI/SPI/EAC, % complete, open RFIs/submittals/COs, safety), **Cost Report**
+  (budget/committed/actual/forecast/variance by category), **EVM / S-Curve** (SPI, EAC, cash-flow
+  curve), and operational logs (Change Order / RFI / Submittal / Daily / Safety) + **Contracts &
+  Signatures**. Built from the existing px / budget / module engines (`reports.py`); endpoints
+  `GET /reports` + `GET /projects/{pid}/reports/{report}.{pdf,xlsx}`. Opens from the 📊 toolbar button.
+
 ## Unreleased — contract & change-order document lifecycle
 - **Generate contract documents** — from a contract record: **Prime Contract**, **Subcontract**
   (AIA A401-style), and **Change Order** (AIA G701-style, showing original → revised contract sum)
