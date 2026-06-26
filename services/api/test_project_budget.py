@@ -10,8 +10,19 @@ for f in ("./test_project_budget.db",):
     if os.path.exists(f):
         os.remove(f)
 
+from datetime import date  # noqa: E402
+
 from fastapi.testclient import TestClient  # noqa: E402
+
 from aec_api.main import app  # noqa: E402
+from aec_api.project_budget import _month_list  # noqa: E402
+
+# _month_list must never return empty (cashflow divides budget by len(months)). A reversed/blank
+# span — finish before start, a data-entry slip — collapses to the single start month.
+assert _month_list(date(2026, 2, 1), date(2026, 4, 30)) == ["2026-02", "2026-03", "2026-04"]
+assert _month_list(date(2026, 5, 1), date(2026, 5, 1)) == ["2026-05"]          # same month
+assert _month_list(date(2026, 5, 31), date(2026, 5, 1)) == ["2026-05"]         # reversed → start month
+assert _month_list(date(2026, 6, 1), date(2026, 1, 1)) == ["2026-06"]          # reversed across years
 
 
 def mk(c, pid, key, data):

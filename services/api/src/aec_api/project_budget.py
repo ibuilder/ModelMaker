@@ -64,7 +64,10 @@ def staffing_cost(data: dict) -> float:
 
 
 def _month_list(s: date, f: date) -> list[str]:
-    """Inclusive YYYY-MM months spanning s→f."""
+    """Inclusive YYYY-MM months spanning s→f. A reversed/blank span (finish before start —
+    a data-entry slip) collapses to the start month so callers never get an empty list."""
+    if (f.year, f.month) < (s.year, s.month):
+        f = s
     out, y, m = [], s.year, s.month
     while (y, m) <= (f.year, f.month):
         out.append(f"{y:04d}-{m:02d}")
