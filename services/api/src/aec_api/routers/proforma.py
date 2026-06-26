@@ -3,7 +3,7 @@ The pure engine (aec_api.proforma) is validated by Pydantic models that double a
 OpenAPI contract. A full proforma + waterfall solves in <100ms — run it in-request."""
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel, Field

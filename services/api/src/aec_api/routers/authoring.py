@@ -127,7 +127,7 @@ def publish(pid: str, reconvert: bool = Body(default=True), db: Session = Depend
             actor: str = Depends(require_role("editor"))):
     """Re-run the pipeline on the current source IFC (convert to .frag + reindex), off the
     request thread. Returns immediately; poll GET publish/status for completion."""
-    p = _project(db, pid)
+    _project(db, pid)  # 404 guard
     audit.record(db, action="ifc.publish", actor=actor, method="POST",
                  path=f"/projects/{pid}/publish")
     db.commit()

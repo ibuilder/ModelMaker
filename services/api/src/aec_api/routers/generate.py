@@ -9,7 +9,6 @@ and solve a starter acquisition proforma seeded from the generated program."""
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field

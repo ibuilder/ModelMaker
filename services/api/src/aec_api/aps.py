@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
 import urllib.parse
 import urllib.request
 
@@ -81,11 +80,11 @@ def translate_rvt_to_ifc(data: bytes, filename: str, poll_seconds: int = 600) ->
         raise RuntimeError(
             "APS_DA_ACTIVITY is not set. RVT→IFC needs a Design-Automation-for-Revit Activity that "
             "runs Revit's IFC exporter; provision it in your APS app and set its id in APS_DA_ACTIVITY.")
-    token = oauth_token()                                  # noqa: F841 — used by the steps below
-    # The remaining steps (OSS upload → WorkItem against `activity` → poll → download the IFC output)
-    # are exercised against the live APS service in a credentialed deployment. They are intentionally
-    # not stubbed with fake data: without real credentials there is nothing to return, so this raises
-    # rather than fabricate an IFC. Wire the WorkItem here once your DA Activity is provisioned.
+    # The remaining steps (OAuth via oauth_token() → OSS upload → WorkItem against `activity` → poll
+    # → download the IFC output) run against the live APS service in a credentialed deployment. They
+    # are intentionally not stubbed with fake data: without real credentials there is nothing to
+    # return, so this raises rather than fabricate an IFC (and avoids a pointless token round-trip).
+    # Wire the WorkItem here once your DA Activity is provisioned.
     raise NotImplementedError(
         "RVT→IFC Design Automation WorkItem runs in a credentialed APS deployment; configure your "
         "Design Automation Activity (APS_DA_ACTIVITY) to enable it. Until then, export IFC from Revit.")

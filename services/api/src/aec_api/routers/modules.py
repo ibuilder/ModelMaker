@@ -4,8 +4,6 @@ One set of routes serves every module (RFIs, Submittals, the change-order chain,
 acting user's *party role* gates workflow transitions; the *capability role* gates writes."""
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session

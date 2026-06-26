@@ -5,11 +5,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import source_ifc_path as _source_ifc
+from ..models import Project
 
 _DATA_SRC = Path(__file__).resolve().parents[4] / "data" / "src"
 if str(_DATA_SRC) not in sys.path:

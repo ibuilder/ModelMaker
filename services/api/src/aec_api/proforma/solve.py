@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from datetime import date
 
-import numpy as np
-
 from . import operations as ops
 from . import returns as ret
 from .schedule import monthly_uses

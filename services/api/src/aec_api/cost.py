@@ -172,8 +172,8 @@ def lien_waiver(db: Session, pid: str, kind: str = "conditional_progress", app_n
         body = (f"The undersigned has been paid in full for all labor, services, equipment, or "
                 f"material furnished to {customer or '[Customer]'} on the job of {customer or '[Owner]'} "
                 f"located at {project_name or '[Project]'} " +
-                (f"and does hereby waive and release any mechanics lien, stop payment notice, or "
-                 f"payment bond rights the undersigned has on the above referenced project."
+                ("and does hereby waive and release any mechanics lien, stop payment notice, or "
+                 "payment bond rights the undersigned has on the above referenced project."
                  if final else
                  f"to the following extent: this release covers a progress payment for all labor, "
                  f"services, equipment, or material furnished through {through_date or '[date]'} in "

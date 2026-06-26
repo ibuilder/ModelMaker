@@ -15,7 +15,6 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import (JSON, Column, DateTime, Index, String, Table, func, insert, or_, select,

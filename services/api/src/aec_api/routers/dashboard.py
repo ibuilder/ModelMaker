@@ -212,4 +212,4 @@ def status_report(pid: str, db: Session = Depends(get_db), _: str = Depends(requ
     proj = db.get(Project, pid)
     pdf = report.project_status_pdf(db, pid, proj.name if proj else pid)
     return Response(pdf, media_type="application/pdf",
-                    headers={"Content-Disposition": f'attachment; filename="status-report.pdf"'})
+                    headers={"Content-Disposition": 'attachment; filename="status-report.pdf"'})
