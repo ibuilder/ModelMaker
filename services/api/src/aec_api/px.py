@@ -96,3 +96,64 @@ def summary(db: Session, pid: str, proforma_hard: float | None = None) -> dict:
             "baseline_movement": comp.get("vac_delta"),
         },
     }
+
+
+def alerts(db: Session, pid: str) -> dict[str, Any]:
+    """Predictive schedule alerts from the cost-loaded schedule + CPM (rules first): overdue work,
+    late starts, at-risk starts (incomplete predecessor), behind-schedule SPI, and a procurement
+    proxy (open submittals with near-term work). Feeds the executive report + a live endpoint."""
+    acts = pb._records(db, "schedule_activity", pid)
+    today = date.today()
+    horizon = today + timedelta(days=21)
+    pct_by_key: dict[str, float] = {}
+    for r in acts:
+        d = r.get("data") or {}
+        for k in (r.get("ref"), d.get("wbs")):
+            if k:
+                pct_by_key[str(k)] = _n(d.get("percent"))
+
+    def _preds(raw: Any) -> list[str]:
+        return [t.strip() for t in str(raw or "").replace(";", ",").split(",") if t.strip()]
+
+    out: list[dict[str, Any]] = []
+    for r in acts:
+        d = r.get("data") or {}
+        name = d.get("name") or r.get("ref")
+        pct = _n(d.get("percent"))
+        s, f = pb._pdate(d.get("start")), pb._pdate(d.get("finish"))
+        f = f or s
+        is_ms = d.get("activity_type") == "Milestone" or (s and f and s == f)
+        if f and f < today and pct < 100:
+            out.append({"level": "high", "type": "overdue", "ref": r.get("ref"),
+                        "title": f"{'Milestone' if is_ms else 'Activity'} overdue: {name}",
+                        "detail": f"due {f.isoformat()}, {pct:.0f}% complete"})
+        elif s and s < today and pct == 0:
+            out.append({"level": "medium", "type": "late_start", "ref": r.get("ref"),
+                        "title": f"Not started: {name}", "detail": f"planned start {s.isoformat()}"})
+        if s and today <= s < horizon and pct < 100:
+            late = [p for p in _preds(d.get("predecessors")) if pct_by_key.get(p, 100) < 100]
+            if late:
+                out.append({"level": "high", "type": "predecessor", "ref": r.get("ref"),
+                            "title": f"At-risk start: {name}",
+                            "detail": f"starts {s.isoformat()} but predecessor(s) {', '.join(late)} incomplete"})
+
+    spi = summary(db, pid)["schedule"]["spi"]
+    if spi is not None and spi < 0.95:
+        out.append({"level": "high" if spi < 0.85 else "medium", "type": "spi",
+                    "title": f"Behind schedule (SPI {spi})", "detail": "earned value trailing planned value"})
+
+    try:
+        subs = pb._records(db, "submittal", pid)
+        open_subs = [x for x in subs if x.get("workflow_state") not in ("approved", "closed", "void")]
+        near = sum(1 for r in acts if (st := pb._pdate((r.get("data") or {}).get("start"))) and today <= st < horizon)
+        if open_subs and near:
+            out.append({"level": "medium", "type": "procurement",
+                        "title": f"Procurement risk: {len(open_subs)} open submittal(s)",
+                        "detail": f"{near} activit{'y' if near == 1 else 'ies'} start within 3 weeks"})
+    except Exception:  # noqa: BLE001 — submittal module optional
+        pass
+
+    order = {"high": 0, "medium": 1, "low": 2}
+    out.sort(key=lambda a: order.get(a["level"], 3))
+    counts = {lvl: sum(1 for a in out if a["level"] == lvl) for lvl in ("high", "medium", "low")}
+    return {"alerts": out, "counts": counts}

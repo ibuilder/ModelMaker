@@ -49,6 +49,14 @@ def cpm(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("
     return schedule_cpm.compute(acts)
 
 
+@router.get("/projects/{pid}/schedule/alerts")
+def schedule_alerts(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Predictive schedule alerts — overdue work, late/at-risk starts (incomplete predecessor),
+    behind-schedule SPI, and a procurement-risk proxy — from the cost-loaded schedule + CPM."""
+    from .. import px
+    return px.alerts(db, pid)
+
+
 @router.get("/projects/{pid}/schedule/gantt.svg")
 def gantt(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     return _svg(schedule_viz.gantt_svg(db, pid))

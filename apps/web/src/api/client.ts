@@ -345,6 +345,12 @@ export class ApiClient {
     return this.json<{ answer: string; source: string; ai_enabled: boolean; snapshot?: unknown }>(
       `/projects/${pid}/ai/ask`, { method: "POST", body: JSON.stringify({ question }) });
   }
+  /** Predictive schedule alerts (overdue / late-start / at-risk predecessor / SPI / procurement). */
+  scheduleAlerts(pid: string) {
+    return this.json<{ alerts: { level: string; type: string; title: string; detail: string; ref?: string }[];
+      counts: { high: number; medium: number; low: number } }>(`/projects/${pid}/schedule/alerts`);
+  }
+
   // --- report center ---------------------------------------------------------
   /** Catalog of available reports (id, name, group). */
   reports() {

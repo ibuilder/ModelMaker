@@ -83,6 +83,11 @@ def _executive(db: Session, pid: str, name: str) -> Report:
     incidents = _records(db, "incident", pid)
     open_counts.append(["Safety incidents", len(incidents), len(incidents)])
     r.table("Open items", ["Item", "Open", "Total"], open_counts)
+    al = px.alerts(db, pid)
+    r.kpi("Schedule alerts", f"{al['counts']['high']} high / {al['counts']['medium']} med")
+    if al["alerts"]:
+        r.table("Predictive schedule alerts", ["Level", "Alert", "Detail"],
+                [[a["level"].upper(), a["title"], a.get("detail", "")] for a in al["alerts"][:25]])
     return r
 
 

@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased — audit follow-ups (ties, queue-readiness, RFI triage, schedule alerts)
+- **Predictive schedule alerts** — `GET /projects/{pid}/schedule/alerts` (+ a section in the Executive
+  report): overdue work, late / at-risk starts (incomplete predecessor), behind-schedule SPI, and a
+  procurement-risk proxy, from the cost-loaded schedule + CPM.
+- **AI RFI triage** — categorize + ball-in-court + draft response (see e-sign/AI sections).
+- **Relationship ties** — COR ⤳ SOV line, awarded bid ⤳ subcontract conversions; cor→change_event ref.
+- **Queue-readiness (no Celery)** — IFC publish extracted to a worker-callable `run_publish(pid)` +
+  interrupted-job recovery; rationale in docs/audit-2026-06.md.
+
 ## Unreleased — PDF digital signatures (PAdES) + e-sign options
 - **Digitally sign (PAdES)** — a contract/CO can be signed with a certificate-based **PAdES** digital
   signature (Bluebeam's model) via **pyHanko**: the document is rendered, signed (tamper-evident,
