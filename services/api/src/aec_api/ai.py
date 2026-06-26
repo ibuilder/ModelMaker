@@ -193,3 +193,57 @@ def draft_rfi(element: dict[str, Any], note: str | None = None) -> dict[str, Any
     except Exception as e:           # noqa: BLE001 — never fail the request over an AI assist
         _log.warning("AI RFI draft failed (%s); using template", e)
         return _template_draft(element, note)
+
+
+_BOQ_SYSTEM = (
+    "You are a senior quantity surveyor / cost estimator. From a plain-language project description, "
+    "draft a realistic construction Bill of Quantities: the major trades implied by the scope, each "
+    "with a quantity, unit, a market unit rate in USD, and a CSI MasterFormat division. Be "
+    "reasonable and conservative; do not invent scope the description doesn't imply."
+)
+_BOQ_SCHEMA = {
+    "type": "object", "additionalProperties": False, "required": ["lines"],
+    "properties": {"lines": {"type": "array", "items": {
+        "type": "object", "additionalProperties": False,
+        "required": ["description", "quantity", "unit", "rate"],
+        "properties": {
+            "description": {"type": "string"},
+            "quantity": {"type": "number"},
+            "unit": {"type": "string"},
+            "rate": {"type": "number"},
+            "division": {"type": "string"},
+        }}}},
+}
+
+
+def estimate_boq(description: str) -> dict[str, Any]:
+    """Draft a Bill of Quantities from a plain-text project description. Uses Claude when configured;
+    without a key returns a graceful stub so the UI degrades cleanly (no fabricated numbers)."""
+    desc = (description or "").strip()
+    if not desc:
+        return {"lines": [], "total": 0.0, "source": "empty", "message": "Describe the project to draft a BOQ."}
+    if not ai_enabled():
+        return {"lines": [], "total": 0.0, "source": "disabled",
+                "message": "AI estimating isn't configured — set an Anthropic API key in Settings to "
+                           "draft a Bill of Quantities from a description."}
+    try:
+        from anthropic import Anthropic  # lazy: only when a key is configured
+
+        client = Anthropic(api_key=settings_store.get("ANTHROPIC_API_KEY"))
+        msg = (f"Project description:\n{desc}\n\nDraft the Bill of Quantities as JSON.")
+        resp = client.messages.create(
+            model=settings_store.get("AEC_AI_MODEL", "claude-opus-4-8"), max_tokens=2048,
+            system=_BOQ_SYSTEM, messages=[{"role": "user", "content": msg}],
+            output_config={"format": {"type": "json_schema", "schema": _BOQ_SCHEMA}, "effort": "low"})
+        text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", None) == "text")
+        data = json.loads(text)
+        lines = data.get("lines", [])
+        for ln in lines:
+            ln["amount"] = round(float(ln.get("quantity", 0) or 0) * float(ln.get("rate", 0) or 0), 2)
+        data["total"] = round(sum(ln.get("amount", 0) for ln in lines), 2)
+        data["source"] = "claude"
+        return data
+    except Exception as e:           # noqa: BLE001 — never fail the request over an AI assist
+        _log.warning("AI BOQ draft failed (%s)", e)
+        return {"lines": [], "total": 0.0, "source": "error",
+                "message": "Couldn't reach the AI service just now — try again shortly."}

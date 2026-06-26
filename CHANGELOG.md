@@ -4,6 +4,21 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased — AI estimate (text → BOQ)
+- **Draft a Bill of Quantities from a description** — the conceptual-estimate tool gains
+  **✨ Draft BOQ from description**: type the scope and the AI returns priced line items
+  (description / qty / unit / rate / CSI division) with a rolled-up total. Reuses the existing
+  Anthropic provider + `ai_enabled()` gate; degrades to a clean stub (no fabricated numbers) when no
+  API key is configured. Endpoint `POST /projects/{pid}/ai/estimate`.
+
+## Unreleased — regional classification standards + GAEB export
+- **Regional classifications** — map the model estimate's IFC-class line items to **DIN 276** (DACH),
+  **RICS NRM 1** (UK), or **CSI MasterFormat** (US/CA) via `GET /classifications` + a built-in code
+  table (`classification.py`).
+- **GAEB DA XML (X83) export** — `GET /projects/{pid}/estimate/gaeb.x83?system=…` exports the
+  estimate as a GAEB 3.2 Bill of Quantities (the DACH tender standard); the conceptual-estimate
+  result now has **↧ GAEB · DIN 276 / NRM 1 / MasterFormat** download buttons.
+
 ## Unreleased — PDF takeoff & markup
 - **PDF takeoff** — **Drawings → 📄 PDF Takeoff** opens a PDF drawing (pdf.js, offline worker),
   lets you **calibrate the scale** (draw a line, enter its real length), then **measure distance /

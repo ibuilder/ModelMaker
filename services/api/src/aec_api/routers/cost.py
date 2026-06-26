@@ -14,7 +14,7 @@ from .. import cost
 from .. import modules as me
 from ..db import get_db
 from ..models import Project
-from ..rbac import require_role
+from ..rbac import current_user, require_role
 
 router = APIRouter()
 
@@ -421,6 +421,30 @@ def estimate_from_model(pid: str, db: Session = Depends(get_db), _: str = Depend
     except Exception:                                 # noqa: BLE001 — benchmark is best-effort
         gfa_sf = None
     return est.estimate_from_takeoff(rows, gfa_sf=gfa_sf)
+
+
+@router.get("/classifications")
+def list_classifications(_: str = Depends(current_user)):
+    """Regional classification systems available for estimate coding / GAEB export."""
+    from .. import classification as cls
+    return {"systems": cls.systems()}
+
+
+@router.get("/projects/{pid}/estimate/gaeb.x83")
+def estimate_gaeb(pid: str, system: str = "din276", db: Session = Depends(get_db),
+                  _: str = Depends(require_role("viewer"))):
+    """Export the model estimate as a GAEB DA XML 3.2 Bill of Quantities (X83), coded to a regional
+    classification (din276 / nrm1 / masterformat). 409 if the project has no source IFC."""
+    from ..deps import source_ifc_path
+    from aec_data.qto import takeoff_file  # type: ignore
+    from .. import estimate as est, classification as cls
+    path = source_ifc_path(db, pid)
+    rows = takeoff_file(path, force_geometry=True)
+    est_out = est.estimate_from_takeoff(rows)
+    p = db.get(Project, pid)
+    xml = cls.gaeb_x83(p.name if p else "Project", est_out.get("lines", []), system)
+    return Response(xml, media_type="application/xml",
+                    headers={"Content-Disposition": f'attachment; filename="estimate-{system}.x83"'})
 
 
 @router.get("/projects/{pid}/qto/by-floor")

@@ -43,5 +43,14 @@ with TestClient(app) as c:
     out = ai.ask("anything", {"kpis": {"open_rfis": 3}})
     assert out["source"] == "disabled" and "snapshot" in out, out
 
-print("AI OK - ask endpoint grounds on a live snapshot (3 RFIs + 1 change event), "
-      "degrades gracefully with no key, rejects empty questions; ai.ask seam verified")
+    # AI estimate (text -> BOQ): degrades to a clean stub with no key; rejects empty input
+    est = c.post(f"/projects/{pid}/ai/estimate", json={"description": "Two-storey 500 m2 office, steel frame"}, headers=H)
+    assert est.status_code == 200, est.text
+    ej = est.json()
+    assert ej["source"] == "disabled" and ej["ai_enabled"] is False and ej["lines"] == [], ej
+    assert c.post(f"/projects/{pid}/ai/estimate", json={"description": "  "}, headers=H).status_code == 422
+    # ai.estimate_boq seam: amounts roll up from quantity x rate (verified on a synthetic line set)
+    assert ai.estimate_boq("")["source"] == "empty"
+
+print("AI OK - ask + estimate endpoints ground/degrade gracefully with no key, reject empty input; "
+      "ai.ask + ai.estimate_boq seams verified")

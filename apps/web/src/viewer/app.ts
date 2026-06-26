@@ -1240,6 +1240,28 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
             body.appendChild(kvTable(r.lines.map((l) => ({
               k: `${l.ifc_class.replace("Ifc", "")} (${l.quantity} ${l.unit} @ ${money(l.rate)})`,
               v: money(l.amount) }))));
+            const gaeb = document.createElement("div"); gaeb.className = "meta"; gaeb.style.marginTop = "8px";
+            gaeb.textContent = "Export GAEB (X83), coded to a regional standard:";
+            body.appendChild(gaeb);
+            for (const [sys, label] of [["din276", "DIN 276"], ["nrm1", "NRM 1"], ["masterformat", "MasterFormat"]] as const)
+              body.appendChild(toolBtn2(`↧ GAEB · ${label}`, () => window.open(api.url(`/projects/${pid}/estimate/gaeb.x83?system=${sys}`), "_blank")));
+          });
+        }));
+        b.appendChild(toolBtn2("✨ Draft BOQ from description", async () => {
+          const desc = prompt("Describe the project (scope, size, structure, finishes):", "");
+          if (!desc || !desc.trim()) return;
+          out.textContent = "drafting BOQ…";
+          let r;
+          try { r = await api.aiEstimate(pid, desc.trim()); }
+          catch { out.textContent = "AI estimate failed"; return; }
+          const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
+          if (!r.lines.length) { out.textContent = r.message || "no lines"; toast(r.message || "AI estimating not configured", "info"); return; }
+          out.textContent = `BOQ ${money(r.total || 0)} · ${r.lines.length} lines`;
+          showResult("AI-drafted Bill of Quantities", (body) => {
+            body.appendChild(resultNote(`<b>${money(r!.total || 0)}</b> across ${r!.lines.length} lines (AI draft — review before use)`, "ok"));
+            body.appendChild(kvTable(r!.lines.map((l) => ({
+              k: `${l.division ? l.division + " · " : ""}${l.description} (${l.quantity} ${l.unit} @ ${money(l.rate)})`,
+              v: money(l.amount ?? l.quantity * l.rate) }))));
           });
         }));
         b.appendChild(toolBtn2("▦ QTO by floor & discipline", async () => {

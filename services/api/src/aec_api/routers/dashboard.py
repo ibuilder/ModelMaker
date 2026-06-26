@@ -206,6 +206,17 @@ def ai_ask(pid: str, body: dict, db: Session = Depends(get_db),
     return {**ai.ask(question, ctx), "ai_enabled": ai.ai_enabled()}
 
 
+@router.post("/projects/{pid}/ai/estimate")
+def ai_estimate(pid: str, body: dict, _: str = Depends(require_role("viewer"))):
+    """Draft a Bill of Quantities from a plain-text project description (Claude when configured;
+    a graceful stub otherwise — never fabricates numbers without the model)."""
+    from fastapi import HTTPException
+    description = (body or {}).get("description", "").strip()
+    if not description:
+        raise HTTPException(422, "description is required")
+    return {**ai.estimate_boq(description), "ai_enabled": ai.ai_enabled()}
+
+
 @router.get("/projects/{pid}/report.pdf")
 def status_report(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """One-page project status report (KPIs, cost, open items by module, ball-in-court) as a PDF."""

@@ -52,3 +52,22 @@ self-hostable, and free to run on one machine**. That combination is the wedge.
   ERP connectors, risk/selections/bid-leveling, TRIR, templates, version history → **cut v0.1.3**).
 - **Quality gate:** `services/api/run_tests.py` (Python suites) + web tsc/vitest/build must be green
   before tagging; the in-app **update banner** also notifies users who can't auto-update.
+
+## OpenConstructionERP (datadrivenconstruction/OpenConstructionERP) — gap analysis (2026-06)
+Open-source construction ERP (AGPL). We already match most of it: estimating/QTO from IFC/RVT/DWG,
+4D/5D + EVM (SPI/CPI/EAC) + S-curve, bid leveling, **federated cross-discipline clash + BCF**,
+punchlist, daily diary/HSE, property-development lifecycle, AI chat, self-hosted/offline.
+
+**Added in response to the comparison:**
+- **GIS / topography** — GeoJSON + GeoTIFF DEM as georeferenced overlays (their "Geo Hub", but in
+  our existing viewer rather than a separate Cesium globe).
+- **PDF takeoff & markup** — calibrated measure / area / count + annotations + CSV.
+- **Regional classification standards + GAEB X83 export** — DIN 276 / NRM 1 / MasterFormat coding.
+- **AI estimate (text → BOQ)** — describe scope → priced line items (reuses our Anthropic seam).
+
+**Deliberately NOT cloned (disproportionate / low ROI for us):**
+- 55,000-item CWICR cost database across 9 languages / 11 price regions — huge curated data asset,
+  not code; we price via editable unit rates + (now) AI drafting.
+- OCR/YOLO photo-&-PDF auto-takeoff (PaddleOCR/YOLOv11) — heavy ML pipeline + models.
+- Accommodation / worker-camp module — niche.
+- A separate Cesium 3D globe — we georeference in the main viewer instead.

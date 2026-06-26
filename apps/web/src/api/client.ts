@@ -345,6 +345,12 @@ export class ApiClient {
     return this.json<{ answer: string; source: string; ai_enabled: boolean; snapshot?: unknown }>(
       `/projects/${pid}/ai/ask`, { method: "POST", body: JSON.stringify({ question }) });
   }
+  /** Draft a Bill of Quantities from a plain-text project description (AI; stub without a key). */
+  aiEstimate(pid: string, description: string) {
+    return this.json<{ lines: { description: string; quantity: number; unit: string; rate: number; amount?: number; division?: string }[];
+      total?: number; source: string; ai_enabled: boolean; message?: string }>(
+      `/projects/${pid}/ai/estimate`, { method: "POST", body: JSON.stringify({ description }) });
+  }
   login(username: string, password: string) {
     return this.json<{ token: string; username: string; role: string }>(
       "/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
