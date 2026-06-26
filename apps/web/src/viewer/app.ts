@@ -50,6 +50,7 @@ export interface ViewerApp {
   anchorPoint(): { x: number; y: number; z: number } | null;
   selectedGuidValue(): string | null;
   triggerOpen(kind: "ifc" | "frag" | "convert"): void;
+  openFile(kind: "ifc" | "frag" | "convert", file: File): Promise<void>;
   loadSample(file: string, label: string): Promise<void>;
   exportFrag(): Promise<void>;
   exportIfc(): void;
@@ -195,43 +196,76 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   container.addEventListener("dblclick", () => { if (section.enabled) section.createPlane(); });
 
   // ---- file loading --------------------------------------------------------
-  $("ifc-input").addEventListener("change", (e) => void openIfc(e.target as HTMLInputElement));
-  $("frag-input").addEventListener("change", (e) => loadFile(e.target as HTMLInputElement, (b, id) => loader.loadFragments(b, id), "loading"));
-  $("convert-input").addEventListener("change", (e) => convertAndLoad(e.target as HTMLInputElement));
-  // Open an IFC: show it instantly (client-side parse), and — when a project is open — also
-  // register it as the project's source model so drawings / clash / IDS / energy / exports /
-  // authoring populate automatically (they're all generated server-side from the source IFC).
-  async function openIfc(input: HTMLInputElement) {
-    const file = input.files?.[0]; input.value = "";
-    if (!file) return;
+  // The hidden file <input>s live in index.html and are opened + wired by main.ts, so the native
+  // file dialog can appear instantly on click without waiting for this (heavy) module to finish
+  // loading. main hands the chosen File straight to openFile() once the viewer is ready.
+  async function openFile(kind: "ifc" | "frag" | "convert", file: File) {
+    if (kind === "frag") await loadFile(file, (b, id) => loader.loadFragments(b, id), "loading");
+    else if (kind === "convert") await convertAndLoad(file);
+    else await openIfc(file);
+  }
+  // Above this, parsing the IFC in the browser (web-ifc WASM) is too slow / memory-heavy. When a
+  // project + backend are available we skip the in-browser parse entirely and let the server convert
+  // the IFC to Fragments off-thread, then stream the optimized result — the production large-model
+  // path (CLAUDE.md: never parse a full IFC in the browser at runtime).
+  const CLIENT_IFC_MAX = 60 * 1024 * 1024;   // ~60 MB
+  const mb = (n: number) => (n / 1048576).toFixed(0);
+
+  // Open an IFC: small files parse in-browser for an instant view (and, with a project open, also
+  // upload so drawings / clash / IDS / energy / exports / authoring regenerate server-side). Large
+  // files route straight to the server pipeline and stream back the published fragments.
+  async function openIfc(file: File) {
+    const pid = projectId;
+    const big = file.size > CLIENT_IFC_MAX;
+
+    // Large model + backend: server converts → we stream the published .frag. No in-browser parse.
+    if (big && connected && pid) {
+      let replace = true;
+      try { if ((await api.project(pid)).has_source_ifc) replace = confirm(`Replace this project's model with ${file.name} (${mb(file.size)} MB)? Drawings & analysis will regenerate.`); }
+      catch { /* offline check — proceed */ }
+      if (!replace) { notify(`kept the current project model`, "info"); return; }
+      notify(`${file.name} is large (${mb(file.size)} MB) — converting on the server for smooth streaming…`, "info");
+      try {
+        await api.uploadSourceIfc(pid, file);          // saves + sets source_ifc + publishes off-thread
+        const state = await waitForPublish(pid, (s) => setStatus(`processing model: ${s}…`));
+        if (state === "done") {
+          await loadProjectModel();                    // stream the optimized fragments with progress
+          void buildToolsPanel();
+          notify(`${file.name} loaded — drawings, QA, energy & authoring are ready`, "success");
+        } else {
+          notify(`model uploaded; server processing: ${state}`, "info");
+        }
+      } catch (e) { notify(`couldn't process on the server: ${(e as Error).message}`, "error"); }
+      return;
+    }
+
+    // Small file (or no backend): parse in-browser for an instant view.
+    if (big) notify(`${file.name} is large (${mb(file.size)} MB) — in-browser parsing may be slow; open a project for server-side conversion.`, "info");
     await withLoading(container, `loading ${file.name}`, async () => {
       await loader.loadIfc(new Uint8Array(await file.arrayBuffer()), nextId(file.name));
       await fitToModels();
     });
-    if (!connected || !projectId) { notify(`loaded ${file.name} (no project — view only)`, "success"); return; }
+    if (!connected || !pid) { notify(`loaded ${file.name} (no project — view only)`, "success"); return; }
     let replace = true;
-    try { if ((await api.project(projectId)).has_source_ifc) replace = confirm(`Replace this project's model with ${file.name}? Drawings & analysis will regenerate.`); }
+    try { if ((await api.project(pid)).has_source_ifc) replace = confirm(`Replace this project's model with ${file.name}? Drawings & analysis will regenerate.`); }
     catch { /* offline check — proceed */ }
     if (!replace) { notify(`loaded ${file.name} (project model unchanged)`, "info"); return; }
     notify(`Adding ${file.name} to the project — generating drawings & analysis…`, "info");
     try {
-      await api.uploadSourceIfc(projectId, file);     // saves + sets source_ifc + publishes off-thread
-      const state = await waitForPublish(projectId, (s) => setStatus(`processing model: ${s}…`));
+      await api.uploadSourceIfc(pid, file);            // saves + sets source_ifc + publishes off-thread
+      const state = await waitForPublish(pid, (s) => setStatus(`processing model: ${s}…`));
       void buildToolsPanel();                          // re-checks has_source_ifc → un-gates the tools
       notify(state === "done"
         ? `${file.name} is the project model — drawings, QA, energy & authoring are ready`
         : `model added; server processing: ${state}`, state === "done" ? "success" : "info");
     } catch (e) { notify(`couldn't add to project: ${(e as Error).message}`, "error"); }
   }
-  async function loadFile(input: HTMLInputElement, load: (b: Uint8Array, id: string) => Promise<unknown>, verb: string) {
-    const file = input.files?.[0];
-    if (!file) return;
+  async function loadFile(file: File, load: (b: Uint8Array, id: string) => Promise<unknown>, verb: string) {
     await withLoading(container, `${verb} ${file.name}`, async () => {
       await load(new Uint8Array(await file.arrayBuffer()), nextId(file.name));
       await fitToModels();
       notify(`loaded ${file.name}`, "success");
     });
-    input.value = "";
   }
   async function loadSample(file: string, label: string) {
     await withLoading(container, `loading ${label}`, async () => {
@@ -246,10 +280,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       notify(`loaded ${label}`, "success");
     });
   }
-  async function convertAndLoad(input: HTMLInputElement) {
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file) return;
+  async function convertAndLoad(file: File) {
     await withLoading(container, `converting ${file.name} (Autodesk bridge)`, async () => {
       const fd = new FormData(); fd.append("file", file);
       const res = await fetch(api.url("/convert"), { method: "POST", body: fd, headers: api.authHeaders() });
@@ -1556,7 +1587,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
     applySettings, selectByGuid, reloadModelPins, fitToModels, refreshIssues,
     anchorPoint: () => (lastPoint ? { x: lastPoint.x, y: lastPoint.y, z: lastPoint.z } : null),
     selectedGuidValue: () => selectedGuid,
-    triggerOpen, loadSample, exportFrag, exportIfc, handleKey,
+    triggerOpen, openFile, loadSample, exportFrag, exportIfc, handleKey,
     onModelShown: () => {
       // Wait for the container to actually have dimensions (the workspace just toggled visible, so
       // layout may not have flushed yet) before resizing — resizing at 0×0 sets a NaN aspect.

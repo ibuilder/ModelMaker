@@ -44,6 +44,25 @@ async function ensureViewer(): Promise<ViewerApp> {
 }
 const withViewer = (fn: (v: ViewerApp) => void) => void ensureViewer().then(fn);
 
+// ---- model file open: dialog first, heavy viewer in parallel -----------------
+// The hidden <input>s live in index.html, so the native file dialog can open instantly on click
+// (preserving the user-gesture) without waiting for the ~6 MB three/@thatopen viewer module. We
+// warm the viewer in parallel and hand it the chosen File on `change`. Desktop (Tauri) uses its
+// own native dialog via the viewer (the bundle is local, so init is fast).
+const isTauriShell = () => "__TAURI_INTERNALS__" in window;
+function openModelFile(kind: "ifc" | "frag" | "convert") {
+  if (isTauriShell()) { withViewer((v) => v.triggerOpen(kind)); return; }
+  void ensureViewer();                                   // warm the viewer while the user browses
+  document.getElementById(`${kind}-input`)?.click();     // instant native file dialog
+}
+for (const kind of ["ifc", "frag", "convert"] as const) {
+  document.getElementById(`${kind}-input`)?.addEventListener("change", (e) => {
+    const inp = e.target as HTMLInputElement;
+    const file = inp.files?.[0]; inp.value = "";
+    if (file) void ensureViewer().then((v) => v.openFile(kind, file));
+  });
+}
+
 // ---- Open / Save dropdown menus (extracted to ./ui/menus) -------------------
 const dismissMenusIfOutside = (e: Event) => { if (!(e.target as HTMLElement).closest(".menu")) closeMenus(); };
 document.addEventListener("pointerdown", dismissMenusIfOutside, true);
@@ -53,8 +72,8 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus
 // pre-warm the viewer when the file menus open so triggerOpen/export resolve promptly
 buildMenu("open-menu", "Open ▾", [
   { label: "Open Project (.mmproj)…", onClick: () => void openProjectBundle() },
-  { label: "Open IFC…", onClick: () => withViewer((v) => v.triggerOpen("ifc")) },
-  { label: "Open Fragments (.frag)…", onClick: () => withViewer((v) => v.triggerOpen("frag")) },
+  { label: "Open IFC…", onClick: () => openModelFile("ifc") },
+  { label: "Open Fragments (.frag)…", onClick: () => openModelFile("frag") },
   { label: "Sample models", sep: true },
   { label: "School — Structural", onClick: () => withViewer((v) => void v.loadSample("/school_str.frag", "School (Structural)")) },
   { label: "School — Architectural", onClick: () => withViewer((v) => void v.loadSample("/school_arq.frag", "School (Architectural)")) },
@@ -62,8 +81,8 @@ buildMenu("open-menu", "Open ▾", [
   { label: "Import from Revit / CAD", sep: true },
   { label: "Free: export IFC from Revit (no bridge)…", onClick: () => showFreeImportHelp() },
   { label: "Revit (.rvt) — paid Autodesk bridge…", onClick: () => void importRvtFlow() },
-  { label: "AutoCAD (.dwg) — paid bridge…", onClick: () => withViewer((v) => v.triggerOpen("convert")) },
-  { label: "Navisworks (.nwc) — paid bridge…", onClick: () => withViewer((v) => v.triggerOpen("convert")) },
+  { label: "AutoCAD (.dwg) — paid bridge…", onClick: () => openModelFile("convert") },
+  { label: "Navisworks (.nwc) — paid bridge…", onClick: () => openModelFile("convert") },
 ], () => void ensureViewer());
 buildMenu("save-menu", "Save ▾", [
   { label: "Save Project (.mmproj)", onClick: () => saveProjectBundle() },
