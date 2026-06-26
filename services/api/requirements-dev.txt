@@ -3,3 +3,4 @@
 #   PYTHONPATH=src python run_tests.py
 httpx>=0.27          # required by starlette.testclient
 pytest>=8.0          # optional: collects the run_tests gate
+pypdf>=4.0           # read generated PDFs in tests (contract documents)
