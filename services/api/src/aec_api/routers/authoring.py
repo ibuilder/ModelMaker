@@ -14,13 +14,15 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
+import uuid
+
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from .. import audit, storage
 from ..rbac import current_user, require_role
 from ..db import get_db
-from ..models import Project
+from ..models import Project, ProjectModel
 from . import properties as props_router
 
 _IFC_DIR = Path(os.environ.get("IFC_DIR", "/app/ifc"))   # local IFC copies the converter can read
@@ -159,6 +161,51 @@ async def upload_source_ifc(pid: str, file: UploadFile = File(...), publish: boo
         _publish_bg(pid)
         out["publish"] = "running"
     return out
+
+
+@router.get("/projects/{pid}/models")
+def list_project_models(pid: str, db: Session = Depends(get_db),
+                        _: str = Depends(require_role("viewer"))):
+    """Discipline models layered on the project beyond the primary source IFC (for federated clash)."""
+    rows = db.query(ProjectModel).filter_by(project_id=pid).order_by(ProjectModel.created_at).all()
+    return [{"id": m.id, "discipline": m.discipline,
+             "created_at": m.created_at.isoformat() if m.created_at else None} for m in rows]
+
+
+@router.post("/projects/{pid}/models", status_code=201)
+async def add_project_model(pid: str, file: UploadFile = File(...), discipline: str = Form("Model"),
+                            db: Session = Depends(get_db), actor: str = Depends(require_role("editor"))):
+    """Append a discipline IFC (STR / MEP / ARCH …) so it can take part in federated clash."""
+    if not db.get(Project, pid):
+        raise HTTPException(404, "project not found")
+    data = await file.read()
+    mid = uuid.uuid4().hex
+    (_IFC_DIR / pid / "models").mkdir(parents=True, exist_ok=True)
+    ifc_path = _IFC_DIR / pid / "models" / f"{mid}.ifc"
+    ifc_path.write_bytes(data)
+    storage.put(f"{pid}/models/{mid}.ifc", data)          # durable copy
+    m = ProjectModel(id=mid, project_id=pid, discipline=(discipline or "Model").strip() or "Model",
+                     ifc_path=str(ifc_path))
+    db.add(m)
+    audit.record(db, action="model.append", actor=actor, method="POST",
+                 path=f"/projects/{pid}/models", detail={"discipline": m.discipline})
+    db.commit()
+    return {"id": m.id, "discipline": m.discipline, "size": len(data)}
+
+
+@router.delete("/projects/{pid}/models/{mid}")
+def delete_project_model(pid: str, mid: str, db: Session = Depends(get_db),
+                         actor: str = Depends(require_role("editor"))):
+    m = db.get(ProjectModel, mid)
+    if not m or m.project_id != pid:
+        raise HTTPException(404, "model not found")
+    try:
+        Path(m.ifc_path).unlink(missing_ok=True)
+    except OSError:
+        pass
+    db.delete(m)
+    db.commit()
+    return {"deleted": True, "id": mid}
 
 
 @router.get("/bridge/rvt/status")

@@ -38,6 +38,17 @@ class Project(Base):
     topics: Mapped[list["Topic"]] = relationship(back_populates="project", cascade="all, delete-orphan")
 
 
+class ProjectModel(Base):
+    """An additional discipline model layered onto a project beyond its primary `source_ifc` —
+    e.g. STR / MEP / ARCH IFCs — so federated (cross-discipline) clash can run across them."""
+    __tablename__ = "project_models"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    discipline: Mapped[str] = mapped_column(String, default="Model")
+    ifc_path: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class Scenario(Base):
     """A modeled version of a development deal (Proforma). assumptions + last solved result
     stored as JSON so scenarios version/diff cheaply (guide §5)."""

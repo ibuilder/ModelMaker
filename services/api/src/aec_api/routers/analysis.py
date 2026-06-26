@@ -12,7 +12,7 @@ from .. import audit
 from ..rbac import require_role
 from ..db import get_db
 from ..deps import source_ifc_path as _source_ifc
-from ..models import Topic
+from ..models import Project, ProjectModel, Topic
 
 _DATA_SRC = Path(__file__).resolve().parents[4] / "data" / "src"
 if str(_DATA_SRC) not in sys.path:
@@ -69,20 +69,30 @@ def run_clash(
 @router.post("/projects/{pid}/clash/federated")
 def run_clash_federated(
     pid: str,
-    disciplines: dict = Body(..., embed=True),  # {"STR": "/path/str.ifc", "MEP": "/path/mep.ifc"}
+    disciplines: dict = Body(default={}, embed=True),  # optional {"STR": "/path/str.ifc", …}
     min_volume: float = 1e-3,
     create_topics: bool = False,
     limit: int = 200,
     db: Session = Depends(get_db),
     actor: str = Depends(require_role("editor")),
 ):
-    """Cross-discipline (federated) clash across 2+ models. Intra-model overlaps are
-    excluded. With create_topics=true, the top clashes become BCF clash topics."""
+    """Cross-discipline (federated) clash across 2+ models. Intra-model overlaps are excluded.
+    If no `disciplines` map is given, it's built from the project's own models — the primary source
+    IFC + any appended discipline models (POST /projects/{pid}/models). create_topics=true turns the
+    top clashes into BCF clash topics (→ pins / Issues)."""
     from aec_data import clash  # type: ignore
 
-    valid = {k: v for k, v in disciplines.items() if v and Path(v).exists()}
+    valid = {k: v for k, v in (disciplines or {}).items() if v and Path(v).exists()}
+    if not valid:                                   # auto-build from the project's model registry
+        p = db.get(Project, pid)
+        if p and p.source_ifc and Path(p.source_ifc).exists():
+            valid["Source"] = p.source_ifc
+        for m in db.query(ProjectModel).filter_by(project_id=pid):
+            if Path(m.ifc_path).exists():
+                key = m.discipline if m.discipline not in valid else f"{m.discipline} ({m.id[:4]})"
+                valid[key] = m.ifc_path
     if len(valid) < 2:
-        raise HTTPException(409, "need >=2 accessible discipline IFCs")
+        raise HTTPException(409, 'need >=2 accessible discipline models — append one via "Open IFC as discipline"')
     results = clash.detect_federated_files(valid, min_volume=min_volume)
 
     created = 0

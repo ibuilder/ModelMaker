@@ -1415,6 +1415,33 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
             body.appendChild(toolBtn2("Open Issues panel", () => (document.querySelector('.rail-btn[data-rail="issues"]') as HTMLElement)?.click()));
           });
         })));
+        b.appendChild(toolBtn2("🔗 Federated clash (disciplines)", () => withLoading(container, "Running federated clash", async () => {
+          let r;
+          try { r = await api.clashFederated(pid, { create_topics: true }); }
+          catch { toast("Federated clash needs ≥2 models — add one with “＋ Add discipline IFC”", "error"); return; }
+          out.textContent = `${r.count} cross-model clashes · ${r.created_topics} topics`;
+          toast(`Federated: ${r.count} clashes across ${r.disciplines.join(" × ")}`, r.count ? "info" : "success");
+          await refreshIssues(); await reloadModelPins();
+          const pairs: Record<string, number> = {};
+          for (const c of r.clashes) { const k = `${c.a_model} × ${c.b_model}`; pairs[k] = (pairs[k] || 0) + 1; }
+          showResult("Federated clash", (body) => {
+            body.appendChild(resultNote(`<b>${r!.count}</b> cross-model clashes across <b>${r!.disciplines.join(" × ")}</b> · <b>${r!.created_topics}</b> topics created.`, r!.count ? "bad" : "ok"));
+            if (Object.keys(pairs).length) body.appendChild(kvTable(Object.entries(pairs).map(([k, v]) => ({ k, v: String(v) }))));
+            body.appendChild(toolBtn2("Open Issues panel", () => (document.querySelector('.rail-btn[data-rail="issues"]') as HTMLElement)?.click()));
+          });
+        })));
+        b.appendChild(toolBtn2("＋ Add discipline IFC…", () => {
+          const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".ifc";
+          inp.onchange = () => void withLoading(container, "adding discipline model", async () => {
+            const file = inp.files?.[0]; if (!file) return;
+            const disc = (prompt("Discipline (e.g. STR, MEP, ARCH):", file.name.replace(/\.ifc$/i, "").slice(0, 16)) || "Model").trim() || "Model";
+            await api.addProjectModel(pid, file, disc);                                   // register server-side (for clash)
+            await loader.loadIfc(new Uint8Array(await file.arrayBuffer()), nextId(disc)); // view it layered
+            await fitToModels(); refreshFederation();
+            toast(`added ${disc} discipline model — now in federated clash`, "success");
+          });
+          inp.click();
+        }));
         b.appendChild(toolBtn2("✓ Validate (IDS)", () => withLoading(container, "Validating (IDS)", async () => {
           const r = await api.validate(pid);
           out.textContent = `IDS ${r.status.toUpperCase()} — ${r.summary.passed}/${r.summary.passed + r.summary.failed}`;

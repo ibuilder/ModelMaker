@@ -4,6 +4,18 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## Unreleased — model federation, alignment & federated clash
+- **Navisworks-style model layering** — each reference overlay (mesh / point cloud) now has a ⛭
+  transform panel in the federation list: X/Y/Z offset, a **Z-up → Y-up** flip, uniform scale,
+  **Move to picked point**, and Reset — so you can align several models in one space.
+- **Multi-discipline models** — append discipline IFCs (STR / MEP / ARCH …) to a project via the
+  Coordination panel's **＋ Add discipline IFC** (or `POST /projects/{pid}/models`); they layer in
+  the viewer and join clash.
+- **Federated (cross-discipline) clash** — **🔗 Federated clash** runs `detect_federated_files`
+  across the project's layered models (primary source IFC + appended disciplines), excludes
+  intra-model overlaps, lists clashes grouped by model-pair, and turns the top hits into BCF clash
+  topics → pins / Issues. (Clash needs real IFC geometry — meshes/point clouds don't clash.)
+
 ## Unreleased — multi-format reference models + QR share
 - **Open meshes & point clouds** — alongside IFC/Fragments, the viewer now opens **OBJ, STL, PLY,
   glTF/GLB** meshes and **PCD, XYZ, LAS, LAZ** point clouds as **view-only reference overlays** (IFC

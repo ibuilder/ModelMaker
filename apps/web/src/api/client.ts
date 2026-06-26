@@ -528,6 +528,30 @@ export class ApiClient {
     const q = new URLSearchParams({ create_topics: "true", ...(opts as Record<string, string>) }).toString();
     return this.json<ClashResult>(`/projects/${pid}/clash?${q}`, { method: "POST" });
   }
+  /** Federated (cross-discipline) clash across the project's layered models — primary source IFC +
+   *  any appended discipline models. 409 if fewer than 2 are available. */
+  clashFederated(pid: string, opts: { create_topics?: boolean; min_volume?: number; limit?: number } = {}) {
+    const q = new URLSearchParams({ create_topics: String(opts.create_topics ?? true),
+      ...(opts.min_volume != null ? { min_volume: String(opts.min_volume) } : {}),
+      ...(opts.limit != null ? { limit: String(opts.limit) } : {}) }).toString();
+    return this.json<{ disciplines: string[]; count: number; created_topics: number; truncated: boolean;
+      clashes: { a_model: string; a_class: string; a_guid: string; b_model: string; b_class: string;
+        b_guid: string; volume: number; method: "mesh" | "aabb"; point: Vec3 }[] }>(
+      `/projects/${pid}/clash/federated?${q}`, { method: "POST" });
+  }
+  /** Discipline models layered on a project (for federated clash). */
+  projectModels(pid: string) {
+    return this.json<{ id: string; discipline: string; created_at: string | null }[]>(`/projects/${pid}/models`);
+  }
+  async addProjectModel(pid: string, file: File, discipline: string) {
+    const fd = new FormData(); fd.append("file", file); fd.append("discipline", discipline);
+    const res = await fetch(this.url(`/projects/${pid}/models`), { method: "POST", body: fd, headers: this.authHeaders() });
+    if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || `add model -> ${res.status}`); }
+    return res.json() as Promise<{ id: string; discipline: string; size: number }>;
+  }
+  deleteProjectModel(pid: string, mid: string) {
+    return this.json<{ deleted: boolean; id: string }>(`/projects/${pid}/models/${mid}`, { method: "DELETE" });
+  }
   validate(pid: string) {
     return fetch(this.url(`/projects/${pid}/validate`), { method: "POST" }).then((r) => r.json() as Promise<ValidationResult>);
   }
