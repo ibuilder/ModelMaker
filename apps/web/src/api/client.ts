@@ -923,6 +923,7 @@ export class ApiClient {
     return this.json<{ loan_amount: number; equity: number; drawn_to_date: number; equity_drawn: number;
       loan_drawn: number; loan_available: number; loan_balance: number; pct_capital_drawn: number;
       interest_rate: number; accrued_interest: number; loan_start: string | null; outstanding_with_interest: number;
+      budgeted_interest_reserve: number; forecast_interest: number; interest_variance: number;
       invoice_count: number }>(`/projects/${pid}/loan-draws`);
   }
   /** Lender draw-request PDF (the bank-facing submission) as an auth'd blob. */
@@ -930,6 +931,14 @@ export class ApiClient {
     const res = await fetch(this.url(`/projects/${pid}/loan-draws/request.pdf?app_no=${appNo}`), { headers: this.authHeaders() });
     if (!res.ok) throw new Error(`draw request PDF -> ${res.status}`);
     return res.blob();
+  }
+  /** Subcontractor billing rollup — each subcontract's pay apps vs contract value (GC-pays-subs). */
+  subcontractorBilling(pid: string) {
+    return this.json<{ subs: { subcontract_ref: string | null; vendor: string | null; trade: string | null;
+      cost_code: string | null; contract_value: number; billed: number; retainage: number; paid: number;
+      remaining: number; applications: number }[];
+      totals: { contract_value: number; billed: number; retainage: number; paid: number; remaining: number };
+      subcontract_count: number; invoice_count: number }>(`/projects/${pid}/subcontractor-billing`);
   }
   /** Set the developer hard cost to the GC's GMP (replaces hard lines with one synced line). */
   syncGmpToHard(pid: string) {

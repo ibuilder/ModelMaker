@@ -1,0 +1,91 @@
+{
+  "key": "sub_invoice",
+  "name": "Subcontractor Invoices",
+  "section": "Cost",
+  "icon": "🧾",
+  "ref_prefix": "SINV",
+  "title_field": "vendor",
+  "pinnable": false,
+  "fields": [
+    {
+      "name": "vendor",
+      "label": "Subcontractor",
+      "type": "text",
+      "required": true,
+      "fieldset": "Application"
+    },
+    {
+      "name": "subcontract",
+      "label": "Subcontract",
+      "type": "reference",
+      "module": "subcontract",
+      "fieldset": "Application"
+    },
+    {
+      "name": "period",
+      "label": "Billing Period",
+      "type": "text",
+      "fieldset": "Application"
+    },
+    {
+      "name": "invoice_date",
+      "label": "Invoice Date",
+      "type": "date",
+      "fieldset": "Application"
+    },
+    {
+      "name": "amount",
+      "label": "This Application (gross)",
+      "type": "currency",
+      "required": true,
+      "fieldset": "Cost"
+    },
+    {
+      "name": "retainage_pct",
+      "label": "Retainage %",
+      "type": "number",
+      "fieldset": "Cost"
+    },
+    {
+      "name": "cost_code",
+      "label": "Cost Code",
+      "type": "reference",
+      "module": "cost_code",
+      "fieldset": "Cost"
+    }
+  ],
+  "workflow": {
+    "initial": "submitted",
+    "states": [
+      "submitted",
+      "approved",
+      "paid",
+      "rejected"
+    ],
+    "transitions": [
+      {
+        "from": "submitted",
+        "to": "approved",
+        "action": "approve",
+        "party": ["GC"]
+      },
+      {
+        "from": "submitted",
+        "to": "rejected",
+        "action": "reject",
+        "party": ["GC"]
+      },
+      {
+        "from": "approved",
+        "to": "paid",
+        "action": "pay",
+        "party": ["GC"]
+      }
+    ]
+  },
+  "list_columns": [
+    "subcontract",
+    "amount",
+    "invoice_date"
+  ]
+}

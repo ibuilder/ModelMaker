@@ -282,7 +282,8 @@ def sync_gmp_to_hard(pid: str, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{pid}/loan-draws")
-def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, db: Session = Depends(get_db)):
+def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, construction_months: int = 18,
+               db: Session = Depends(get_db)):
     """Construction-loan draw status from the GC's actual billing: owner invoices are the developer's
     draws to pay the GC, funded equity-first then debt. Returns the sized loan/equity (from Sources &
     Uses) vs drawn-to-date, the equity/loan split, and remaining loan availability — so the developer
@@ -298,8 +299,10 @@ def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, db: Session = D
 
     from .. import project_budget as _pb
     sumry = dvb.summarize(p.dev_budget or dvb.starter_budget())
-    cap = su.build(sumry, {"ltc": ltc, "rate": rate})
+    cap = su.build(sumry, {"ltc": ltc, "rate": rate, "construction_months": construction_months})
     debt, equity = float(cap["debt"]), float(cap["equity"])
+    budgeted_interest = round(sum(float(u["amount"]) for u in cap.get("uses", [])
+                                  if "interest" in str(u.get("label", "")).lower()), 2)
     invs = _me.list_records(db, "owner_invoice", pid, limit=1_000_000) if "owner_invoice" in _me.TABLES else []
     drawn = round(sum(float((r.get("data") or {}).get("amount") or 0) for r in invs), 2)
     equity_drawn = round(min(drawn, equity), 2)        # equity-first funding
@@ -327,6 +330,17 @@ def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, db: Session = D
         accrued += loan_portion * rate * max(0, (today - dd).days) / 365
     accrued = round(accrued, 2)
 
+    # interest re-forecast: actual accrued-to-date + projected remaining carry, vs the underwritten
+    # reserve — so the developer sees if the live carrying cost is tracking the underwriting. The
+    # already-drawn loan balance carries the full remaining build; remaining draws ramp (avg ½ period).
+    elapsed_m = ((today - loan_start).days / 30.4) if loan_start else 0.0
+    remaining_m = max(0.0, construction_months - elapsed_m)
+    remaining_loan = max(0.0, debt - loan_drawn)
+    remaining_interest = (loan_drawn * rate * remaining_m / 12
+                          + remaining_loan * rate * (remaining_m / 2) / 12)
+    forecast_interest = round(accrued + remaining_interest, 2)
+    interest_variance = round(budgeted_interest - forecast_interest, 2)   # +ve = under reserve (good)
+
     return {"loan_amount": round(debt, 2), "equity": round(equity, 2), "drawn_to_date": drawn,
             "equity_drawn": equity_drawn, "loan_drawn": loan_drawn,
             "loan_available": round(debt - loan_drawn, 2), "loan_balance": loan_drawn,
@@ -334,6 +348,9 @@ def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, db: Session = D
             "interest_rate": rate, "accrued_interest": accrued,
             "loan_start": loan_start.isoformat() if loan_start else None,
             "outstanding_with_interest": round(loan_drawn + accrued, 2),
+            "budgeted_interest_reserve": budgeted_interest,
+            "forecast_interest": forecast_interest,
+            "interest_variance": interest_variance,
             "invoice_count": len(invs)}
 
 

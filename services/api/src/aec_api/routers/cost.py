@@ -95,6 +95,49 @@ def summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require_ro
     return cost.summary(db, pid)
 
 
+@router.get("/projects/{pid}/subcontractor-billing")
+def subcontractor_billing(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Subcontractor billing — the GC-pays-subs mirror of owner billing. Each subcontract's pay
+    applications (sub_invoice records) rolled up: contract value vs billed-to-date (approved/paid),
+    retainage held, paid, and remaining-to-bill. Ties sub draws to the same cost codes and the GMP
+    direct-cost actual, so what subs bill the GC reconciles against what the GC bills the owner."""
+    def _n(v):
+        try:
+            return float(v or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    subs = {r["id"]: r for r in me.list_records(db, "subcontract", pid, limit=1_000_000)} \
+        if "subcontract" in me.TABLES else {}
+    invs = me.list_records(db, "sub_invoice", pid, limit=1_000_000) if "sub_invoice" in me.TABLES else []
+    rows: dict[str, dict] = {}
+    for r in invs:
+        d = r.get("data") or {}
+        scid = d.get("subcontract")
+        sub = subs.get(scid, {})
+        sd = sub.get("data") or {}
+        key = scid or d.get("vendor") or r.get("id")
+        row = rows.setdefault(key, {
+            "subcontract_ref": sub.get("ref"), "vendor": d.get("vendor") or sd.get("vendor"),
+            "trade": sd.get("trade"), "cost_code": d.get("cost_code") or sd.get("cost_code"),
+            "contract_value": round(_n(sd.get("value")), 2),
+            "billed": 0.0, "retainage": 0.0, "paid": 0.0, "applications": 0})
+        amt = _n(d.get("amount"))
+        ret_pct = _n(d.get("retainage_pct")) or _n(sd.get("retainage_pct"))
+        state = r.get("workflow_state")
+        row["applications"] += 1
+        if state in ("approved", "paid"):
+            row["billed"] = round(row["billed"] + amt, 2)
+            row["retainage"] = round(row["retainage"] + amt * ret_pct / 100, 2)
+        if state == "paid":
+            row["paid"] = round(row["paid"] + amt * (1 - ret_pct / 100), 2)
+    for row in rows.values():
+        row["remaining"] = round(row["contract_value"] - row["billed"], 2)
+    out = sorted(rows.values(), key=lambda x: -x["billed"])
+    tot = {k: round(sum(_n(r[k]) for r in out), 2) for k in ("contract_value", "billed", "retainage", "paid", "remaining")}
+    return {"subs": out, "totals": tot, "subcontract_count": len(subs), "invoice_count": len(invs)}
+
+
 @router.get("/projects/{pid}/budget/gmp")
 def gmp_budget(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """Full GC project budget (GMP): direct trade work (by CSI division + bid package) + General
