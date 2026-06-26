@@ -954,6 +954,20 @@ export class ProformaUI {
     const card = () => { const d = document.createElement("div"); d.className = "dash-card"; return d; };
     const irrColor = ret.equity_irr == null ? "var(--muted)" : ret.equity_irr >= TARGET ? "#33d17a" : ret.equity_irr >= TARGET * 0.8 ? "#ffd479" : "#e2554a";
 
+    // toolbar — save the current solve as a scenario (so it rolls into the Portfolio returns)
+    const tools = document.createElement("div"); tools.style.cssText = "display:flex;gap:6px;align-items:center;margin-bottom:8px";
+    const save = document.createElement("button"); save.className = "file-btn"; save.textContent = "💾 Save scenario";
+    save.title = "Save this solve as a named scenario — it then appears in the Portfolio with its returns";
+    save.onclick = async () => {
+      if (!pid) { this.setStatus("open a project to save a scenario"); return; }
+      const name = prompt("Save scenario as:", "Base case"); if (!name) return;
+      try { await this.api.createScenario(name, pid, this.a); this.setStatus(`saved scenario “${name}” — now in the Portfolio`); }
+      catch (e) { this.setStatus(`save failed: ${(e as Error).message}`); }
+    };
+    tools.append(save, Object.assign(document.createElement("span"), { className: "meta",
+      textContent: pid ? "Saved scenarios roll into the Portfolio's developer returns." : "Open a project to save scenarios." }));
+    host.appendChild(tools);
+
     // KPI cards
     const kpis = document.createElement("div"); kpis.className = "dash-cols"; kpis.style.marginBottom = "10px";
     const kpi = (label: string, val: string, color?: string) => {
