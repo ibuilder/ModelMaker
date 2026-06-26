@@ -242,6 +242,8 @@ with TestClient(app) as c:
     me_row = next((r for r in pf["projects"] if r["id"] == pid), None)
     assert me_row is not None and me_row["gmp"] == b2["totals"]["budget"], me_row
     assert me_row["status"] in ("on_track", "at_risk", "behind"), me_row
+    assert "equity_irr" in me_row and "equity_multiple" in me_row, me_row   # developer returns alongside GC status
+    assert "blended_equity_irr" in pf["totals"], pf["totals"]
     assert sum(pf["status_tally"].values()) == pf["project_count"], pf["status_tally"]
 
     print(f"PROJECT BUDGET OK - GMP computed ${b['gmp']['computed']:,.0f} (cost of work ${cow:,.0f}); "

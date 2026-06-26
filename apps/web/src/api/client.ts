@@ -937,8 +937,8 @@ export class ApiClient {
     return this.json<{
       projects: { id: string; name: string; status: "on_track" | "at_risk" | "behind"; spi: number | null;
         pct_complete: number; lookahead_3wk: number; milestones_late: number; gmp: number; eac: number;
-        variance_at_completion: number; committed_pct: number }[];
-      totals: { gmp: number; eac: number; variance_at_completion: number; committed: number };
+        variance_at_completion: number; committed_pct: number; equity_irr: number | null; equity_multiple: number | null }[];
+      totals: { gmp: number; eac: number; variance_at_completion: number; committed: number; equity: number; blended_equity_irr: number | null };
       status_tally: { on_track: number; at_risk: number; behind: number }; project_count: number }>(
       `/portfolio/executive`);
   }
