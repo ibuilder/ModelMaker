@@ -55,6 +55,40 @@ def construction_portfolio(db: Session = Depends(get_db), _: str = Depends(rbac.
     return {"projects": rows, "totals": tot, "project_count": len(rows)}
 
 
+@router.get("/portfolio/executive")
+def executive_portfolio(db: Session = Depends(get_db), _: str = Depends(rbac.current_user)):
+    """Cross-project executive roll-up — every project's on-schedule (SPI, % complete, lookahead,
+    late milestones) next to on-budget (GMP, EAC, variance-at-completion) with its overall status,
+    plus portfolio totals and a status tally. The 'how's the whole book doing?' view, built on the
+    same px-summary each project's dashboard shows."""
+    from .. import px
+    rows = []
+    tot = {"gmp": 0.0, "eac": 0.0, "variance_at_completion": 0.0, "committed": 0.0}
+    tally = {"on_track": 0, "at_risk": 0, "behind": 0}
+    for p in db.query(Project).all():
+        try:
+            s = px.summary(db, p.id)
+        except Exception:                              # noqa: BLE001 — a project with no data still lists
+            s = {"status": "on_track", "schedule": {}, "budget": {}}
+        sched, bud = s.get("schedule", {}), s.get("budget", {})
+        rows.append({
+            "id": p.id, "name": p.name, "status": s.get("status"),
+            "spi": sched.get("spi"), "pct_complete": sched.get("pct_complete", 0),
+            "lookahead_3wk": sched.get("lookahead_3wk", 0),
+            "milestones_late": (sched.get("milestones") or {}).get("late", 0),
+            "gmp": bud.get("gmp", 0), "eac": bud.get("eac", 0),
+            "variance_at_completion": bud.get("variance_at_completion", 0),
+            "committed_pct": bud.get("committed_pct", 0)})
+        tot["gmp"] += bud.get("gmp", 0); tot["eac"] += bud.get("eac", 0)
+        tot["variance_at_completion"] += bud.get("variance_at_completion", 0)
+        tot["committed"] += bud.get("committed", 0)
+        if s.get("status") in tally:
+            tally[s["status"]] += 1
+    tot = {k: round(v, 2) for k, v in tot.items()}
+    rows.sort(key=lambda r: (r["status"] != "behind", r["status"] != "at_risk", r["variance_at_completion"]))
+    return {"projects": rows, "totals": tot, "status_tally": tally, "project_count": len(rows)}
+
+
 @router.get("/projects/{pid}/safety/metrics")
 def safety_metrics(pid: str, hours: float | None = None, db: Session = Depends(get_db),
                    _: str = Depends(require_role("viewer"))):

@@ -113,6 +113,13 @@ export class PortalUI {
     budget.onclick = () => { this.activeKey = "__budget__"; void this.renderBudget(); this.buildNav(); };
     nav.appendChild(budget);
 
+    // first-class Portfolio destination — cross-project executive roll-up (all jobs at a glance)
+    const portfolio = document.createElement("button");
+    portfolio.className = "pnav-item pnav-home" + (this.activeKey === "__portfolio__" ? " active" : "");
+    portfolio.innerHTML = `<span class="ic">🏢</span> Portfolio`;
+    portfolio.onclick = () => { this.activeKey = "__portfolio__"; void this.renderPortfolio(); this.buildNav(); };
+    nav.appendChild(portfolio);
+
     const filter = document.createElement("input");
     filter.type = "search"; filter.placeholder = "Filter…"; filter.className = "portal-filter pnav-filter";
     nav.appendChild(filter);
@@ -504,6 +511,61 @@ export class PortalUI {
    *  + Contingency = GMP, each line budget vs committed (buyout) vs variance, reconciled to the
    *  prime contract value and the developer proforma's construction hard cost. The on-budget half of
    *  what a project executive lives in, next to the Schedule destination. */
+  /** Cross-project executive portfolio — every job's on-schedule + on-budget status at a glance.
+   *  Rows are clickable to switch projects. The 'how's the whole book doing?' destination. */
+  private async renderPortfolio() {
+    this.root.innerHTML = "";
+    this.root.appendChild(this.bar("Portfolio", () => { this.activeKey = null; void this.renderHome(); this.buildNav(); }));
+    const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
+    const vcol = (v: number) => v < 0 ? "#e2554a" : v > 0 ? "#33d17a" : "var(--muted)";
+    const pill: Record<string, [string, string]> = { on_track: ["On track", "#33d17a"], at_risk: ["At risk", "#ffd479"], behind: ["Behind", "#e2554a"] };
+    const status = document.createElement("div"); status.className = "meta"; status.textContent = "loading portfolio…";
+    this.root.appendChild(status);
+    const here = this.host.projectId();
+
+    void this.host.api.executivePortfolio().then((pf) => {
+      status.remove();
+      const t = pf.totals, ta = pf.status_tally;
+      const kpis = document.createElement("div"); kpis.className = "dash-cols"; kpis.style.marginBottom = "10px";
+      const kpi = (label: string, val: string, color?: string) => {
+        const c = document.createElement("div"); c.className = "dash-card"; c.style.flex = "1";
+        c.innerHTML = `<div class="meta">${label}</div><div style="font-size:18px;font-weight:700${color ? `;color:${color}` : ""}">${val}</div>`;
+        return c;
+      };
+      kpis.append(
+        kpi("Projects", String(pf.project_count)),
+        kpi("Portfolio GMP", usd(t.gmp)),
+        kpi("Variance at completion", usd(t.variance_at_completion), vcol(t.variance_at_completion)),
+        kpi("Status", `${ta.on_track}✓ ${ta.at_risk}△ ${ta.behind}⚠`),
+      );
+      this.root.appendChild(kpis);
+
+      const card = document.createElement("div"); card.className = "dash-card";
+      const tbl = document.createElement("table"); tbl.className = "portal-table"; tbl.style.fontSize = "11px";
+      tbl.innerHTML = `<thead><tr><th>Project</th><th>Status</th><th style="text-align:right">SPI</th>`
+        + `<th style="text-align:right">% cmpl</th><th style="text-align:right">GMP</th>`
+        + `<th style="text-align:right">EAC</th><th style="text-align:right">VAC</th><th style="text-align:right">Late MS</th></tr></thead>`;
+      const tb = document.createElement("tbody");
+      for (const p of pf.projects) {
+        const tr = document.createElement("tr"); tr.className = "kpi-click";
+        if (p.id === here) tr.style.fontWeight = "700";
+        const [lbl, col] = pill[p.status] ?? ["—", "var(--muted)"];
+        tr.innerHTML = `<td>${p.name}${p.id === here ? " ·" : ""}</td>`
+          + `<td><span class="ball-badge" style="background:${col}22;color:${col};border-color:${col}">${lbl}</span></td>`
+          + `<td style="text-align:right;color:${p.spi == null ? "var(--muted)" : p.spi >= 0.95 ? "#33d17a" : "#e2554a"}">${p.spi ?? "—"}</td>`
+          + `<td style="text-align:right">${p.pct_complete}%</td><td style="text-align:right">${usd(p.gmp)}</td>`
+          + `<td style="text-align:right">${usd(p.eac)}</td>`
+          + `<td style="text-align:right;color:${vcol(p.variance_at_completion)}">${usd(p.variance_at_completion)}</td>`
+          + `<td style="text-align:right;color:${p.milestones_late ? "#e2554a" : "var(--muted)"}">${p.milestones_late || "—"}</td>`;
+        tr.onclick = () => { if (p.id !== here) window.location.search = `?project=${p.id}`; };
+        tb.appendChild(tr);
+      }
+      tbl.appendChild(tb); card.appendChild(tbl); this.root.appendChild(card);
+      this.root.appendChild(Object.assign(document.createElement("div"), { className: "meta",
+        textContent: "Click a project to switch to it. On-schedule (SPI / % complete / late milestones) + on-budget (GMP / EAC / variance) across the book." }));
+    }).catch(() => { status.className = "empty-state"; status.innerHTML = `Portfolio unavailable<span class="es-hint">Needs at least one project with schedule/budget data.</span>`; });
+  }
+
   private async renderBudget() {
     const pid = this.host.projectId()!;
     this.root.innerHTML = "";
