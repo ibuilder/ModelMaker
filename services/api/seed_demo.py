@@ -52,22 +52,55 @@ else:
     pid = call("POST", "/projects", {"name": "Demo Tower"})["id"]
 print(f"seeding project {pid} as '{opts.user}'")
 
-# --- cost chain --------------------------------------------------------------
-codes = {
-    "03-3000": ("Cast-in-place concrete", 4_800_000),
-    "05-1200": ("Structural steel", 6_200_000),
-    "09-2900": ("Gypsum board", 1_350_000),
+# --- cost chain: cost codes (by CSI division) + budget lines + buyout + actuals --------------
+codes = {                                   # code: (description, division, budget)
+    "03-3000": ("Cast-in-place concrete", "03", 4_800_000),
+    "05-1200": ("Structural steel", "05", 6_200_000),
+    "23-0000": ("HVAC", "23", 3_100_000),
+    "26-0000": ("Electrical", "26", 2_700_000),
+    "09-2900": ("Gypsum board", "09", 1_350_000),
+    "01-5000": ("General requirements", "01", 1_200_000),   # Div 01 → General Requirements bucket
 }
 cost_codes = {}
-for code, (desc, budget) in codes.items():
-    cc = new("cost_code", {"code": code, "description": desc})
+for code, (desc, div, budget) in codes.items():
+    cc = new("cost_code", {"code": code, "description": desc, "division": div})
     cost_codes[code] = cc
-    new("commitment", {"description": f"{desc} sub", "cost_code": cc, "amount": round(budget * 0.92)})
-    new("direct_cost", {"description": "Equipment & misc", "cost_code": cc, "amount": round(budget * 0.03)})
+    new("budget", {"cost_code": cc, "description": desc, "revised": budget})          # GMP allocation
+    if div != "01":
+        com = new("commitment", {"description": f"{desc} sub", "cost_code": cc, "amount": round(budget * 0.92)})
+        act("commitment", com, "execute")                                            # → committed (buyout)
+        new("direct_cost", {"description": "Equipment & misc", "cost_code": cc, "amount": round(budget * 0.03)})
 
-pc = new("prime_contract", {"name": "GMP — Demo Tower", "value": 41_000_000})
+# GMP prime contract with markups (so the Budget destination computes a full GMP)
+pc = new("prime_contract", {"name": "GMP — Demo Tower", "type": "GMP", "value": 41_000_000,
+                            "overhead_pct": 5, "fee_pct": 4, "contingency_pct": 3})
 for i, amt in enumerate([2_400_000, 3_100_000, 2_750_000], 1):
-    new("owner_invoice", {"number": f"INV-{i:03d}", "amount": amt, "prime_contract": pc})
+    new("owner_invoice", {"number": f"INV-{i:03d}", "amount": amt, "prime_contract": pc, "period": f"2026-0{i+2}-01"})
+
+# --- project team (staffing → General Conditions) ----------------------------
+for role, cat, rate in [("Project Executive", "General Conditions", 8_000),
+                        ("Senior Project Manager", "General Conditions", 22_000),
+                        ("Superintendent", "General Conditions", 20_000),
+                        ("Safety Manager", "General Requirements", 15_000)]:
+    new("staffing", {"role": role, "category": cat, "count": 1, "rate": rate,
+                     "rate_period": "Month", "start": "2026-01-01", "finish": "2026-12-31"})
+
+# --- cost-loaded schedule (drives Schedule / 4D scrub / cash-flow / CPM) ------
+acts = [("Sitework", "Sitework", "2026-01-05", "2026-02-15", 1_500_000),
+        ("Foundations", "Concrete", "2026-02-10", "2026-04-10", 4_800_000),
+        ("Superstructure", "Steel", "2026-04-01", "2026-08-15", 6_200_000),
+        ("MEP rough-in", "MEP", "2026-06-01", "2026-10-30", 5_800_000),
+        ("Interiors & finishes", "Finishes", "2026-09-01", "2027-01-31", 4_200_000)]
+prev = None
+for i, (name, trade, s, f, bud) in enumerate(acts):
+    pct = [100, 80, 40, 10, 0][i]
+    a = new("schedule_activity", {"name": name, "trade": trade, "start": s, "finish": f,
+                                  "budget": bud, "percent": pct, "wbs": f"01.{i+1:02d}",
+                                  "predecessors": prev or ""})
+    prev = f"01.{i+1:02d}"
+
+# seed the owner Schedule of Values from the GMP budget + bill the first period
+call("POST", f"/projects/{pid}/cost/sov/from-budget?replace=true")
 
 # --- change-management chain -------------------------------------------------
 rfis = []
