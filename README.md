@@ -167,7 +167,14 @@ Deliverables** — with a sticky live-solved returns bar.
 
 ## Recent platform work
 
-- **Inspection, intel & robustness (latest, v0.1.81)** — a rebuilt **element properties panel**:
+- **Financial statements & tax (latest, v0.1.82)** — the Finance proforma gains a **Statements** tab
+  (and a Report-Center PDF/Excel): a stabilized **income statement** (PGR → EGI → NOI → depreciation →
+  net income), a **balance sheet** that ties to the dollar every year, a GAAP three-section
+  **cash-flow statement**, a **tax** schedule (27.5/39-yr straight-line depreciation, annual income
+  tax, and at sale **§1250 recapture** + **capital gains** + NIIT → an **after-tax IRR**), and the
+  development budget as a two-sided **Uses ∣ Sources** view. `POST /proforma/financials`,
+  `GET /projects/{pid}/financials`, `GET /projects/{pid}/budget/two-sided`.
+- **Inspection, intel & robustness (v0.1.81)** — a rebuilt **element properties panel**:
   structured **Attributes / Quantities / Property Sets** (IFC quantities now surfaced), value
   formatting, a live **filter**, click-to-copy + **Copy all**, and a collapsible-tree fallback.
   **Interchangeable municipal permit open data** — a Socrata feed across **NYC · SF · Chicago · LA ·
@@ -196,7 +203,7 @@ Deliverables** — with a sticky live-solved returns bar.
   cost burn; **QTO by floor & discipline**. Plus **multi-user** (members → role-scoped persona
   views), bulk site-photo + camera capture, and an optional **paid Revit (.rvt)→IFC bridge** (APS,
   feature-flagged with a cost gate; IFC stays the source of truth). One click (lot→building→deal)
-  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.81).
+  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.82).
 - **Rendering, families & computational design (M-theme)** — a viewer **render mode** (directional
   sun + soft shadows, ACES/PBR, IBL), a NOAA **sun-&-shadow study** (date · time · lat/long), and a
   Matterport-style first-person **walkthrough**; Revit-style **`IfcMaterialLayerSet` assemblies** on

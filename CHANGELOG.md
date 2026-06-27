@@ -4,6 +4,22 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.82 — financial statements & tax modeling
+- **Three financial statements + tax** — the Finance proforma gains a **Statements** tab (and a
+  Report-Center "Financial Statements" PDF/Excel) built on `financials.py`:
+  - **Income statement** — stabilized operating P&L (Potential Gross Rent → vacancy/credit → Effective
+    Gross Income → operating expenses → **NOI**; then interest, straight-line **depreciation**, income
+    tax → **net income**) plus a year-by-year operating summary.
+  - **Balance sheet** — Assets (land + improvements net of accumulated depreciation + capitalized
+    financing + cash) = Liabilities (loan) + Equity (paid-in + retained); **balances every year**.
+  - **Cash-flow statement** — GAAP three-section (Operating / Investing / Financing), indirect method.
+  - **Tax** — 27.5-yr residential / 39-yr commercial straight-line (land non-depreciable), annual income
+    tax, and at sale **§1250 depreciation recapture** (≤25%) stacked on **capital gains** (+ NIIT) —
+    driving an **after-tax** equity IRR / multiple. Institutional defaults, overridable via a `tax` block.
+  - **Two-sided budget** — the development budget as **Uses** (left) vs **Sources** (right); both tie.
+  - Endpoints: `POST /proforma/financials`, `GET /projects/{pid}/financials`,
+    `GET /projects/{pid}/budget/two-sided`.
+
 ## v0.1.81 — properties panel, multi-city permits, money + BCF hardening
 - **Robust properties panel** — the element inspector is now structured (IFC-class badge, copyable GUID,
   collapsible **Attributes / Quantities / Property Sets** with counts), formats values (numbers,
