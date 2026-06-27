@@ -9,6 +9,7 @@ import { ModelLoader } from "./loader";
 import { loadReferenceModel } from "./referenceLoader";
 import { type ModelIdMap } from "./modelIds";
 import { showQrModal } from "../ui/qr";
+import { askText } from "../ui/prompt";
 import { SelectionSets } from "./selectionSets";
 import { MeasureTool, type MeasureMode } from "../tools/measure";
 import { SectionTool } from "../tools/section";
@@ -1248,7 +1249,8 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
           });
         }));
         b.appendChild(toolBtn2("✨ Draft BOQ from description", async () => {
-          const desc = prompt("Describe the project (scope, size, structure, finishes):", "");
+          const desc = await askText("Draft BOQ from description",
+            { label: "Describe the project (scope, size, structure, finishes):", multiline: true, okLabel: "Draft" });
           if (!desc || !desc.trim()) return;
           out.textContent = "drafting BOQ…";
           let r;
@@ -1454,14 +1456,18 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
         })));
         b.appendChild(toolBtn2("＋ Add discipline IFC…", () => {
           const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".ifc";
-          inp.onchange = () => void withLoading(container, "adding discipline model", async () => {
+          inp.onchange = async () => {
             const file = inp.files?.[0]; if (!file) return;
-            const disc = (prompt("Discipline (e.g. STR, MEP, ARCH):", file.name.replace(/\.ifc$/i, "").slice(0, 16)) || "Model").trim() || "Model";
-            await api.addProjectModel(pid, file, disc);                                   // register server-side (for clash)
-            await loader.loadIfc(new Uint8Array(await file.arrayBuffer()), nextId(disc)); // view it layered
-            await fitToModels(); refreshFederation();
-            toast(`added ${disc} discipline model — now in federated clash`, "success");
-          });
+            const disc = ((await askText("Add discipline IFC", { label: "Discipline (e.g. STR, MEP, ARCH):",
+              value: file.name.replace(/\.ifc$/i, "").slice(0, 16) })) || "").trim();
+            if (!disc) return;
+            await withLoading(container, "adding discipline model", async () => {
+              await api.addProjectModel(pid, file, disc);                                 // register server-side (for clash)
+              await loader.loadIfc(new Uint8Array(await file.arrayBuffer()), nextId(disc)); // view it layered
+              await fitToModels(); refreshFederation();
+              toast(`added ${disc} discipline model — now in federated clash`, "success");
+            });
+          };
           inp.click();
         }));
         b.appendChild(toolBtn2("✓ Validate (IDS)", () => withLoading(container, "Validating (IDS)", async () => {
