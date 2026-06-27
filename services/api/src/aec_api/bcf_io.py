@@ -48,9 +48,16 @@ def _markup_xml(topic: Topic) -> bytes:
         if c.viewpoint_id:
             ET.SubElement(ce, "Viewpoint", {"Guid": c.viewpoint_id})
 
+    has_vp = False
     for v in topic.viewpoints:
         vp = ET.SubElement(root, "Viewpoints", {"Guid": v.guid})
         ET.SubElement(vp, "Viewpoint").text = f"{v.guid}.bcfv"
+        has_vp = True
+    # a pin (anchor + element GUIDs) with no explicit viewpoint still needs a .bcfv so the element
+    # tie + camera survive the round-trip (the GlobalId tie is a non-negotiable)
+    if not has_vp and (topic.anchor or topic.element_guids):
+        vp = ET.SubElement(root, "Viewpoints", {"Guid": topic.guid})
+        ET.SubElement(vp, "Viewpoint").text = f"{topic.guid}.bcfv"
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
@@ -92,8 +99,13 @@ def export_bcfzip(db: Session, project_id: str) -> bytes:
         z.writestr("bcf.version", ET.tostring(bsmart, encoding="utf-8", xml_declaration=True))
         for topic in topics:
             z.writestr(f"{topic.guid}/markup.bcf", _markup_xml(topic))
+            wrote_vp = False
             for v in topic.viewpoints:
                 z.writestr(f"{topic.guid}/{v.guid}.bcfv", _viewpoint_xml(v))
+                wrote_vp = True
+            if not wrote_vp and (topic.anchor or topic.element_guids):
+                z.writestr(f"{topic.guid}/{topic.guid}.bcfv",
+                           _record_viewpoint_xml(topic.guid, topic.element_guids or [], topic.anchor))
     return buf.getvalue()
 
 
@@ -182,12 +194,26 @@ def import_bcfzip(db: Session, project_id: str, data: bytes) -> int:
     """Import topics from a .bcfzip. Returns the count imported."""
     count = 0
     with zipfile.ZipFile(io.BytesIO(data)) as z:
-        markups = [n for n in z.namelist() if n.endswith("markup.bcf")]
+        names = z.namelist()
+        markups = [n for n in names if n.endswith("markup.bcf")]
         for name in markups:
             root = ET.fromstring(z.read(name))
             te = root.find("Topic")
             if te is None:
                 continue
+            # restore the pin (selected components by IFC GUID + camera) from any viewpoint in the folder
+            folder = name.rsplit("/", 1)[0] if "/" in name else ""
+            comps: list[str] = []
+            anchor = None
+            for vp in [n for n in names if n.endswith(".bcfv") and (not folder or n.startswith(folder + "/"))]:
+                vroot = ET.fromstring(z.read(vp))
+                for comp in vroot.findall(".//Selection/Component"):
+                    g = comp.get("IfcGuid")
+                    if g:
+                        comps.append(g)
+                cvp = vroot.find("PerspectiveCamera/CameraViewPoint")
+                if cvp is not None:
+                    anchor = {ax.lower(): float(cvp.findtext(ax) or 0) for ax in ("X", "Y", "Z")}
             topic = Topic(
                 project_id=project_id,
                 guid=te.get("Guid"),
@@ -199,6 +225,8 @@ def import_bcfzip(db: Session, project_id: str, data: bytes) -> int:
                 assignee=te.findtext("AssignedTo"),
                 author=te.findtext("CreationAuthor"),
                 labels=[e.text for e in te.findall("Labels") if e.text],
+                element_guids=comps or None,
+                anchor=anchor,
             )
             for ce in root.findall("Comment"):
                 topic.comments.append(Comment(
