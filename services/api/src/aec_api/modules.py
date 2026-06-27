@@ -207,6 +207,8 @@ def revise(db: Session, key: str, project_id: str, rid: str, actor: str, party: 
 
 def list_records(db: Session, key: str, project_id: str, state: str | None = None,
                  q: str | None = None, limit: int = 200, offset: int = 0) -> list[dict]:
+    if key not in TABLES:
+        raise HTTPException(404, f"unknown module {key!r}")
     t = TABLES[key]
     stmt = select(t).where(t.c.project_id == project_id)
     if state:
