@@ -188,3 +188,94 @@ def risk_digest(db: Session, pid: str) -> dict[str, Any]:
     return {"headline": narrative.get("headline", ""), "risks": narrative.get("risks", []),
             "source": narrative.get("source"), "ai_enabled": ai.ai_enabled(),
             "drivers": {"schedule": kpis, "cost": cost, "top_alerts": al["alerts"][:8]}}
+
+
+# acceleration levers are advisory only — a planner must validate against logic ties and resources
+_CRASH_FACTOR = 0.25       # indicative time a longer critical task can be shortened by crashing
+_FASTTRACK_FACTOR = 0.30   # indicative overlap achievable between two consecutive critical tasks
+_NEAR_CRITICAL_DAYS = 5    # total float at/under this = at risk of becoming critical
+
+
+def optimize(db: Session, pid: str) -> dict[str, Any]:
+    """Rule-based schedule-acceleration ADVISORY off the CPM critical path — it never rewrites the
+    schedule. Surfaces three levers planners actually use: crash the longest critical activities,
+    fast-track consecutive critical activities (overlap them), and watch near-critical activities
+    that could swallow the float. Optionally adds an AI narrative; the levers stay deterministic."""
+    from . import ai
+    acts = pb._records(db, "schedule_activity", pid)
+    cpm = schedule_cpm.compute(acts)
+    by_id = {a["id"]: a for a in cpm["activities"]}
+    pct_by_id: dict[str, float] = {}
+    for r in acts:
+        pct_by_id[r["id"]] = _n((r.get("data") or {}).get("percent"))
+
+    def _name(a: dict) -> str:
+        return a.get("name") or a.get("ref") or a["id"][:8]
+
+    def _open(a: dict) -> bool:
+        return pct_by_id.get(a["id"], 0.0) < 100
+
+    critical = [a for a in cpm["activities"] if a["critical"] and _open(a)]
+
+    crash: list[dict[str, Any]] = []
+    for a in sorted(critical, key=lambda x: x["duration"], reverse=True):
+        if a["duration"] < 2:
+            continue
+        days = int(round(a["duration"] * _CRASH_FACTOR))
+        if days < 1:
+            continue
+        crash.append({"type": "crash", "ref": a.get("ref"), "name": _name(a),
+                      "duration": a["duration"], "days_potential": days,
+                      "detail": f"Critical, {a['duration']}d — add crews/shifts to recover up to ~{days}d"})
+        if len(crash) >= 6:
+            break
+
+    fast_track: list[dict[str, Any]] = []
+    for a in critical:
+        crit_preds = [by_id[p] for p in a.get("predecessors", []) if p in by_id and by_id[p]["critical"]]
+        for p in crit_preds:
+            if not _open(p):
+                continue
+            days = int(round(min(a["duration"], p["duration"]) * _FASTTRACK_FACTOR))
+            if days < 1:
+                continue
+            fast_track.append({"type": "fast_track", "ref": a.get("ref"), "name": _name(a),
+                               "predecessor": _name(p), "days_potential": days,
+                               "detail": f"Overlap '{_name(a)}' with '{_name(p)}' (fast-track) to save up to ~{days}d"})
+    fast_track = fast_track[:6]
+
+    near_critical = [
+        {"type": "near_critical", "ref": a.get("ref"), "name": _name(a), "total_float": a["total_float"],
+         "detail": f"Only {a['total_float']}d total float — protect it or it joins the critical path"}
+        for a in sorted((x for x in cpm["activities"] if _open(x) and 0 < x["total_float"] <= _NEAR_CRITICAL_DAYS),
+                        key=lambda x: x["total_float"])[:6]
+    ]
+
+    # indicative ceiling: the single best lever (savings aren't additive — each re-baselines the CPM)
+    best = max((s["days_potential"] for s in crash + fast_track), default=0)
+    levers = len(crash) + len(fast_track)
+    if cpm.get("has_cycle"):
+        headline = "Schedule has a dependency cycle — fix the logic ties before optimizing."
+    elif not critical:
+        headline = "No open critical activities to accelerate — schedule has float to spare."
+    elif levers:
+        headline = (f"{levers} acceleration lever(s) on the {cpm['critical_count']}-activity critical path; "
+                    f"the strongest could recover ~{best}d (advisory — validate logic + resources).")
+    else:
+        headline = "Critical path is short-duration work; little to crash or fast-track."
+
+    out = {"project_duration": cpm.get("project_duration", 0),
+           "critical_count": cpm.get("critical_count", 0), "has_cycle": cpm.get("has_cycle", False),
+           "headline": headline, "crash": crash, "fast_track": fast_track, "near_critical": near_critical,
+           "best_single_lever_days": best, "source": "rules", "ai_enabled": ai.ai_enabled(), "narrative": ""}
+
+    if ai.ai_enabled() and levers:
+        res = ai.ask("Give a 2-3 sentence schedule-acceleration recommendation a project scheduler "
+                     "could act on this week, based on these CPM levers. Be specific and cautious; "
+                     "do not invent activities or numbers beyond the data.",
+                     {"critical_path_days": out["project_duration"], "crash": crash,
+                      "fast_track": fast_track, "near_critical": near_critical})
+        if res.get("source") == "claude" and res.get("answer"):
+            out["narrative"] = res["answer"]
+            out["source"] = "claude"
+    return out

@@ -350,6 +350,16 @@ export class ApiClient {
     return this.json<{ alerts: { level: string; type: string; title: string; detail: string; ref?: string }[];
       counts: { high: number; medium: number; low: number } }>(`/projects/${pid}/schedule/alerts`);
   }
+  /** Schedule-acceleration advisory off the CPM critical path (crash / fast-track / near-critical). */
+  scheduleOptimize(pid: string) {
+    return this.json<{
+      project_duration: number; critical_count: number; has_cycle: boolean; headline: string;
+      best_single_lever_days: number; source: string; ai_enabled: boolean; narrative: string;
+      crash: { ref?: string; name: string; duration: number; days_potential: number; detail: string }[];
+      fast_track: { ref?: string; name: string; predecessor: string; days_potential: number; detail: string }[];
+      near_critical: { ref?: string; name: string; total_float: number; detail: string }[];
+    }>(`/projects/${pid}/schedule/optimize`);
+  }
 
   // --- report center ---------------------------------------------------------
   /** Catalog of available reports (id, name, group). */

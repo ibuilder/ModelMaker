@@ -1315,6 +1315,38 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
               v: `${a.duration}d · float ${a.total_float}`, strong: a.critical }))));
           });
         }));
+        b.appendChild(toolBtn2("⏩ Accelerate (advisory)", async () => {
+          out.textContent = "analyzing critical path…";
+          const o = await api.scheduleOptimize(pid);
+          const levers = o.crash.length + o.fast_track.length;
+          out.textContent = o.has_cycle ? "⚠ dependency cycle — fix logic ties"
+            : `${levers} lever(s) · best ~${o.best_single_lever_days}d`;
+          showResult("Schedule acceleration — advisory", (body) => {
+            body.appendChild(resultNote(o.headline, o.has_cycle ? "bad" : levers ? "ok" : ""));
+            if (o.narrative) body.appendChild(resultNote(o.narrative + " <i>(AI)</i>"));
+            if (o.crash.length) {
+              const h = document.createElement("div"); h.className = "section-title"; h.style.marginTop = "10px";
+              h.textContent = "Crash candidates (shorten the longest critical work)"; body.appendChild(h);
+              body.appendChild(kvTable(o.crash.map((s) => ({
+                k: `${s.ref || ""} ${s.name}`.trim(), v: `~${s.days_potential}d`, strong: true }))));
+            }
+            if (o.fast_track.length) {
+              const h = document.createElement("div"); h.className = "section-title"; h.style.marginTop = "10px";
+              h.textContent = "Fast-track candidates (overlap consecutive critical work)"; body.appendChild(h);
+              body.appendChild(kvTable(o.fast_track.map((s) => ({
+                k: `${s.name} ∥ ${s.predecessor}`, v: `~${s.days_potential}d` }))));
+            }
+            if (o.near_critical.length) {
+              const h = document.createElement("div"); h.className = "section-title"; h.style.marginTop = "10px";
+              h.textContent = "Near-critical watch (little float left)"; body.appendChild(h);
+              body.appendChild(kvTable(o.near_critical.map((s) => ({
+                k: `${s.ref || ""} ${s.name}`.trim(), v: `${s.total_float}d float` }))));
+            }
+            if (!levers && !o.near_critical.length)
+              body.appendChild(resultNote("No acceleration levers — add a cost-loaded schedule with dependencies in Construction → Schedule."));
+            body.appendChild(resultNote("<i>Advisory only — validate against logic ties, resources and cost before re-baselining.</i>"));
+          });
+        }));
         b.appendChild(toolBtn2("▤ Takt (line of balance)", () =>
           window.open(api.url(`/projects/${projectId}/schedule/takt.svg?floors=12`), "_blank")));
         // 4D construction sequence — scrub the takt timeline, isolating built-to-date elements
