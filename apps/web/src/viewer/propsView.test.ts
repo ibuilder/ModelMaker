@@ -1,0 +1,94 @@
+import { describe, expect, it } from "vitest";
+
+import type { ElementProps } from "../api/client";
+import { buildElementProps, buildRawProps, elementToText, formatValue } from "./propsView";
+
+const sample: ElementProps = {
+  guid: "3vB2eYHr1ABcDeFgHiJkLm",
+  ifc_class: "IfcWallStandardCase",
+  name: "Basic Wall:Exterior",
+  type_name: "Exterior - Brick",
+  storey: "Level 1",
+  qtos: { Qto_WallBaseQuantities: { Length: 5.123456, Height: 3, GrossArea: 15.37, IsExternal: true } },
+  psets: { Pset_WallCommon: { LoadBearing: false, FireRating: "2HR", ThermalTransmittance: 0.25 } },
+};
+
+describe("formatValue", () => {
+  it("localizes numbers, rounds floats, maps booleans, dashes empties", () => {
+    expect(formatValue(1234)).toBe((1234).toLocaleString());
+    expect(formatValue(5.123456)).toBe(Number(5.123).toLocaleString(undefined, { maximumFractionDigits: 3 }));
+    expect(formatValue(true)).toBe("Yes");
+    expect(formatValue(false)).toBe("No");
+    expect(formatValue(null)).toBe("—");
+    expect(formatValue("")).toBe("—");
+    expect(formatValue([])).toBe("—");
+  });
+  it("unwraps {value, unit} IFC wrappers", () => {
+    expect(formatValue({ value: 0.25, unit: "W/m²K" })).toBe("0.25 W/m²K");
+  });
+});
+
+describe("buildElementProps", () => {
+  const root = buildElementProps(sample);
+
+  it("shows the class badge, name and GUID", () => {
+    expect(root.querySelector(".pv-class")?.textContent).toBe("WallStandardCase");  // Ifc stripped
+    expect(root.querySelector(".pv-name")?.textContent).toBe("Basic Wall:Exterior");
+    expect(root.querySelector(".pv-guid-v")?.textContent).toBe(sample.guid);
+  });
+
+  it("renders Quantities (the old panel dropped qtos entirely)", () => {
+    const titles = [...root.querySelectorAll(".pv-sum-t")].map((e) => e.textContent);
+    expect(titles).toContain("Quantities");
+    expect(root.textContent).toContain("GrossArea");
+    expect(root.textContent).toContain("FireRating");          // pset rendered too
+  });
+
+  it("groups every section and counts rows", () => {
+    const groups = root.querySelectorAll(".pv-group");
+    expect(groups.length).toBe(3);          // Attributes + Quantities + 1 pset
+    const rows = root.querySelectorAll(".pv-row");
+    expect(rows.length).toBe(4 + 4 + 3);    // attrs(4) + qto(4) + pset(3)
+  });
+
+  it("filters rows live by key/value across groups", () => {
+    const r = buildElementProps(sample);
+    const filter = r.querySelector<HTMLInputElement>(".pv-filter")!;
+    filter.value = "firerating";
+    filter.dispatchEvent(new Event("input"));
+    const visible = [...r.querySelectorAll<HTMLElement>(".pv-row")].filter((row) => !row.hidden);
+    expect(visible.length).toBe(1);
+    expect(visible[0].textContent).toContain("FireRating");
+    // its group is force-opened and others with no hits are hidden
+    const hiddenGroups = [...r.querySelectorAll<HTMLElement>(".pv-group")].filter((g) => g.hidden);
+    expect(hiddenGroups.length).toBe(2);
+  });
+
+  it("empty element shows a friendly note, not a blank panel", () => {
+    const bare = buildElementProps({ ...sample, qtos: {}, psets: {} });
+    expect(bare.querySelector(".pv-note")?.textContent).toContain("No property sets");
+    expect(bare.querySelectorAll(".pv-group").length).toBe(1);   // just Attributes
+  });
+});
+
+describe("elementToText (copy-all)", () => {
+  it("includes attributes, quantities and property sets", () => {
+    const t = elementToText(sample);
+    expect(t).toContain("IfcWallStandardCase");
+    expect(t).toContain("[Qto_WallBaseQuantities]");
+    expect(t).toContain("FireRating: 2HR");
+    expect(t).toContain("LoadBearing: No");
+  });
+});
+
+describe("buildRawProps (in-browser fallback)", () => {
+  it("renders arbitrary nested data as a collapsible tree", () => {
+    const root = buildRawProps({ Name: "Wall", _category: "IFCWALL",
+      IsDefinedBy: [{ Name: "Pset_X", HasProperties: [{ Name: "A", NominalValue: 1 }] }] });
+    expect(root.querySelector(".props-view")).toBeNull();        // root IS .props-view
+    expect(root.classList.contains("props-view")).toBe(true);
+    expect(root.querySelectorAll(".pv-group").length).toBeGreaterThan(1);  // nested groups
+    expect(root.textContent).toContain("IsDefinedBy");
+    expect(root.textContent).toContain("Pset_X");
+  });
+});

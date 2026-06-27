@@ -284,7 +284,44 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
   cursor: pointer; padding: 4px 6px; border-radius: 4px;
 }
 #props-close:hover { background: var(--accent); color: #fff; }
-#props-body { white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.4; }
+#props-body { font-size: 12px; line-height: 1.4; }
+
+/* structured properties view */
+.props-view { display: flex; flex-direction: column; gap: 8px; }
+.pv-head2 { display: flex; flex-direction: column; gap: 4px; }
+.pv-title { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.pv-class { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+  background: var(--accent); color: #fff; padding: 1px 6px; border-radius: 4px; }
+.pv-name { font-weight: 600; word-break: break-word; }
+.pv-guid { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.pv-guid-v { font-family: ui-monospace, monospace; font-size: 10.5px; word-break: break-all; flex: 1; }
+.pv-guid-c { background: transparent; border: 1px solid var(--line); color: var(--muted);
+  border-radius: 4px; cursor: pointer; padding: 0 6px; line-height: 1.6; }
+.pv-guid-c:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pv-toolbar { display: flex; gap: 6px; align-items: center; position: sticky; top: 28px;
+  background: var(--panel); padding: 2px 0; z-index: 1; }
+.pv-filter { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line);
+  color: var(--text); border-radius: 5px; padding: 4px 7px; font-size: 12px; }
+.pv-copy { background: transparent; border: 1px solid var(--line); color: var(--muted);
+  border-radius: 5px; cursor: pointer; padding: 4px 8px; font-size: 11px; white-space: nowrap; }
+.pv-copy:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pv-none { flex-basis: 100%; color: var(--muted); font-size: 11px; padding: 4px 0; }
+.pv-group { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.pv-sum { cursor: pointer; user-select: none; display: flex; justify-content: space-between;
+  align-items: center; padding: 5px 8px; font-weight: 600; font-size: 11.5px; background: var(--bg); }
+.pv-sum::-webkit-details-marker { display: none; }
+.pv-sum-t { word-break: break-word; }
+.pv-sum-n { color: var(--muted); font-weight: 400; font-size: 10.5px; background: var(--panel);
+  border-radius: 8px; padding: 0 6px; min-width: 18px; text-align: center; }
+.pv-body { display: flex; flex-direction: column; }
+.pv-row { display: grid; grid-template-columns: 42% 58%; gap: 6px; padding: 3px 8px; cursor: pointer;
+  border-top: 1px solid var(--line); }
+.pv-group .pv-body > .pv-group { border: none; border-top: 1px solid var(--line); border-radius: 0; }
+.pv-row:hover { background: var(--bg); }
+.pv-k { color: var(--muted); word-break: break-word; }
+.pv-v { word-break: break-word; }
+.pv-v.pv-empty { color: var(--muted); opacity: .6; }
+.pv-note { color: var(--muted); font-size: 11px; font-style: italic; padding: 4px 2px; }
 
 /* pin markers */
 .pin {

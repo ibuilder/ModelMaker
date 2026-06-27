@@ -7,6 +7,7 @@ import { createViewer, renderMode, positionSun } from "./world";
 import { sunAltAz, sunSceneDir } from "./solar";
 import { ModelLoader } from "./loader";
 import { loadReferenceModel } from "./referenceLoader";
+import { buildElementProps, buildRawProps } from "./propsView";
 import { type ModelIdMap } from "./modelIds";
 import { showQrModal } from "../ui/qr";
 import { askText } from "../ui/prompt";
@@ -158,20 +159,12 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
       relationsDefault: { attributes: false, relations: false },
     });
     propsPanel.hidden = false;
-    propsBody.textContent = JSON.stringify(data, null, 2);
+    propsBody.replaceChildren(buildRawProps(data));
   }
 
   function renderProps(el: ElementProps) {
     propsPanel.hidden = false;
-    propsBody.textContent = [
-      `${el.ifc_class}  —  ${el.name ?? "(unnamed)"}`,
-      `GUID: ${el.guid}`,
-      `Type: ${el.type_name ?? "-"}    Storey: ${el.storey ?? "-"}`,
-      "",
-      ...Object.entries(el.psets).flatMap(([ps, props]) => [
-        `[${ps}]`, ...Object.entries(props).map(([k, v]) => `  ${k}: ${v}`),
-      ]),
-    ].join("\n");
+    propsBody.replaceChildren(buildElementProps(el));
   }
 
   async function selectByGuid(guid: string, fit = false) {
