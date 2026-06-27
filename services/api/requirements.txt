@@ -21,5 +21,9 @@ shapely>=2.0
 reportlab>=4.0
 pyhanko>=0.25            # PAdES certificate-based PDF digital signatures (esign.py)
 
+# optional: shared rate-limit + login-lockout counters across workers — only imported when
+# AEC_REDIS_URL is set (the prod overlay sets it); harmless to omit for single-worker / dev.
+redis>=5.0
+
 # optional AI assists (Draft RFI) — only used when ANTHROPIC_API_KEY is set; lazy-imported
 anthropic>=0.69

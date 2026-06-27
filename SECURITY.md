@@ -32,7 +32,25 @@ Set these environment variables for a team/cloud deployment:
 | `AEC_MAX_UPLOAD_MB=1024` | Cap request body size (oversized uploads → `413`). |
 | `AEC_LOGIN_MAX_FAILS` / `AEC_LOGIN_WINDOW_SEC` | Login brute-force lockout (default 8 fails / 5 min → `429`). |
 | `AEC_RATE_LIMIT_RPM=<n>` (+ `AEC_REDIS_URL`) | Per-IP rate limiting (multi-worker via Redis). |
+| `AEC_REDIS_URL=redis://redis:6379/0` | Shares the rate-limit **and** login-lockout counters across workers (the API runs multi-worker). Fail-open: any Redis error falls back to per-process counters. |
 | `AEC_TRUST_XUSER` | **Leave unset in production.** The `X-User` header is a dev-only impersonation shim, honored only when RBAC is off or this flag is set. |
+
+The bundled `docker-compose.prod.yml` sets these (RBAC, require-secret, HSTS, secure cookie, strict CSP,
+Redis) and ships a `redis` service; you only supply the secrets in `.env` (`AEC_AUTH_SECRET`,
+`POSTGRES_PASSWORD`, `S3_*`).
+
+## Schema migrations
+There is **no Alembic** — by design. The schema is partly **config-driven**: each GC-portal module
+(`module.json`) registers its own `mod_<key>` table at startup, so the table set isn't fixed in code.
+On boot `init_db()` runs an **additive, dbDelta-style sync**: `create_all` (new tables, including the
+dynamic module tables) → `_ensure_columns` (ALTER-ADD any model column missing from an existing table)
+→ `_ensure_indexes` (backfill new indexes). It is **additive only** — it never drops or retypes a
+column, so deploying a newer build over an existing Postgres/SQLite DB is safe and automatic. This is
+covered by `test_migrate.py`.
+
+**Non-additive changes** (dropping/renaming/retyping a column, backfilling data, adding a NOT-NULL
+column with no default) are **not** handled automatically — run a one-off SQL migration against the
+DB during the deploy for those. Take a backup first; the additive sync intentionally won't destroy data.
 
 ## Built-in protections
 - **Identity:** signed bearer tokens / httpOnly `samesite=lax` cookie; the `X-User` header is never

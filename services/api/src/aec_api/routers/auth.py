@@ -86,14 +86,37 @@ def register(username: str = Body(..., embed=True), password: str = Body(..., em
     return {"username": username, "role": role}
 
 
-# brute-force throttle: lock a username out after too many failed logins in a sliding window
-# (in-process; good enough for the single-worker / desktop posture, cleared on a success).
+# brute-force throttle: lock a username out after too many failed logins in a sliding window.
+# In-process by default (good enough for the single-worker / desktop posture); when AEC_REDIS_URL
+# is set the count is shared across workers via Redis (atomic INCR + EXPIRE), so the limit holds in
+# a multi-process deployment. Redis is fail-open (any error falls back to the in-process counter) so
+# the lockout infra can never lock everyone out or take login down. Cleared on a successful auth.
 _LOGIN_FAILS: dict[str, list[float]] = {}
 _LOGIN_MAX = int(os.environ.get("AEC_LOGIN_MAX_FAILS", "8"))
 _LOGIN_WINDOW = int(os.environ.get("AEC_LOGIN_WINDOW_SEC", "300"))
 
+_LOGIN_REDIS = None
+_login_redis_url = os.environ.get("AEC_REDIS_URL", "").strip()
+if _login_redis_url:
+    try:                                          # lazy: redis is only a dependency when configured
+        import redis as _redis
+        _LOGIN_REDIS = _redis.Redis.from_url(_login_redis_url, socket_timeout=0.25,
+                                             socket_connect_timeout=0.25)
+    except Exception:                             # noqa: BLE001 — not installed / bad URL → in-process
+        _LOGIN_REDIS = None
+
+
+def _login_key(username: str) -> str:
+    return f"login_fails:{(username or '').lower()}"
+
 
 def _login_blocked(username: str) -> bool:
+    if _LOGIN_REDIS is not None:
+        try:
+            n = _LOGIN_REDIS.get(_login_key(username))
+            return n is not None and int(n) >= _LOGIN_MAX
+        except Exception:                          # noqa: BLE001 — Redis hiccup → fall back, fail-open
+            pass
     import time as _t
     now = _t.time()
     fails = [t for t in _LOGIN_FAILS.get(username, []) if now - t < _LOGIN_WINDOW]
@@ -102,8 +125,27 @@ def _login_blocked(username: str) -> bool:
 
 
 def _login_record_fail(username: str) -> None:
+    if _LOGIN_REDIS is not None:
+        try:
+            key = _login_key(username)
+            pipe = _LOGIN_REDIS.pipeline()
+            pipe.incr(key)
+            pipe.expire(key, _LOGIN_WINDOW)        # window starts at the first failure
+            pipe.execute()
+            return
+        except Exception:                          # noqa: BLE001 — fall through to in-process on error
+            pass
     import time as _t
     _LOGIN_FAILS.setdefault(username, []).append(_t.time())
+
+
+def _login_clear(username: str) -> None:
+    if _LOGIN_REDIS is not None:
+        try:
+            _LOGIN_REDIS.delete(_login_key(username))
+        except Exception:                          # noqa: BLE001
+            pass
+    _LOGIN_FAILS.pop(username, None)
 
 
 @router.post("/auth/login")
@@ -117,7 +159,7 @@ def login(request: Request, response: Response, username: str = Body(..., embed=
         raise HTTPException(401, "invalid username or password")
     if u.active is False:
         raise HTTPException(403, "account is deactivated")
-    _LOGIN_FAILS.pop(username, None)            # successful auth clears the counter
+    _login_clear(username)                      # successful auth clears the counter (Redis + in-proc)
     token = auth.create_token(username)
     # httpOnly cookie so SSE + direct-download links (which can't set a header) authenticate
     # same-origin (via the /api proxy in prod). Fetches use the token in the body for the header.

@@ -23,10 +23,34 @@ services:
   web:
     restart: unless-stopped
 
+  # Shared store for per-IP rate limiting + login-lockout counters across the API's uvicorn workers
+  # (the base stack runs UVICORN_WORKERS=4; without Redis those counters are per-process).
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]   # ephemeral counters; no persistence
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    profiles: ["full"]
+
   api:
     restart: unless-stopped
+    depends_on:
+      redis: { condition: service_healthy }
     environment:
-      AEC_RBAC: "1"      # enforce auth/roles in production (override the dev default)
+      AEC_RBAC: "1"                                     # enforce auth/roles in production (override the dev default)
+      AEC_REQUIRE_SECRET: "1"                           # refuse to start without AEC_AUTH_SECRET (fail-closed)
+      AEC_HSTS: "1"                                     # served over HTTPS via Caddy → enable HSTS
+      AEC_COOKIE_SECURE: "1"                            # force the Secure flag on the auth cookie
+      AEC_CSP: "${AEC_CSP:-1}"                          # strict resource Content-Security-Policy
+      AEC_SIGNED_URL_TTL: "${AEC_SIGNED_URL_TTL:-3600}"
+      AEC_MAX_UPLOAD_MB: "${AEC_MAX_UPLOAD_MB:-1024}"
+      AEC_RATE_LIMIT_RPM: "${AEC_RATE_LIMIT_RPM:-600}"  # per-IP throttle (shared via Redis below)
+      AEC_REDIS_URL: "redis://redis:6379/0"             # shared rate-limit + login-lockout across workers
+      AEC_ADMIN_EMAILS: "${AEC_ADMIN_EMAILS:-}"         # platform admins (Settings/audit/user mgmt)
 
   postgres:
     restart: unless-stopped

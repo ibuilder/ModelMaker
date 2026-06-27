@@ -93,6 +93,13 @@ with TestClient(app) as c:
     good = _sig.sign_path("/x", ttl=60)
     assert _sig.verify_path("/x", good["sig"], good["exp"]) is True    # valid round-trip
 
+    # liveness vs readiness: /health is shallow; /ready pings the DB and is reachable without auth
+    # (probes carry no session) and reports the DB up. Orchestrator aliases resolve too.
+    assert c.get("/health").json()["status"] == "ok"
+    rdy = c.get("/ready")
+    assert rdy.status_code == 200 and rdy.json()["db"] == "up", rdy.text[:160]
+    assert c.get("/healthz").status_code == 200 and c.get("/readyz").status_code == 200
+
 print("SECURITY OK - X-User not trusted; hardening headers; RBAC gate blocks anonymous finance/"
       "properties/exports/drawings (401); projects list scoped to members; oversized upload -> 413; "
       "login brute-force lockout -> 429; default signing-secret detected")

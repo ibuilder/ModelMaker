@@ -4,6 +4,21 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.85 — production readiness
+- **Readiness probe:** new `GET /ready` (and `/readyz`) pings the DB (`SELECT 1`) and returns `503`
+  when it's unreachable, so a load balancer / orchestrator stops routing to a degraded instance;
+  `GET /health` (`/healthz`) stays a cheap dependency-free liveness check.
+- **Multi-worker login lockout:** the brute-force lockout now shares its counter across workers via
+  `AEC_REDIS_URL` (atomic Redis `INCR`+`EXPIRE`), fail-open to the in-process counter — matching the
+  per-IP rate limiter. The API runs multi-worker in production, so the lockout now actually holds.
+- **Hardened-by-default deploy:** `docker-compose.prod.yml` now sets RBAC, `AEC_REQUIRE_SECRET`,
+  HSTS, secure cookie, strict CSP, body cap, rate limit, and ships a `redis` service for the shared
+  counters; `.env.example` documents every hardening flag (and how to generate a strong secret).
+- **Schema migrations documented + tested:** the app uses an additive, dbDelta-style startup sync
+  (fits the config-driven dynamic module tables) rather than Alembic; `SECURITY.md` documents the
+  policy + the manual escape hatch for non-additive changes, and `test_migrate.py` proves a new
+  nullable model column is ALTERed onto an existing DB and new indexes backfill (additive-only).
+
 ## v0.1.84 — security hardening
 - **Access control:** RBAC defense-in-depth gate (anonymous blocked from project/finance/admin
   prefixes when `AEC_RBAC=1`), `require_role` on every project-scoped finance/data endpoint, attachment

@@ -122,7 +122,7 @@ if _RATE_RPM > 0:
 
     @app.middleware("http")
     async def _rate_limit(request: Request, call_next):
-        if request.url.path in ("/health", "/metrics"):
+        if request.url.path in ("/health", "/healthz", "/ready", "/readyz", "/metrics"):
             return await call_next(request)
         ip = request.client.host if request.client else "?"
         win = int(time.time() // 60)
@@ -240,7 +240,30 @@ async def security(request: Request, call_next):
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    """Liveness — the process is up and serving. Cheap, no dependencies; for restart probes."""
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready() -> Response:
+    """Readiness — the process can serve real traffic (DB reachable). Pings the DB with a
+    trivial `SELECT 1`; returns 503 if it's unreachable so a load balancer / orchestrator stops
+    routing to (or restarts) this instance instead of serving 500s. Kept separate from /health
+    so a DB blip doesn't kill a still-live process."""
+    from sqlalchemy import text as _text
+    from .db import engine as _engine
+    try:
+        with _engine.connect() as conn:
+            conn.execute(_text("SELECT 1"))
+    except Exception as exc:        # noqa: BLE001 — any DB error means "not ready"
+        return JSONResponse({"status": "unavailable", "db": "down", "error": str(exc)[:200]},
+                            status_code=503)
+    return JSONResponse({"status": "ready", "db": "up"})
+
+
+# Common orchestrator aliases so probes "just work" regardless of convention.
+app.add_api_route("/healthz", health, methods=["GET"], include_in_schema=False)
+app.add_api_route("/readyz", ready, methods=["GET"], include_in_schema=False)
 
 
 @app.get("/metrics")
