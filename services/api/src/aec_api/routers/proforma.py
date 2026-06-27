@@ -86,6 +86,14 @@ class Waterfall(BaseModel):
     tiers: list[Tier]
 
 
+class Tax(BaseModel):
+    income_tax_rate: float = Field(default=0.25, ge=0, le=1)     # ordinary rate on operating income
+    depreciation_years: float = Field(default=27.5, gt=0)        # 27.5 residential · 39 commercial
+    capital_gains_rate: float = Field(default=0.20, ge=0, le=1)  # long-term capital gains
+    niit_rate: float = Field(default=0.038, ge=0, le=1)          # net investment income tax
+    recapture_rate: float = Field(default=0.25, ge=0, le=1)      # §1250 depreciation recapture (≤25%)
+
+
 class Assumptions(BaseModel):
     timing: Timing
     cost_lines: list[CostLine]
@@ -95,6 +103,7 @@ class Assumptions(BaseModel):
     exit: Exit
     waterfall: Waterfall
     discount_rate: float = 0.10
+    tax: Tax | None = None        # optional; financial statements use institutional defaults if absent
 
 
 @router.post("/proforma/solve")
@@ -104,6 +113,55 @@ def solve_stateless(a: Assumptions):
     from .. import underwrite
     result = solve(a.model_dump())
     return {**result, "guardrails": underwrite.guardrails(result)}
+
+
+@router.post("/proforma/financials")
+def financials_stateless(a: Assumptions):
+    """Three financial statements + tax for a deal, without persisting: income statement (NOI →
+    depreciation → interest → tax → net income), balance sheet (balances), GAAP cash-flow statement,
+    depreciation/tax schedule with sale recapture + capital gains, after-tax returns, two-sided budget."""
+    from .. import financials
+    assumptions = a.model_dump()
+    return financials.statements(solve(assumptions), assumptions)
+
+
+def _latest_scenario(db: Session, pid: str):
+    return (db.query(Scenario).filter(Scenario.project_id == pid)
+            .order_by(Scenario.created_at.desc()).first())
+
+
+@router.get("/projects/{pid}/financials")
+def project_financials(pid: str, db: Session = Depends(get_db)):
+    """Financial statements for the project's latest saved scenario (income statement · balance sheet ·
+    cash flow · tax · after-tax returns · two-sided budget)."""
+    from .. import financials
+    s = _latest_scenario(db, pid)
+    if not s:
+        raise HTTPException(404, "no saved scenario — solve & save a proforma first")
+    result = s.result or solve(s.assumptions)
+    return {"scenario": {"id": s.id, "name": s.name}, **financials.statements(result, s.assumptions)}
+
+
+@router.get("/projects/{pid}/budget/two-sided")
+def two_sided_budget(pid: str, ltc: float = 0.65, rate: float = 0.075,
+                     construction_months: int = 18, lp_pct: float = 0.9,
+                     db: Session = Depends(get_db)):
+    """The development budget as Uses (left) vs Sources (right) — from the latest scenario if one is
+    saved, else built from the project's cost budget + the supplied debt/equity params."""
+    from .. import dev_budget as dvb, financials, sources_uses as su
+    from ..models import Project as _P
+    p = db.get(_P, pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    s = _latest_scenario(db, pid)
+    if s:
+        return financials.two_sided_budget(s.result or solve(s.assumptions), s.assumptions)
+    # no scenario yet: assemble a two-sided view from the cost budget + sources-uses sizing
+    summary = dvb.summarize(p.dev_budget or dvb.starter_budget())
+    su_out = su.build(summary, {"ltc": ltc, "rate": rate, "construction_months": construction_months, "lp_pct": lp_pct})
+    return {"uses": su_out["uses"], "sources": su_out["sources"],
+            "total_uses": su_out["total_uses"], "total_sources": su_out["total_sources"],
+            "balanced": su_out["balanced"]}
 
 
 @router.get("/projects/{pid}/dev-budget")

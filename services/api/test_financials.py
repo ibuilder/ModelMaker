@@ -1,0 +1,117 @@
+"""Financial statements engine — the three statements + tax tie out and balance.
+Run: PYTHONPATH=src ./.venv/Scripts/python.exe test_financials.py"""
+import os
+
+os.environ["DATABASE_URL"] = "sqlite:///./test_financials.db"
+os.environ["STORAGE_DIR"] = "./test_storage_financials"
+os.environ.pop("AEC_RBAC", None)
+for _f in ("./test_financials.db",):
+    if os.path.exists(_f):
+        os.remove(_f)
+
+from aec_api import financials as fin                  # noqa: E402
+from aec_api.proforma.solve import solve               # noqa: E402
+
+ASSUMPTIONS = {
+    "timing": {"construction_months": 18, "leaseup_months": 6, "hold_years": 7, "start_date": "2026-01-01"},
+    "cost_lines": [
+        {"category": "land", "name": "Land", "amount": 4_000_000, "curve": "upfront"},
+        {"category": "hard", "name": "Hard costs", "amount": 18_000_000, "curve": "scurve"},
+        {"category": "soft", "name": "Soft costs", "amount": 4_000_000, "curve": "scurve"},
+    ],
+    "debt": {"ltc": 0.6, "rate": 0.075, "points": 0.01},
+    "equity": {"lp_pct": 0.9, "gp_pct": 0.1},
+    "operations": {"potential_rent_annual": 3_600_000, "other_income_annual": 200_000,
+                   "opex_annual": 1_300_000, "reserves_annual": 90_000,
+                   "stabilized_occ": 0.94, "credit_loss_pct": 0.01},
+    "exit": {"exit_cap": 0.055, "selling_cost_pct": 0.02},
+    "waterfall": {"pref_rate": 0.08, "style": "american", "clawback": False,
+                  "tiers": [{"hurdle": 0.08, "lp": 0.9, "gp": 0.1}, {"hurdle": None, "lp": 0.8, "gp": 0.2}]},
+    "discount_rate": 0.10,
+    "tax": {"income_tax_rate": 0.25, "depreciation_years": 27.5,
+            "capital_gains_rate": 0.20, "niit_rate": 0.038, "recapture_rate": 0.25},
+}
+
+s = solve(ASSUMPTIONS)
+f = fin.statements(s, ASSUMPTIONS)
+
+# --- income statement: the NOI line equals the proforma's stabilized NOI ------
+isr = {ln["label"]: ln["amount"] for ln in f["income_statement"]["lines"]}
+noi_stmt = isr["Net operating income (NOI)"]
+assert abs(noi_stmt - s["operations"]["stabilized_noi_annual"]) < 2.0, (noi_stmt, s["operations"])
+# EGI = PGR − vacancy/credit + other; net income = pretax − tax (internal consistency)
+assert abs(isr["Effective gross income"] - (isr["Potential gross rent"] + isr["Vacancy & credit loss"] + isr["Other income"])) < 1.0
+assert abs(isr["Net income"] - (isr["Pre-tax income"] + isr["Income tax"])) < 1.0
+
+# --- depreciation: straight-line on the depreciable basis (improvements only) -
+basis = f["assumptions"]["depreciable_basis"]
+assert basis > 0 and f["assumptions"]["land"] == 4_000_000, f["assumptions"]
+assert abs(f["tax"]["depreciation_by_year"][0] - basis / 27.5) < 1.0, f["tax"]["depreciation_by_year"][0]
+
+# --- balance sheet balances every year (assets == liabilities + equity) -------
+assert f["balance_sheet"]["balanced"], [b for b in f["balance_sheet"]["by_year"] if not b["balanced"]]
+for b in f["balance_sheet"]["by_year"]:
+    assert abs(b["assets"]["total"] - (b["liabilities"]["total"] + b["equity"]["total"])) < 1.0, b
+
+# --- cash-flow statement: CFO = NOI − interest − income tax (add-back works) ---
+cfs = f["cash_flow_statement"]
+cfo_expected = round(sum(y["noi"] - y["interest"] - y["income_tax"] for y in f["tax"]["annual"]), 2)
+assert abs(cfs["operating"]["after_tax_operating_cash_flow"] - cfo_expected) < 1.0, cfs["operating"]
+
+# --- tax at sale: recapture (≤25%) stacked on capital gains (+NIIT) -----------
+st = f["tax"]["sale"]
+assert st["depreciation_recaptured"] <= sum(f["tax"]["depreciation_by_year"]) + 1.0
+assert st["total_sale_tax"] == round(st["recapture_tax"] + st["capital_gains_tax"], 2)
+assert st["total_sale_tax"] > 0, st                      # a gain on this deal
+# recapture taxed at 25%, the rest at cap-gains + NIIT
+assert abs(st["recapture_tax"] - st["depreciation_recaptured"] * 0.25) < 1.0
+assert abs(st["capital_gains_tax"] - st["capital_gain"] * (0.20 + 0.038)) < 1.0
+
+# --- after-tax returns are below pre-tax (tax drag) ---------------------------
+at = f["after_tax_returns"]
+assert at["equity_irr"] is not None and s["returns"]["equity_irr"] is not None
+assert at["equity_irr"] < s["returns"]["equity_irr"], (at["equity_irr"], s["returns"]["equity_irr"])
+assert at["total_income_tax"] != 0 and at["total_sale_tax"] > 0
+
+# --- two-sided budget: Uses (left) ties to Sources (right) --------------------
+tb = f["two_sided_budget"]
+assert tb["balanced"] and abs(tb["total_uses"] - tb["total_sources"]) < 1.0, tb
+assert abs(tb["total_sources"] - (s["sources_uses"]["loan_amount"] + s["sources_uses"]["equity"])) < 2.0, tb
+
+# --- endpoints + Report Center ------------------------------------------------
+from fastapi.testclient import TestClient                     # noqa: E402
+from aec_api.main import app                                  # noqa: E402
+
+with TestClient(app) as c:
+    # stateless financials
+    r = c.post("/proforma/financials", json=ASSUMPTIONS)
+    assert r.status_code == 200, r.text[:200]
+    body = r.json()
+    assert body["balance_sheet"]["balanced"] and body["two_sided_budget"]["balanced"], body.keys()
+    assert "income_statement" in body and "cash_flow_statement" in body and "tax" in body
+
+    pid = c.post("/projects", json={"name": "Tower Fund"}).json()["id"]
+    # no scenario yet -> financials 404, but two-sided budget still builds from the cost budget
+    assert c.get(f"/projects/{pid}/financials").status_code == 404
+    assert c.get(f"/projects/{pid}/budget/two-sided").json()["balanced"] in (True, False)  # never errors
+
+    sc = c.post("/proforma/scenarios", json={"name": "Base", "project_id": pid, "assumptions": ASSUMPTIONS})
+    assert sc.status_code == 201, sc.text[:200]
+    pf = c.get(f"/projects/{pid}/financials").json()
+    assert pf["scenario"]["name"] == "Base" and pf["balance_sheet"]["balanced"], pf.get("scenario")
+    tb2 = c.get(f"/projects/{pid}/budget/two-sided").json()
+    assert tb2["balanced"] and abs(tb2["total_uses"] - tb2["total_sources"]) < 1.0, tb2
+
+    # Report Center: financials report renders a valid PDF + Excel
+    rep = c.get("/reports").json()["reports"]
+    assert any(x["id"] == "financials" for x in rep), rep
+    pdf = c.get(f"/projects/{pid}/reports/financials.pdf")
+    assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF" and len(pdf.content) > 1200, pdf.status_code
+    xls = c.get(f"/projects/{pid}/reports/financials.xlsx")
+    assert xls.status_code == 200 and xls.content[:2] == b"PK", xls.status_code
+
+print(f"FINANCIALS OK - IS NOI ${noi_stmt:,.0f} ties to proforma; balance sheet balances all "
+      f"{len(f['balance_sheet']['by_year'])} years; CFO add-back reconciles; sale tax "
+      f"${st['total_sale_tax']:,.0f} (recapture ${st['recapture_tax']:,.0f} + cap gains "
+      f"${st['capital_gains_tax']:,.0f}); after-tax IRR {at['equity_irr']:.1%} < pre-tax "
+      f"{s['returns']['equity_irr']:.1%}; Uses=Sources ${tb['total_uses']:,.0f}")

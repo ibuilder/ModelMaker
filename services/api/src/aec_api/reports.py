@@ -29,6 +29,7 @@ REPORTS: dict[str, tuple[str, str]] = {
     "daily": ("Daily Report Log", "Logs"),
     "safety": ("Safety / Incident Log", "Logs"),
     "contracts": ("Contracts & Signatures", "Contracts"),
+    "financials": ("Financial Statements", "Finance"),
 }
 
 
@@ -168,6 +169,59 @@ def _risk(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _financials(db: Session, pid: str, name: str) -> Report:
+    """Income statement · balance sheet · cash flow · tax, from the project's latest proforma scenario."""
+    from . import financials
+    from .models import Scenario
+    from .proforma.solve import solve
+    r = Report("Financial Statements", name)
+    s = (db.query(Scenario).filter(Scenario.project_id == pid)
+         .order_by(Scenario.created_at.desc()).first())
+    if not s:
+        r.kpi("Status", "No saved proforma scenario — solve & save one in Finance first.")
+        return r
+    f = financials.statements(s.result or solve(s.assumptions), s.assumptions)
+    a = f["assumptions"]
+    r.kpi("Income-tax rate", f"{a['income_tax_rate'] * 100:.0f}%")
+    r.kpi("Depreciation life", f"{a['depreciation_years']:.1f} yrs")
+    r.kpi("After-tax equity IRR", f"{(f['after_tax_returns']['equity_irr'] or 0) * 100:.1f}%")
+    r.table("Income statement (stabilized year)", ["Line", "Amount"],
+            [[ln["label"], _money(ln["amount"])] for ln in f["income_statement"]["lines"]])
+    r.table("Operating summary by year",
+            ["Year", "NOI", "Interest", "Depreciation", "Taxable", "Income tax", "Net income"],
+            [[y["year"], _money(y["noi"]), _money(y["interest"]), _money(y["depreciation"]),
+              _money(y["taxable_income"]), _money(y["income_tax"]), _money(y["net_income"])]
+             for y in f["income_statement"]["by_year"]])
+    bs = f["balance_sheet"]["by_year"][-1]
+    r.table(f"Balance sheet (year {bs['year']})", ["Account", "Amount"], [
+        ["Land", _money(bs["assets"]["land"])],
+        ["Improvements (net of depreciation)", _money(bs["assets"]["improvements_net"])],
+        ["Capitalized financing", _money(bs["assets"]["capitalized_financing"])],
+        ["Total assets", _money(bs["assets"]["total"])],
+        ["Loan", _money(bs["liabilities"]["total"])],
+        ["Paid-in capital", _money(bs["equity"]["paid_in_capital"])],
+        ["Retained earnings", _money(bs["equity"]["retained_earnings"])],
+        ["Total liabilities + equity", _money(bs["liabilities"]["total"] + bs["equity"]["total"])],
+    ])
+    cfs = f["cash_flow_statement"]
+    r.table("Cash-flow statement", ["Section", "Amount"], [
+        ["Operating (after-tax)", _money(cfs["operating"]["after_tax_operating_cash_flow"])],
+        ["Investing", _money(cfs["investing"]["total"])],
+        ["Financing", _money(cfs["financing"]["total"])],
+        ["Net change in cash", _money(cfs["net_change_in_cash"])],
+    ])
+    st = f["tax"]["sale"]
+    r.table("Tax at sale", ["Item", "Amount"], [
+        ["Net sale price", _money(st["net_sale"])],
+        ["Adjusted basis", _money(st["adjusted_basis"])],
+        ["Total gain", _money(st["total_gain"])],
+        ["Depreciation recapture tax (25%)", _money(st["recapture_tax"])],
+        ["Capital-gains tax (+NIIT)", _money(st["capital_gains_tax"])],
+        ["Total sale tax", _money(st["total_sale_tax"])],
+    ])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -181,6 +235,8 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _evm(db, pid, name)
     if report == "contracts":
         return _contracts(db, pid, name)
+    if report == "financials":
+        return _financials(db, pid, name)
     logs = {
         "change_orders": ("cor", "Change Order Log", [("subject", "Subject"), ("amount", "Amount"), ("reason", "Reason")]),
         "rfi": ("rfi", "RFI Log", [("subject", "Subject"), ("discipline", "Discipline"), ("cost_impact", "Cost impact")]),
