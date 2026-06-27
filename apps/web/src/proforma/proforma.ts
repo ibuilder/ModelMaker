@@ -1,5 +1,6 @@
 import type { ApiClient, MassingParams, MassingResult, ProformaResult, FinancialStatements, StatementLine } from "../api/client";
 import { escapeHtml } from "../ui/feedback";
+import { signedBars, donut, lineChart, stackedBar, tornado, money as cmoney } from "../ui/charts";
 
 /**
  * Real-estate development finance (Proforma) view — edit the key deal drivers, solve live,
@@ -240,6 +241,24 @@ export class ProformaUI {
         + `<td class="num">${money(y.taxable_income)}</td><td class="num">${money(y.income_tax)}</td>`
         + `<td class="num">${money(y.net_income)}</td></tr>`).join("");
     yr.appendChild(yt); grid.appendChild(yr);
+
+    // trend charts: NOI vs net income (line) + cash flow by year (stacked)
+    const by = f.income_statement.by_year, cfy0 = f.cash_flow_statement.by_year;
+    const trends = document.createElement("div"); trends.className = "fin-card fin-wide";
+    trends.innerHTML = `<div class="section-title" style="margin:0 0 4px">Operating trend &amp; cash flow</div>`;
+    const trendRow = document.createElement("div"); trendRow.className = "fin-twoside";
+    const c1 = document.createElement("div");
+    c1.innerHTML = `<div class="meta">NOI vs net income by year</div>` + lineChart([
+      { name: "NOI", values: by.map((y) => y.noi) },
+      { name: "Net income", values: by.map((y) => y.net_income) },
+    ], { title: "NOI vs net income", fmt: cmoney, xlabels: by.map((y) => "Yr " + y.year), height: 150 });
+    const c2 = document.createElement("div");
+    c2.innerHTML = `<div class="meta">Cash flow by year (operating · investing · financing)</div>` + stackedBar(
+      cfy0.map((r) => ({ label: "Yr " + r.year, segments: [
+        { name: "Operating", value: r.operating }, { name: "Investing", value: r.investing },
+        { name: "Financing", value: r.loan_repayment + r.distributions },
+      ] })), { title: "Cash flow by year", fmt: cmoney, height: 150 });
+    trendRow.append(c1, c2); trends.appendChild(trendRow); grid.appendChild(trends);
 
     // per-year columnar statements (years across the top) — the standard financial-statement layout
     const columnar = (title: string, yrs: number[], rows: { label: string; values: number[]; cls?: string }[]) => {
@@ -1068,9 +1087,23 @@ export class ProformaUI {
       `<tr><th>$${(s.y_values[j] / 1e6).toFixed(1)}M</th>` +
       row.map((v) => `<td style="background:${color(v)}">${v == null ? "—" : (v * 100).toFixed(1)}</td>`).join("") +
       `</tr>`).join("");
+    // one-way tornado, derived from the same matrix for free: the middle row sweeps exit cap at the
+    // base hard cost; the middle column sweeps hard cost at the base exit cap.
+    const midR = Math.floor(s.matrix.length / 2), midC = Math.floor((s.x_values.length) / 2);
+    const base = s.matrix[midR]?.[midC];
+    const rowVals = s.matrix[midR]?.filter((v): v is number => v != null) ?? [];
+    const colVals = s.matrix.map((r) => r[midC]).filter((v): v is number => v != null);
+    let torn = "";
+    if (base != null && rowVals.length && colVals.length) {
+      torn = `<div class="section-title" style="margin-top:8px">Tornado — IRR drivers</div>`
+        + tornado([
+            { label: "Exit cap", low: Math.min(...rowVals), high: Math.max(...rowVals) },
+            { label: "Hard cost", low: Math.min(...colVals), high: Math.max(...colVals) },
+          ], { base, fmt: (v) => (v * 100).toFixed(1) + "%", title: "IRR sensitivity tornado" });
+    }
     host.innerHTML =
       `<div class="section-title">Sensitivity — Equity IRR (exit cap × hard cost)</div>` +
-      `<table class="sens-table">${head}${rows}</table>`;
+      `<table class="sens-table">${head}${rows}</table>` + torn;
   }
 
   /** Developer command center (Overview tab) — the executive landing, mirroring the GC dashboard:
@@ -1207,7 +1240,21 @@ export class ProformaUI {
       `<div class="k">LP</div><div class="v">IRR ${pct(wf.lp_irr)} · ${wf.lp_equity_multiple}× · ${money(wf.lp_distributions)}</div>` +
       `<div class="k">GP</div><div class="v">IRR ${pct(wf.gp_irr)} · ${wf.gp_equity_multiple}× · ${money(wf.gp_distributions)}</div>` +
       `</div>` +
-      this.cashflowChart(r.cash_flow.equity);
+      // capital stack (sources) + JV split + equity cash flow — the at-a-glance visuals
+      `<div class="fin-grid" style="margin-top:8px">`
+      + `<div><div class="section-title" style="margin:0 0 2px">Capital stack</div>`
+      + donut([
+          { label: "Senior debt", value: su.loan_amount },
+          { label: "LP equity", value: su.lp_contribution },
+          { label: "GP equity", value: su.gp_contribution },
+        ], { title: "Capital stack", center: cmoney(su.total_uses), height: 150 }) + `</div>`
+      + `<div><div class="section-title" style="margin:0 0 2px">JV distributions (LP vs GP)</div>`
+      + donut([
+          { label: "LP", value: wf.lp_distributions }, { label: "GP", value: wf.gp_distributions },
+        ], { title: "JV distributions", height: 150 }) + `</div>`
+      + `</div>`
+      + `<div class="section-title">Equity cash flow</div>`
+      + signedBars(r.cash_flow.equity, { title: "Equity cash flow", fmt: cmoney });
   }
 
   /** "Loan sizing" row: which constraint bound the loan + the resulting DSCR/LTV. */
@@ -1224,21 +1271,4 @@ export class ProformaUI {
     return `<div class="k">Loan sizing</div><div class="v">${label[ds.binding_constraint] ?? ds.binding_constraint}${bound} — ${metrics}</div>`;
   }
 
-  /** inline SVG bar chart of equity cash flow (outflows during construction, inflows in ops). */
-  private cashflowChart(cf: number[]): string {
-    const w = 252, h = 70, pad = 4;
-    const max = Math.max(1, ...cf.map((v) => Math.abs(v)));
-    const bw = (w - 2 * pad) / cf.length;
-    const mid = h / 2;
-    const bars = cf.map((v, i) => {
-      const bh = (Math.abs(v) / max) * (mid - pad);
-      const x = pad + i * bw;
-      const y = v >= 0 ? mid - bh : mid;
-      const col = v >= 0 ? "#2ecc71" : "#e74c3c";
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(bw - 0.5, 1).toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"/>`;
-    }).join("");
-    return `<div class="section-title">Equity cash flow</div>` +
-      `<svg viewBox="0 0 ${w} ${h}" style="width:100%;background:#1e1f22;border:1px solid var(--line);border-radius:4px">` +
-      `<line x1="${pad}" y1="${mid}" x2="${w - pad}" y2="${mid}" stroke="#444" stroke-width="0.5"/>${bars}</svg>`;
-  }
 }

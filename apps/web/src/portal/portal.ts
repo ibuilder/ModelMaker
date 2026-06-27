@@ -1,5 +1,6 @@
 import type { ApiClient, ModuleDef, ModuleRecord, RecordBrief } from "../api/client";
 import { toast } from "../ui/feedback";
+import { progressBar, groupedBar, money as cmoney } from "../ui/charts";
 import { modalShell } from "../ui/modal";
 import { noProjectHtml } from "../ui/empty";
 import { allQueued, dequeue, enqueueUpload, queuedCountForRecord } from "./offlineQueue";
@@ -207,7 +208,14 @@ export class PortalUI {
       + (bud.draw_this_month ? ` · draw ${usd(bud.draw_this_month)}/mo` : "")
       + (bud.buyout && bud.buyout.savings ? ` · savings ${usd(bud.buyout.savings)}` : "") + `</div>`;
     bCol.onclick = () => { this.activeKey = "__budget__"; void this.renderBudget(); this.buildNav(); };
-    cols.append(sCol, bCol); card.appendChild(cols); host.appendChild(card);
+    cols.append(sCol, bCol); card.appendChild(cols);
+    // progress bars — % complete, bought out, spent — the at-a-glance health strip
+    const prog = document.createElement("div"); prog.style.cssText = "margin-top:8px";
+    prog.innerHTML = progressBar(sched.pct_complete ?? 0, 100, { label: "Schedule % complete" })
+      + progressBar(bud.committed_pct ?? 0, 100, { label: "Bought out (committed)" })
+      + progressBar(bud.spent_pct ?? 0, 100, { label: "Spent (actual / budget)" });
+    card.appendChild(prog);
+    host.appendChild(card);
   }
 
   private async renderHome() {
@@ -696,7 +704,21 @@ export class PortalUI {
         }
       }
       tb.appendChild(row("Total (GMP)", b.totals, { bold: true }));
-      tbl.appendChild(tb); card.appendChild(tbl); this.root.appendChild(card);
+      tbl.appendChild(tb); card.appendChild(tbl);
+      // budget vs committed vs actual vs EAC, by category — grouped bar
+      const cats = (b.categories || []).filter((c: { budget?: number }) => (c.budget ?? 0) > 0);
+      if (cats.length) {
+        const chart = document.createElement("div"); chart.style.marginTop = "8px";
+        chart.innerHTML = `<div class="section-title" style="margin:0 0 2px">Budget vs committed vs actual vs EAC</div>`
+          + groupedBar(cats.map((c: { name: string; budget?: number; committed?: number; actual?: number; eac?: number }) => ({
+              label: c.name, bars: [
+                { name: "Budget", value: c.budget ?? 0 }, { name: "Committed", value: c.committed ?? 0 },
+                { name: "Actual", value: c.actual ?? 0 }, { name: "EAC", value: c.eac ?? c.budget ?? 0 },
+              ],
+            })), { title: "Budget vs committed vs actual vs EAC", fmt: cmoney, height: 180 });
+        card.appendChild(chart);
+      }
+      this.root.appendChild(card);
 
       // bid-package buyout
       const bc = document.createElement("div"); bc.className = "dash-card"; bc.style.marginBottom = "10px";
