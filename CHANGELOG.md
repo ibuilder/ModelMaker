@@ -4,6 +4,26 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.81 — properties panel, multi-city permits, money + BCF hardening
+- **Robust properties panel** — the element inspector is now structured (IFC-class badge, copyable GUID,
+  collapsible **Attributes / Quantities / Property Sets** with counts), formats values (numbers,
+  Yes/No, dashed empties, `{value,unit}`), and adds a live **filter**, per-row click-to-copy, and
+  **Copy all**. Quantities (qtos) are shown for the first time; the no-backend fallback renders a
+  collapsible tree instead of raw JSON.
+- **Interchangeable multi-city permit open data** — a Socrata-based feed (NYC · SF · Chicago · LA ·
+  Austin, one-entry to add a city) normalized to one record shape; query near a point/by text, a GeoJSON
+  GIS overlay, and a **"Import from city open data"** action that seeds the GC `permit` log
+  (source-tagged, deduped). From the github.com/ibuilder portfolio review.
+- **Sources & Uses reconciles to the dollar** — line items now sum exactly to the totals and sources tie
+  to uses (no per-line rounding drift); `balanced` is a strict check. (WPLedger money-handling review.)
+- **BCF round-trip preserves pins** — project-Topic export/import now carry a pin's element GUIDs +
+  anchor (previously dropped); 5 orphaned test suites wired into CI; empty/cyclic-project edge cases and
+  a 404 (not 500) for unknown modules. Backend suites: 47.
+- **Schedule acceleration advisory** — rule-based crash / fast-track / near-critical levers off the CPM
+  critical path; `GET /projects/{pid}/schedule/optimize` + an "Accelerate (advisory)" tool. Advisory only.
+- **Project risk digest** — cost + schedule + open-items + safety drivers with a prioritized narrative;
+  `GET /projects/{pid}/risk-digest` + a Report Center "Risk Digest" report.
+
 ## Unreleased — audit follow-ups (ties, queue-readiness, RFI triage, schedule alerts)
 - **Predictive schedule alerts** — `GET /projects/{pid}/schedule/alerts` (+ a section in the Executive
   report): overdue work, late / at-risk starts (incomplete predecessor), behind-schedule SPI, and a
