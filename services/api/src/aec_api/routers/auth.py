@@ -107,7 +107,7 @@ def _login_record_fail(username: str) -> None:
 
 
 @router.post("/auth/login")
-def login(response: Response, username: str = Body(..., embed=True),
+def login(request: Request, response: Response, username: str = Body(..., embed=True),
           password: str = Body(..., embed=True), db: Session = Depends(get_db)):
     if _login_blocked(username):
         raise HTTPException(429, "too many failed attempts — try again later")
@@ -121,8 +121,7 @@ def login(response: Response, username: str = Body(..., embed=True),
     token = auth.create_token(username)
     # httpOnly cookie so SSE + direct-download links (which can't set a header) authenticate
     # same-origin (via the /api proxy in prod). Fetches use the token in the body for the header.
-    response.set_cookie("aec_token", token, httponly=True, samesite="lax",
-                        max_age=7 * 24 * 3600, path="/")
+    _cookie(response, token, request)
     return {"token": token, "username": username, "role": u.role}
 
 
@@ -139,9 +138,17 @@ def auth_providers():
     return {"providers": oauth.enabled_providers()}
 
 
-def _cookie(response: Response, token: str) -> None:
+def _cookie_secure(request: Request) -> bool:
+    """Mark the auth cookie Secure over HTTPS (incl. behind a TLS-terminating proxy) or when the
+    operator forces it. Off for plain-http local/dev so the cookie still works there."""
+    if os.environ.get("AEC_COOKIE_SECURE") == "1":
+        return True
+    return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+
+
+def _cookie(response: Response, token: str, request: Request) -> None:
     response.set_cookie("aec_token", token, httponly=True, samesite="lax",
-                        max_age=7 * 24 * 3600, path="/")
+                        secure=_cookie_secure(request), max_age=7 * 24 * 3600, path="/")
 
 
 @router.get("/auth/oauth/{provider}/login")
@@ -186,7 +193,7 @@ def oauth_callback(provider: str, request: Request, code: str | None = None,
                  path=f"/auth/oauth/{provider}/callback", detail={"provider": provider})
     db.commit()
     resp = RedirectResponse(os.environ.get("AEC_APP_URL", "/"), status_code=303)
-    _cookie(resp, auth.create_token(email))
+    _cookie(resp, auth.create_token(email), request)
     return resp
 
 

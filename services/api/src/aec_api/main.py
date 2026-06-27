@@ -180,6 +180,14 @@ async def observe_requests(request: Request, call_next):
 # --- security hardening: body-size cap · RBAC gate · response headers ---------
 _MAX_UPLOAD_BYTES = int(os.environ.get("AEC_MAX_UPLOAD_MB", "1024")) * 1024 * 1024  # default 1 GB
 _HSTS = os.environ.get("AEC_HSTS") == "1"   # only when served over HTTPS
+# Content-Security-Policy. Default is framing-only (safe everywhere — never restricts resource loads).
+# AEC_CSP=1 turns on a strict resource policy tuned for the production bundle (external same-origin
+# scripts, inline styles, WASM, blob workers, same-origin XHR); set AEC_CSP=<policy> to fully override.
+_CSP_STRICT = ("default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; "
+               "img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; "
+               "connect-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
+_CSP_ENV = os.environ.get("AEC_CSP", "").strip()
+_CSP = "frame-ancestors 'none'" if not _CSP_ENV else (_CSP_STRICT if _CSP_ENV == "1" else _CSP_ENV)
 # When AEC_RBAC=1, these prefixes require an authenticated identity — defense in depth so an endpoint
 # that lacks its own require_role dependency still can't be reached anonymously. Public auth / health /
 # capability / catalog / stateless-compute paths stay open.
@@ -187,9 +195,14 @@ _PROTECTED_PREFIXES = ("/projects", "/proforma", "/connections", "/settings", "/
 
 
 def _has_identity(request: Request) -> bool:
-    """A valid signed bearer / API key / cookie (or the dev X-User header only when trusted)."""
+    """A valid signed bearer / API key / cookie / signed-URL (or the dev X-User header when trusted)."""
     from . import auth as _auth
     from . import rbac as _rbac
+    from . import signing as _signing
+    # a valid signed download URL authorizes exactly that path (lets the gate pass without a session)
+    qp = request.query_params
+    if _signing.verify_path(request.url.path, qp.get("sig"), qp.get("exp")):
+        return True
     authz = request.headers.get("authorization", "")
     if authz.startswith("Bearer "):
         tok = authz[len("Bearer "):]
@@ -219,7 +232,7 @@ async def security(request: Request, call_next):
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    resp.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+    resp.headers.setdefault("Content-Security-Policy", _CSP)
     if _HSTS:
         resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return resp

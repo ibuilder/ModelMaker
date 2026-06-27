@@ -28,6 +28,11 @@ def secret_is_default() -> bool:
     return _SECRET == _DEV_SECRET.encode()
 
 
+def signing_key() -> bytes:
+    """The HMAC key for signed download URLs (shares the auth secret; set AEC_AUTH_SECRET in prod)."""
+    return _SECRET
+
+
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ROUNDS)

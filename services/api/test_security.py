@@ -77,6 +77,22 @@ with TestClient(app) as c:
         pass
     assert _storage.put("ok/inside.txt", b"x") == "ok/inside.txt"   # normal keys still work
 
+    # signed/expiring URLs: a member mints one; it then authorizes the download without a session,
+    # while a forged or absent signature is still blocked by the RBAC gate.
+    minted = c.get(f"/projects/{pid}/model.frag/signed-url", headers=BEARER(tok))
+    assert minted.status_code == 200, minted.text[:160]
+    signed_url = minted.json()["url"]
+    c.cookies.clear()
+    assert c.get(signed_url).status_code != 401, "valid signed URL must pass the gate"   # 404 ok (no model)
+    assert c.get(f"/projects/{pid}/model.frag").status_code == 401                        # no sig → blocked
+    assert c.get(f"/projects/{pid}/model.frag?sig=forged&exp=9999999999").status_code == 401
+    from aec_api import signing as _sig
+    assert _sig.verify_path("/x", None, None) is False                 # missing sig/exp
+    bad = _sig.sign_path("/x", ttl=-10)                                # already expired
+    assert _sig.verify_path("/x", bad["sig"], bad["exp"]) is False
+    good = _sig.sign_path("/x", ttl=60)
+    assert _sig.verify_path("/x", good["sig"], good["exp"]) is True    # valid round-trip
+
 print("SECURITY OK - X-User not trusted; hardening headers; RBAC gate blocks anonymous finance/"
       "properties/exports/drawings (401); projects list scoped to members; oversized upload -> 413; "
       "login brute-force lockout -> 429; default signing-secret detected")

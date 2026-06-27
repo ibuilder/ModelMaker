@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from pydantic import BaseModel
 
-from .. import audit, bcf_io, rbac, storage
+from .. import audit, bcf_io, rbac, signing, storage
 from ..db import get_db
 from ..models import Attachment, Comment, DrawingMarkup, Project, ProjectMember, Topic, Viewpoint
 from ..rbac import current_user, require_role
@@ -383,28 +383,56 @@ def list_attachments(pid: str, tid: str, db: Session = Depends(get_db), _sec: st
     return db.query(Attachment).filter(Attachment.topic_id == tid).all()
 
 
+def _download_allowed(request: Request, db: Session, pid: str | None, user: str) -> bool:
+    """A download is allowed by a valid signed URL OR (when RBAC is on) project membership."""
+    qp = request.query_params
+    if signing.verify_path(request.url.path, qp.get("sig"), qp.get("exp")):
+        return True
+    return not rbac.RBAC_ON or (pid is not None and rbac.role_for(db, pid, user) is not None)
+
+
 @router.get("/attachments/{aid}/download")
 def download_attachment(aid: str, request: Request, db: Session = Depends(get_db),
                         user: str = Depends(current_user)):
     a = db.get(Attachment, aid)
     if not a:
         raise HTTPException(404, "attachment not found")
-    # IDOR guard: attachments are reachable by opaque id, so when RBAC is on verify the caller
-    # belongs to the attachment's project (else any id could be downloaded across projects).
-    pid = getattr(a, "project_id", None)
-    if rbac.RBAC_ON and pid and rbac.role_for(db, pid, user) is None:
+    # IDOR guard: attachments are reachable by opaque id, so allow only a valid signed URL or a
+    # member of the attachment's project (else any id could be downloaded across projects).
+    if not _download_allowed(request, db, getattr(a, "project_id", None), user):
         raise HTTPException(403, "not a member of this attachment's project")
     return range_response(request, a.storage_key, a.content_type or "application/octet-stream",
                           filename=a.filename, disposition="attachment")
 
 
+@router.get("/attachments/{aid}/signed-url")
+def sign_attachment(aid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
+    """Mint a short-lived signed download URL for an attachment (caller must be a project member)."""
+    a = db.get(Attachment, aid)
+    if not a:
+        raise HTTPException(404, "attachment not found")
+    pid = getattr(a, "project_id", None)
+    if rbac.RBAC_ON and (pid is None or rbac.role_for(db, pid, user) is None):
+        raise HTTPException(403, "not a member of this attachment's project")
+    return signing.sign_path(f"/attachments/{aid}/download")
+
+
 @router.get("/projects/{pid}/model.frag")
-def model_frag(pid: str, request: Request, _sec: str = Depends(require_role("viewer"))):
+def model_frag(pid: str, request: Request, db: Session = Depends(get_db),
+               user: str = Depends(current_user)):
     """Serve the published Fragments tile with HTTP range support + ETag revalidation. The URL is
     stable across republishes, so we revalidate (not immutable): unchanged → 304 (instant re-open),
-    republished → fresh bytes (fixes stale-cache after an edit/regenerate)."""
+    republished → fresh bytes. Access: a valid signed URL or (RBAC on) project membership."""
+    if not _download_allowed(request, db, pid, user):
+        raise HTTPException(403, "forbidden")
     return range_response(request, f"{pid}/model.frag", "application/octet-stream",
                           filename="model.frag", immutable=False)
+
+
+@router.get("/projects/{pid}/model.frag/signed-url")
+def sign_model_frag(pid: str, _sec: str = Depends(require_role("viewer"))):
+    """Mint a short-lived signed URL for the model tile (e.g. QR share / worker fetch without a session)."""
+    return signing.sign_path(f"/projects/{pid}/model.frag")
 
 
 @router.get("/projects/{pid}/source.ifc")
