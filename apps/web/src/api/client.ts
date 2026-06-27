@@ -160,6 +160,34 @@ export interface NotifItem {
 }
 export interface SavedViewDef { id: string; name: string; config: { q?: string; state?: string; sort?: { col: string; dir: 1 | -1 } }; }
 
+export interface StatementLine { label: string; amount: number; subtotal?: boolean; total?: boolean }
+export interface FinancialStatements {
+  scenario?: { id: string; name: string };
+  assumptions: { income_tax_rate: number; depreciation_years: number; capital_gains_rate: number; niit_rate: number; recapture_rate: number; land: number; depreciable_basis: number };
+  income_statement: {
+    lines: StatementLine[];
+    by_year: { year: number; noi: number; interest: number; depreciation: number; taxable_income: number; income_tax: number; net_income: number; after_tax_cash_flow: number }[];
+    note: string;
+  };
+  balance_sheet: {
+    balanced: boolean;
+    by_year: { year: number; assets: { land: number; improvements_net: number; accumulated_depreciation: number; capitalized_financing: number; cash: number; total: number };
+      liabilities: { loan: number; total: number }; equity: { paid_in_capital: number; retained_earnings: number; total: number }; balanced: boolean }[];
+  };
+  cash_flow_statement: {
+    operating: { after_tax_operating_cash_flow: number; note: string };
+    investing: { development_cost: number; net_sale_proceeds: number; sale_tax: number; total: number };
+    financing: { loan_proceeds: number; equity_contributions: number; loan_repayment: number; distributions: number; total: number };
+    net_change_in_cash: number;
+  };
+  tax: {
+    depreciation_by_year: number[];
+    sale: { net_sale: number; adjusted_basis: number; total_gain: number; depreciation_recaptured: number; recapture_tax: number; capital_gain: number; capital_gains_tax: number; total_sale_tax: number };
+  };
+  after_tax_returns: { equity_irr: number | null; equity_multiple: number | null; total_income_tax: number; total_sale_tax: number };
+  two_sided_budget: { uses: StatementLine[]; sources: StatementLine[]; total_uses: number; total_sources: number; balanced: boolean };
+}
+
 export interface ProformaResult {
   sources_uses: { total_uses: number; loan_amount: number; loan_fees: number; interest_reserve: number; equity: number; ltc: number; effective_ltc: number; lp_contribution: number; gp_contribution: number };
   debt_sizing?: { binding_constraint: string; stabilized_value: number; actual_dscr: number | null; actual_debt_yield: number | null; actual_ltv: number | null; caps: Record<string, number> };
@@ -659,6 +687,10 @@ export class ApiClient {
   // real-estate development finance (Proforma)
   solveProforma(assumptions: unknown) {
     return this.json<ProformaResult>(`/proforma/solve`, { method: "POST", body: JSON.stringify(assumptions) });
+  }
+  /** Three financial statements + tax for the current deal (income/balance/cash-flow + two-sided budget). */
+  financials(assumptions: unknown) {
+    return this.json<FinancialStatements>(`/proforma/financials`, { method: "POST", body: JSON.stringify(assumptions) });
   }
   sensitivity(body: unknown) {
     return this.json<{ metric: string; x_values: number[]; y_values: number[]; matrix: (number | null)[][] }>(

@@ -1,4 +1,5 @@
-import type { ApiClient, MassingParams, MassingResult, ProformaResult } from "../api/client";
+import type { ApiClient, MassingParams, MassingResult, ProformaResult, FinancialStatements, StatementLine } from "../api/client";
+import { escapeHtml } from "../ui/feedback";
 
 /**
  * Real-estate development finance (Proforma) view — edit the key deal drivers, solve live,
@@ -109,7 +110,7 @@ export class ProformaUI {
 
     // sub-tabs — Overview is the executive command center (default landing), then the detail panels
     const TABS: [string, string][] = [["over", "Overview"], ["feas", "Feasibility"], ["cap", "Budget & Capital"],
-                                      ["uw", "Underwriting"], ["deliver", "Deliverables"]];
+                                      ["uw", "Underwriting"], ["fin", "Statements"], ["deliver", "Deliverables"]];
     const tabbar = document.createElement("div"); tabbar.className = "pf-subtabs";
     const sections: Record<string, HTMLElement> = {}; const tabBtns: Record<string, HTMLButtonElement> = {};
     for (const [key, label] of TABS) {
@@ -122,6 +123,7 @@ export class ProformaUI {
     const showTab = (k: string) => {
       for (const [key] of TABS) { sections[key].style.display = key === k ? "block" : "none"; tabBtns[key].classList.toggle("active", key === k); }
       localStorage.setItem("pf-tab", k);
+      if (k === "fin") void this.renderStatements(sections.fin);   // (re)compute statements from the live deal
     };
     // route each panel into its section by temporarily pointing this.root at the section
     const self = this as unknown as { root: HTMLElement };
@@ -138,6 +140,106 @@ export class ProformaUI {
     });
     into(sections.deliver, () => { this.renderDeliverables(); this.renderModelLink(); });
     showTab(localStorage.getItem("pf-tab") || "over");
+  }
+
+  /** Statements tab: income statement · balance sheet · cash-flow statement · tax, from the live deal. */
+  private async renderStatements(host: HTMLElement) {
+    host.innerHTML = `<div class="meta">Computing financial statements…</div>`;
+    let f: FinancialStatements;
+    try { f = await this.api.financials(this.a); }
+    catch (e) { host.innerHTML = `<div class="meta">Couldn't compute statements: ${escapeHtml((e as Error).message)}</div>`; return; }
+    host.innerHTML = "";
+    const a = f.assumptions;
+    const note = document.createElement("div"); note.className = "meta"; note.style.marginBottom = "8px";
+    note.innerHTML = `Tax basis — income <b>${(a.income_tax_rate * 100).toFixed(0)}%</b> · depreciation `
+      + `<b>${a.depreciation_years}-yr</b> straight-line · capital gains <b>${(a.capital_gains_rate * 100).toFixed(0)}%</b> + NIIT `
+      + `· recapture <b>${(a.recapture_rate * 100).toFixed(0)}%</b>. Estimate, not tax advice.`;
+    host.appendChild(note);
+
+    const stmt = (title: string, lines: StatementLine[]) => {
+      const box = document.createElement("div"); box.className = "fin-card";
+      box.innerHTML = `<div class="section-title" style="margin:0 0 4px">${title}</div>`;
+      const t = document.createElement("table"); t.className = "fin-table";
+      for (const ln of lines) {
+        const tr = document.createElement("tr");
+        if (ln.total) tr.className = "fin-total"; else if (ln.subtotal) tr.className = "fin-sub";
+        tr.innerHTML = `<td>${escapeHtml(ln.label)}</td><td class="num">${money(ln.amount)}</td>`;
+        t.appendChild(tr);
+      }
+      box.appendChild(t); return box;
+    };
+    const grid = document.createElement("div"); grid.className = "fin-grid"; host.appendChild(grid);
+
+    // income statement (stabilized) + operating-by-year
+    const isCard = stmt("Income statement — stabilized year", f.income_statement.lines);
+    grid.appendChild(isCard);
+
+    // two-sided budget (Uses | Sources)
+    const tb = f.two_sided_budget;
+    const budCard = document.createElement("div"); budCard.className = "fin-card";
+    budCard.innerHTML = `<div class="section-title" style="margin:0 0 4px">Development budget — Uses &amp; Sources `
+      + `${tb.balanced ? '<span class="badge" style="background:var(--accent-soft)">balanced</span>' : ""}</div>`;
+    const two = document.createElement("div"); two.className = "fin-twoside";
+    const col = (head: string, lines: StatementLine[], total: number) => {
+      const c = document.createElement("table"); c.className = "fin-table";
+      c.innerHTML = `<tr class="fin-sub"><td>${head}</td><td class="num"></td></tr>`
+        + lines.map((l) => `<tr><td>${escapeHtml(l.label)}</td><td class="num">${money(l.amount)}</td></tr>`).join("")
+        + `<tr class="fin-total"><td>Total</td><td class="num">${money(total)}</td></tr>`;
+      return c;
+    };
+    two.append(col("Uses", tb.uses, tb.total_uses), col("Sources", tb.sources, tb.total_sources));
+    budCard.appendChild(two); grid.appendChild(budCard);
+
+    // balance sheet (final year)
+    const bs = f.balance_sheet.by_year[f.balance_sheet.by_year.length - 1];
+    grid.appendChild(stmt(`Balance sheet — year ${bs.year} ${f.balance_sheet.balanced ? "✓" : "⚠"}`, [
+      { label: "Land", amount: bs.assets.land },
+      { label: "Improvements (net of depreciation)", amount: bs.assets.improvements_net },
+      { label: "Capitalized financing", amount: bs.assets.capitalized_financing },
+      { label: "Total assets", amount: bs.assets.total, total: true },
+      { label: "Loan", amount: bs.liabilities.total },
+      { label: "Paid-in capital", amount: bs.equity.paid_in_capital },
+      { label: "Retained earnings", amount: bs.equity.retained_earnings },
+      { label: "Liabilities + equity", amount: bs.liabilities.total + bs.equity.total, total: true },
+    ]));
+
+    // cash-flow statement
+    const c = f.cash_flow_statement;
+    grid.appendChild(stmt("Cash-flow statement (life)", [
+      { label: "Operating (after-tax)", amount: c.operating.after_tax_operating_cash_flow, subtotal: true },
+      { label: "Development cost", amount: c.investing.development_cost },
+      { label: "Net sale proceeds", amount: c.investing.net_sale_proceeds },
+      { label: "Sale tax", amount: c.investing.sale_tax },
+      { label: "Investing", amount: c.investing.total, subtotal: true },
+      { label: "Financing (net)", amount: c.financing.total, subtotal: true },
+      { label: "Net change in cash", amount: c.net_change_in_cash, total: true },
+    ]));
+
+    // tax at sale
+    const st = f.tax.sale;
+    grid.appendChild(stmt("Tax at sale", [
+      { label: "Net sale price", amount: st.net_sale },
+      { label: "Adjusted basis", amount: st.adjusted_basis },
+      { label: "Total gain", amount: st.total_gain, subtotal: true },
+      { label: `Depreciation recapture (${(a.recapture_rate * 100).toFixed(0)}%)`, amount: st.recapture_tax },
+      { label: "Capital-gains tax (+NIIT)", amount: st.capital_gains_tax },
+      { label: "Total sale tax", amount: st.total_sale_tax, total: true },
+    ]));
+
+    // operating summary by year (full-width)
+    const yr = document.createElement("div"); yr.className = "fin-card fin-wide";
+    const at = f.after_tax_returns;
+    yr.innerHTML = `<div class="section-title" style="margin:0 0 4px">Operating summary by year · `
+      + `after-tax equity IRR <b>${at.equity_irr != null ? (at.equity_irr * 100).toFixed(1) + "%" : "—"}</b>`
+      + `${at.equity_multiple != null ? ` · ${at.equity_multiple}× EM` : ""}</div>`;
+    const yt = document.createElement("table"); yt.className = "fin-table";
+    yt.innerHTML = `<tr class="fin-sub"><td>Year</td><td class="num">NOI</td><td class="num">Interest</td>`
+      + `<td class="num">Deprec.</td><td class="num">Taxable</td><td class="num">Income tax</td><td class="num">Net income</td></tr>`
+      + f.income_statement.by_year.map((y) => `<tr><td>${y.year}</td><td class="num">${money(y.noi)}</td>`
+        + `<td class="num">${money(y.interest)}</td><td class="num">${money(y.depreciation)}</td>`
+        + `<td class="num">${money(y.taxable_income)}</td><td class="num">${money(y.income_tax)}</td>`
+        + `<td class="num">${money(y.net_income)}</td></tr>`).join("");
+    yr.appendChild(yt); grid.appendChild(yr);
   }
 
   /** Deliverables tab: the investor outputs (investment memo + pitch deck PDFs). */
