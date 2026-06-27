@@ -63,9 +63,17 @@ with TestClient(app) as c:
     assert sub["total_uses"] > s["grand_total"], "financing interest should add to uses"
     assert sub["debt"] + sub["equity"] == sub["total_sources"]
     assert abs(sub["ltc"] - 0.65) < 0.02 and sub["binding_constraint"] == "LTC", sub
+    # money-handling invariant: the displayed line items reconcile to the totals to the dollar
+    # (no per-line rounding drift) and SOURCES tie to USES exactly — a non-90/10 split still ties.
+    assert sum(u["amount"] for u in sub["uses"]) == sub["total_uses"], sub["uses"]
+    assert sum(s2["amount"] for s2 in sub["sources"]) == sub["total_sources"], sub["sources"]
+    odd = su.build(s, {"ltc": 0.65, "rate": 0.075, "lp_pct": 0.873})   # awkward split exercises the remainder
+    assert sum(s2["amount"] for s2 in odd["sources"]) == odd["total_sources"] == odd["total_uses"], odd
+    assert odd["balanced"], odd
     # DSCR cap can bind below LTC when NOI is tight
     capped = su.build(s, {"ltc": 0.65, "rate": 0.075, "min_dscr": 1.25, "noi": 500_000})
     assert capped["debt"] < sub["debt"] and capped["binding_constraint"] == "DSCR", capped
+    assert sum(s2["amount"] for s2 in capped["sources"]) == capped["total_sources"], capped
     # endpoint
     sue = c.get(f"/projects/{pid}/sources-uses").json()
     assert sue["balanced"] and sue["total_uses"] == sue["total_sources"], sue

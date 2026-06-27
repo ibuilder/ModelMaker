@@ -25,7 +25,10 @@ def build(budget_summary: dict[str, Any], params: dict[str, Any] | None = None) 
     months = float(p.get("construction_months", 18))
     # construction-loan interest on ~55% average outstanding balance over the build (one pass)
     interest = round(ltc * cost_excl_fin * rate * (months / 12) * 0.55)
-    total_uses = round(cost_excl_fin + interest, 2)
+    # USES total is the sum of the displayed (rounded) line items, so the statement always reconciles
+    # to the penny — no drift between the lines a user sees and the stated total (WPLedger invariant).
+    use_amounts = [round(acq), round(hard), round(soft), round(contingency), interest]
+    total_uses = float(sum(use_amounts))
 
     # debt sizing: LTC, capped by LTV / DSCR / debt-yield when operating inputs are provided
     debt = ltc * total_uses
@@ -44,8 +47,10 @@ def build(budget_summary: dict[str, Any], params: dict[str, Any] | None = None) 
         if cap < debt:
             debt, binding = cap, "DSCR"
     debt = round(debt)
-    equity = round(total_uses - debt)
+    equity = round(total_uses - debt)           # equity plugs the gap so SOURCES == USES exactly
     lp = float(p.get("lp_pct", 0.9))
+    lp_equity = round(equity * lp)
+    gp_equity = equity - lp_equity              # GP absorbs the rounding remainder (no $1 drift)
 
     uses = [
         {"label": "Acquisition", "amount": round(acq)},
@@ -56,15 +61,17 @@ def build(budget_summary: dict[str, Any], params: dict[str, Any] | None = None) 
     ]
     sources = [
         {"label": f"Senior debt ({ltc * 100:.0f}% LTC, bound by {binding})", "amount": debt},
-        {"label": "LP equity", "amount": round(equity * lp)},
-        {"label": "GP equity", "amount": round(equity * (1 - lp))},
+        {"label": "LP equity", "amount": lp_equity},
+        {"label": "GP equity", "amount": gp_equity},
     ]
+    total_sources = sum(s["amount"] for s in sources)   # == debt + equity == total_uses
     return {
         "uses": [u for u in uses if u["amount"]],
         "sources": [s for s in sources if s["amount"]],
         "total_uses": total_uses,
-        "total_sources": round(debt + equity),
+        "total_sources": total_sources,
         "ltc": round(debt / total_uses, 4) if total_uses else 0,
         "debt": debt, "equity": equity, "binding_constraint": binding,
-        "balanced": abs(total_uses - (debt + equity)) < 1.0,
+        # the displayed lines reconcile to the totals, and sources tie to uses, to the dollar
+        "balanced": (sum(u["amount"] for u in uses) == total_uses == total_sources),
     }
