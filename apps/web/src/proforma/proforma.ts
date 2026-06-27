@@ -240,6 +240,37 @@ export class ProformaUI {
         + `<td class="num">${money(y.taxable_income)}</td><td class="num">${money(y.income_tax)}</td>`
         + `<td class="num">${money(y.net_income)}</td></tr>`).join("");
     yr.appendChild(yt); grid.appendChild(yr);
+
+    // per-year columnar statements (years across the top) — the standard financial-statement layout
+    const columnar = (title: string, yrs: number[], rows: { label: string; values: number[]; cls?: string }[]) => {
+      const card = document.createElement("div"); card.className = "fin-card fin-wide";
+      card.innerHTML = `<div class="section-title" style="margin:0 0 4px">${title}</div>`;
+      const t = document.createElement("table"); t.className = "fin-table";
+      t.innerHTML = `<tr class="fin-sub"><td></td>${yrs.map((y) => `<td class="num">Yr ${y}</td>`).join("")}</tr>`
+        + rows.map((r) => `<tr class="${r.cls ?? ""}"><td>${escapeHtml(r.label)}</td>`
+          + r.values.map((v) => `<td class="num">${money(v)}</td>`).join("") + "</tr>").join("");
+      card.appendChild(t); return card;
+    };
+    const bsy = f.balance_sheet.by_year;
+    grid.appendChild(columnar(`Balance sheet by year ${f.balance_sheet.balanced ? "✓" : "⚠"}`,
+      bsy.map((b) => b.year), [
+        { label: "Land", values: bsy.map((b) => b.assets.land) },
+        { label: "Improvements (net)", values: bsy.map((b) => b.assets.improvements_net) },
+        { label: "Capitalized financing", values: bsy.map((b) => b.assets.capitalized_financing) },
+        { label: "Total assets", values: bsy.map((b) => b.assets.total), cls: "fin-sub" },
+        { label: "Loan", values: bsy.map((b) => b.liabilities.total) },
+        { label: "Paid-in capital", values: bsy.map((b) => b.equity.paid_in_capital) },
+        { label: "Retained earnings", values: bsy.map((b) => b.equity.retained_earnings) },
+        { label: "Liabilities + equity", values: bsy.map((b) => b.liabilities.total + b.equity.total), cls: "fin-total" },
+      ]));
+    const cfy = f.cash_flow_statement.by_year;
+    grid.appendChild(columnar("Cash flow by year", cfy.map((r) => r.year), [
+      { label: "Operating (after-tax)", values: cfy.map((r) => r.operating) },
+      { label: "Investing", values: cfy.map((r) => r.investing) },
+      { label: "Loan repayment", values: cfy.map((r) => r.loan_repayment) },
+      { label: "Distributions", values: cfy.map((r) => r.distributions) },
+      { label: "Net change in cash", values: cfy.map((r) => r.net_change_in_cash), cls: "fin-total" },
+    ]));
   }
 
   /** Deliverables tab: the investor outputs (investment memo + pitch deck PDFs). */

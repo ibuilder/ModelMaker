@@ -166,7 +166,7 @@ export interface FinancialStatements {
   assumptions: { income_tax_rate: number; depreciation_years: number; capital_gains_rate: number; niit_rate: number; recapture_rate: number; land: number; depreciable_basis: number };
   income_statement: {
     lines: StatementLine[];
-    by_year: { year: number; noi: number; interest: number; depreciation: number; taxable_income: number; income_tax: number; net_income: number; after_tax_cash_flow: number }[];
+    by_year: { year: number; noi: number; interest: number; depreciation: number; taxable_income: number; loss_carryforward_used: number; loss_carryforward_end: number; income_tax: number; net_income: number; after_tax_cash_flow: number }[];
     note: string;
   };
   balance_sheet: {
@@ -179,12 +179,14 @@ export interface FinancialStatements {
     investing: { development_cost: number; net_sale_proceeds: number; sale_tax: number; total: number };
     financing: { loan_proceeds: number; equity_contributions: number; loan_repayment: number; distributions: number; total: number };
     net_change_in_cash: number;
+    by_year: { year: number; operating: number; investing: number; loan_repayment: number; distributions: number; net_change_in_cash: number }[];
   };
   tax: {
     depreciation_by_year: number[];
-    sale: { net_sale: number; adjusted_basis: number; total_gain: number; depreciation_recaptured: number; recapture_tax: number; capital_gain: number; capital_gains_tax: number; total_sale_tax: number };
+    suspended_loss_at_sale: number;
+    sale: { sale_price: number; selling_costs: number; net_sale: number; adjusted_basis: number; total_gain: number; suspended_loss_used: number; taxable_gain: number; depreciation_recaptured: number; recapture_tax: number; capital_gain: number; capital_gains_tax: number; total_sale_tax: number };
   };
-  after_tax_returns: { equity_irr: number | null; equity_multiple: number | null; total_income_tax: number; total_sale_tax: number };
+  after_tax_returns: { equity_irr: number | null; equity_multiple: number | null; total_income_tax: number; total_sale_tax: number; suspended_loss_at_sale: number };
   two_sided_budget: { uses: StatementLine[]; sources: StatementLine[]; total_uses: number; total_sources: number; balanced: boolean };
 }
 

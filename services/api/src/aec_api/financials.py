@@ -55,20 +55,24 @@ def depreciation_schedule(building_basis: float, life_years: float, hold_years: 
 
 
 def sale_tax(sale_price: float, selling_costs: float, land: float, building_basis: float,
-             accumulated_depreciation: float, tax: dict) -> dict[str, Any]:
+             accumulated_depreciation: float, tax: dict, suspended_loss: float = 0.0) -> dict[str, Any]:
     """Tax due at disposition: §1250 depreciation recapture (≤25%) plus long-term capital gains (+NIIT)
-    on the remaining gain. Recapture and capital gains are separate calcs that stack on the same sale."""
+    on the remaining gain. Recapture and capital gains are separate calcs that stack on the same sale.
+    Any `suspended_loss` (passive losses released on full disposition) first reduces the gain."""
     total_basis = land + building_basis
     adjusted_basis = total_basis - accumulated_depreciation
     net_sale = sale_price - selling_costs
     total_gain = max(0.0, net_sale - adjusted_basis)
-    recaptured = min(accumulated_depreciation, total_gain)        # taxed at the recapture rate
-    cap_gain = max(0.0, total_gain - recaptured)                  # the rest is long-term capital gain
+    loss_used = min(suspended_loss, total_gain)                  # freed passive losses offset the gain
+    gain = total_gain - loss_used
+    recaptured = min(accumulated_depreciation, gain)            # taxed at the recapture rate
+    cap_gain = max(0.0, gain - recaptured)                      # the rest is long-term capital gain
     recapture_tax = recaptured * float(tax["recapture_rate"])
     cap_gains_tax = cap_gain * (float(tax["capital_gains_rate"]) + float(tax["niit_rate"]))
     return {
         "sale_price": _r(sale_price), "selling_costs": _r(selling_costs), "net_sale": _r(net_sale),
         "adjusted_basis": _r(adjusted_basis), "total_gain": _r(total_gain),
+        "suspended_loss_used": _r(loss_used), "taxable_gain": _r(gain),
         "depreciation_recaptured": _r(recaptured), "recapture_tax": _r(recapture_tax),
         "capital_gain": _r(cap_gain), "capital_gains_tax": _r(cap_gains_tax),
         "total_sale_tax": _r(recapture_tax + cap_gains_tax),
@@ -99,18 +103,31 @@ def statements(solve: dict, assumptions: dict) -> dict[str, Any]:
     rate_inc = float(tax["income_tax_rate"])
 
     # --- year-by-year operating rows -----------------------------------------
-    years, accum_depr = [], 0.0
+    # Passive activity losses (real estate is passive): a loss year yields no current tax benefit —
+    # it's suspended and carried forward to offset later passive income, with the remainder released
+    # against the gain at sale (§469). So income tax is never negative; the shield is deferred.
+    years, accum_depr, carryforward = [], 0.0, 0.0
     for y in range(hold_years):
         noi = noi_by_year[y]
         d = depr[y]
         taxable = round(noi - interest_annual - d, 2)
-        income_tax = round(taxable * rate_inc, 2)            # negative = passive shield (see note)
+        if taxable >= 0:
+            used = round(min(taxable, carryforward), 2)        # prior suspended losses offset income
+            carryforward = round(carryforward - used, 2)
+            income_tax = round((taxable - used) * rate_inc, 2)
+        else:
+            used = 0.0
+            carryforward = round(carryforward - taxable, 2)    # taxable < 0 → grows the suspended loss
+            income_tax = 0.0
         net_income = round(taxable - income_tax, 2)
         after_tax_cash = round(noi - interest_annual - income_tax, 2)   # depreciation is non-cash
         accum_depr = round(accum_depr + d, 2)
         years.append({"year": y + 1, "noi": noi, "interest": interest_annual, "depreciation": d,
-                      "taxable_income": taxable, "income_tax": income_tax, "net_income": net_income,
-                      "after_tax_cash_flow": after_tax_cash, "accumulated_depreciation": accum_depr})
+                      "taxable_income": taxable, "loss_carryforward_used": used,
+                      "loss_carryforward_end": carryforward, "income_tax": income_tax,
+                      "net_income": net_income, "after_tax_cash_flow": after_tax_cash,
+                      "accumulated_depreciation": accum_depr})
+    suspended_loss = carryforward                              # released against the gain at sale
 
     # --- stabilized operating P&L (detailed income statement) -----------------
     occ = float(ops_in["stabilized_occ"])
@@ -122,9 +139,7 @@ def statements(solve: dict, assumptions: dict) -> dict[str, Any]:
     opex = float(ops_in["opex_annual"])
     reserves = float(ops_in.get("reserves_annual", 0))
     noi_stab = round(egi - opex - reserves, 2)
-    depr_stab = depr[-1] if depr else 0.0
-    taxable_stab = round(noi_stab - interest_annual - depr_stab, 2)
-    tax_stab = round(taxable_stab * rate_inc, 2)
+    last = years[-1]                                            # the fully-stabilized operating year
     income_statement = {
         "lines": [
             {"label": "Potential gross rent", "amount": _r(pgr)},
@@ -134,15 +149,15 @@ def statements(solve: dict, assumptions: dict) -> dict[str, Any]:
             {"label": "Operating expenses", "amount": _r(-opex)},
             {"label": "Capital reserves", "amount": _r(-reserves)},
             {"label": "Net operating income (NOI)", "amount": _r(noi_stab), "subtotal": True},
-            {"label": "Interest expense", "amount": _r(-interest_annual)},
-            {"label": "Depreciation", "amount": _r(-depr_stab)},
-            {"label": "Pre-tax income", "amount": _r(taxable_stab), "subtotal": True},
-            {"label": "Income tax", "amount": _r(-tax_stab)},
-            {"label": "Net income", "amount": _r(taxable_stab - tax_stab), "total": True},
+            {"label": "Interest expense", "amount": _r(-last["interest"])},
+            {"label": "Depreciation", "amount": _r(-last["depreciation"])},
+            {"label": "Pre-tax income", "amount": _r(last["taxable_income"]), "subtotal": True},
+            {"label": "Income tax", "amount": _r(-last["income_tax"])},
+            {"label": "Net income", "amount": _r(last["net_income"]), "total": True},
         ],
         "by_year": years,
-        "note": "Stabilized year shown; income tax can be negative (a passive depreciation shield) — "
-                "passive-loss limits may defer the benefit. Estimate, not tax advice.",
+        "note": "Stabilized year shown. Real estate is passive: loss years are suspended (no current "
+                "benefit) and carried forward, releasing against the gain at sale. Estimate, not tax advice.",
     }
 
     # --- balance sheet per year-end (full distribution → cash held flat) ------
@@ -171,11 +186,22 @@ def statements(solve: dict, assumptions: dict) -> dict[str, Any]:
     gross_sale = float(rev.get("gross_sale", 0))
     selling_costs = float(rev.get("selling_costs", 0))
     loan_payoff = float(rev.get("loan_payoff", loan))
-    stax = sale_tax(gross_sale, selling_costs, land, building_basis, accum, tax)
+    stax = sale_tax(gross_sale, selling_costs, land, building_basis, accum, tax, suspended_loss)
     cfo = round(sum(r["after_tax_cash_flow"] for r in years), 2)
     cfi = round(-total_uses + (gross_sale - selling_costs) - stax["total_sale_tax"], 2)
     distributions = round(cfo + (gross_sale - selling_costs) - stax["total_sale_tax"] - loan_payoff, 2)
     cff = round(loan + paid_in - loan_payoff - distributions, 2)
+    # per-year three-section cash flow (full distribution → cash flat; the sale lands in the final year)
+    cfs_by_year = []
+    for i, r in enumerate(years):
+        last_y = i == hold_years - 1
+        op = r["after_tax_cash_flow"]
+        inv = round((gross_sale - selling_costs) - stax["total_sale_tax"], 2) if last_y else 0.0
+        repay = -loan_payoff if last_y else 0.0
+        dist = round(op + inv + repay, 2)              # distribute all available cash each year
+        cfs_by_year.append({"year": r["year"], "operating": op, "investing": inv,
+                            "loan_repayment": _r(repay), "distributions": _r(-dist),
+                            "net_change_in_cash": _r(op + inv + repay - dist)})
     cash_flow_statement = {
         "operating": {"after_tax_operating_cash_flow": cfo,
                       "note": "NOI − interest − income tax (net income + depreciation add-back)"},
@@ -184,6 +210,7 @@ def statements(solve: dict, assumptions: dict) -> dict[str, Any]:
         "financing": {"loan_proceeds": _r(loan), "equity_contributions": _r(paid_in),
                       "loan_repayment": _r(-loan_payoff), "distributions": _r(-distributions), "total": cff},
         "net_change_in_cash": _r(cfo + cfi + cff),
+        "by_year": cfs_by_year,
     }
 
     # --- after-tax returns (levered equity, net of income + sale tax) ---------
@@ -206,6 +233,7 @@ def statements(solve: dict, assumptions: dict) -> dict[str, Any]:
         "equity_multiple": round(_ret.equity_multiple(contrib, distrib), 3) if contrib else None,
         "total_income_tax": _r(sum(annual_tax)),
         "total_sale_tax": stax["total_sale_tax"],
+        "suspended_loss_at_sale": _r(suspended_loss),
     }
 
     return {
@@ -217,7 +245,8 @@ def statements(solve: dict, assumptions: dict) -> dict[str, Any]:
         "balance_sheet": {"by_year": balance_sheets,
                           "balanced": all(b["balanced"] for b in balance_sheets)},
         "cash_flow_statement": cash_flow_statement,
-        "tax": {"depreciation_by_year": depr, "annual": years, "sale": stax},
+        "tax": {"depreciation_by_year": depr, "annual": years, "sale": stax,
+                "suspended_loss_at_sale": _r(suspended_loss)},
         "after_tax_returns": after_tax,
         "two_sided_budget": two_sided_budget(solve, assumptions),
     }
