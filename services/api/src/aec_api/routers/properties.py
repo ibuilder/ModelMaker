@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from .. import storage
+from ..rbac import require_role
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ def _load(pid: str, payload: dict) -> int:
 
 
 @router.post("/projects/{pid}/properties/index")
-async def upload_index(pid: str, file: UploadFile = File(...)):
+async def upload_index(pid: str, file: UploadFile = File(...), _: str = Depends(require_role("editor"))):
     """Upload the props.json produced by the data service (`aec_data.cli index`)."""
     payload = json.loads(await file.read())
     storage.put(f"{pid}/props.json", json.dumps(payload).encode("utf-8"))
@@ -39,7 +40,7 @@ def _ensure_loaded(pid: str) -> None:
 
 
 @router.get("/projects/{pid}/properties/meta")
-def meta(pid: str):
+def meta(pid: str, _: str = Depends(require_role("viewer"))):
     _ensure_loaded(pid)
     if pid not in _META:
         raise HTTPException(404, "no properties index for project")
@@ -47,7 +48,8 @@ def meta(pid: str):
 
 
 @router.get("/projects/{pid}/elements")
-def list_elements(pid: str, ifc_class: str | None = None, storey: str | None = None, limit: int = 500):
+def list_elements(pid: str, ifc_class: str | None = None, storey: str | None = None, limit: int = 500,
+                  _: str = Depends(require_role("viewer"))):
     _ensure_loaded(pid)
     if pid not in _INDEX:
         raise HTTPException(404, "no properties index for project")
@@ -64,7 +66,7 @@ def list_elements(pid: str, ifc_class: str | None = None, storey: str | None = N
 
 
 @router.get("/projects/{pid}/elements/{guid}")
-def element(pid: str, guid: str):
+def element(pid: str, guid: str, _: str = Depends(require_role("viewer"))):
     _ensure_loaded(pid)
     rec = _INDEX.get(pid, {}).get(guid)
     if not rec:

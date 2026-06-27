@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from . import metrics
 from .db import init_db
@@ -174,6 +175,54 @@ async def observe_requests(request: Request, call_next):
             "method": request.method, "route": route, "status": status,
             "dur_ms": round(dur * 1000, 1),
         }))
+
+
+# --- security hardening: body-size cap · RBAC gate · response headers ---------
+_MAX_UPLOAD_BYTES = int(os.environ.get("AEC_MAX_UPLOAD_MB", "1024")) * 1024 * 1024  # default 1 GB
+_HSTS = os.environ.get("AEC_HSTS") == "1"   # only when served over HTTPS
+# When AEC_RBAC=1, these prefixes require an authenticated identity — defense in depth so an endpoint
+# that lacks its own require_role dependency still can't be reached anonymously. Public auth / health /
+# capability / catalog / stateless-compute paths stay open.
+_PROTECTED_PREFIXES = ("/projects", "/proforma", "/connections", "/settings", "/audit", "/auth/users")
+
+
+def _has_identity(request: Request) -> bool:
+    """A valid signed bearer / API key / cookie (or the dev X-User header only when trusted)."""
+    from . import auth as _auth
+    from . import rbac as _rbac
+    authz = request.headers.get("authorization", "")
+    if authz.startswith("Bearer "):
+        tok = authz[len("Bearer "):]
+        if _rbac.API_KEY and tok == _rbac.API_KEY:
+            return True
+        if _auth.verify_token(tok):
+            return True
+    ck = request.cookies.get("aec_token")
+    if ck and _auth.verify_token(ck):
+        return True
+    return bool(_rbac.TRUST_XUSER and request.headers.get("x-user"))
+
+
+@app.middleware("http")
+async def security(request: Request, call_next):
+    from . import rbac as _rbac
+    # 1) reject oversized bodies up front (cheap Content-Length check — avoids reading them into memory)
+    cl = request.headers.get("content-length")
+    if cl and cl.isdigit() and int(cl) > _MAX_UPLOAD_BYTES:
+        return JSONResponse({"detail": "payload too large"}, status_code=413)
+    # 2) RBAC gate: when enabled, anonymous callers can't reach protected prefixes at all
+    if (_rbac.RBAC_ON and request.method != "OPTIONS"
+            and request.url.path.startswith(_PROTECTED_PREFIXES) and not _has_identity(request)):
+        return JSONResponse({"detail": "authentication required"}, status_code=401)
+    resp = await call_next(request)
+    # 3) hardening headers on every response (safe set — does not restrict resource loading)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+    if _HSTS:
+        resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return resp
 
 
 @app.get("/health")

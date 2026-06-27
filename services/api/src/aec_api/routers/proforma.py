@@ -131,7 +131,7 @@ def _latest_scenario(db: Session, pid: str):
 
 
 @router.get("/projects/{pid}/financials")
-def project_financials(pid: str, db: Session = Depends(get_db)):
+def project_financials(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Financial statements for the project's latest saved scenario (income statement · balance sheet ·
     cash flow · tax · after-tax returns · two-sided budget)."""
     from .. import financials
@@ -145,7 +145,7 @@ def project_financials(pid: str, db: Session = Depends(get_db)):
 @router.get("/projects/{pid}/budget/two-sided")
 def two_sided_budget(pid: str, ltc: float = 0.65, rate: float = 0.075,
                      construction_months: int = 18, lp_pct: float = 0.9,
-                     db: Session = Depends(get_db)):
+                     db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """The development budget as Uses (left) vs Sources (right) — from the latest scenario if one is
     saved, else built from the project's cost budget + the supplied debt/equity params."""
     from .. import dev_budget as dvb, financials, sources_uses as su
@@ -165,7 +165,7 @@ def two_sided_budget(pid: str, ltc: float = 0.65, rate: float = 0.075,
 
 
 @router.get("/projects/{pid}/dev-budget")
-def get_dev_budget(pid: str, db: Session = Depends(get_db)):
+def get_dev_budget(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """The project's developer cost budget (line-item hard/soft/acquisition + contingencies) plus a
     computed summary. Returns a starter budget if none is saved yet."""
     from .. import dev_budget as dvb
@@ -183,7 +183,7 @@ class DevBudgetIn(BaseModel):
 
 
 @router.put("/projects/{pid}/dev-budget")
-def put_dev_budget(pid: str, body: DevBudgetIn, db: Session = Depends(get_db)):
+def put_dev_budget(pid: str, body: DevBudgetIn, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("editor"))):
     """Save the developer cost budget; returns the recomputed summary."""
     from .. import dev_budget as dvb
     from ..models import Project as _P
@@ -197,7 +197,7 @@ def put_dev_budget(pid: str, body: DevBudgetIn, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{pid}/specialty")
-def get_specialty(pid: str, db: Session = Depends(get_db)):
+def get_specialty(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Specialty assets (on-site energy + vertical-farm/PFAL) params + computed summary (capex,
     annual revenue/opex/energy-offset). Starter params if none saved."""
     from .. import specialty as sp
@@ -210,7 +210,7 @@ def get_specialty(pid: str, db: Session = Depends(get_db)):
 
 
 @router.put("/projects/{pid}/specialty")
-def put_specialty(pid: str, body: dict, db: Session = Depends(get_db)):
+def put_specialty(pid: str, body: dict, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("editor"))):
     """Save specialty-asset params; returns the recomputed summary + proforma deltas."""
     from .. import specialty as sp
     from ..models import Project as _P
@@ -223,7 +223,7 @@ def put_specialty(pid: str, body: dict, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{pid}/property")
-def get_property(pid: str, db: Session = Depends(get_db)):
+def get_property(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Property & tax assumptions + computed summary (totals, per-SF ratios, proforma deltas)."""
     from .. import dev_property as dp
     from ..models import Project as _P
@@ -235,7 +235,7 @@ def get_property(pid: str, db: Session = Depends(get_db)):
 
 
 @router.put("/projects/{pid}/property")
-def put_property(pid: str, body: dict, db: Session = Depends(get_db)):
+def put_property(pid: str, body: dict, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("editor"))):
     """Save property & tax assumptions; returns the recomputed summary."""
     from .. import dev_property as dp
     from ..models import Project as _P
@@ -250,7 +250,7 @@ def put_property(pid: str, body: dict, db: Session = Depends(get_db)):
 @router.get("/projects/{pid}/sources-uses")
 def get_sources_uses(pid: str, ltc: float = 0.65, rate: float = 0.075,
                      construction_months: int = 18, lp_pct: float = 0.9,
-                     db: Session = Depends(get_db)):
+                     db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Sources & Uses built from the project's cost budget — grouped Uses (acquisition/hard/soft/
     contingency + construction-loan interest) vs sized Sources (senior debt by LTC + LP/GP equity)."""
     from .. import dev_budget as dvb, sources_uses as su
@@ -264,7 +264,7 @@ def get_sources_uses(pid: str, ltc: float = 0.65, rate: float = 0.075,
 
 
 @router.get("/projects/{pid}/investment-memo.pdf")
-def investment_memo(pid: str, db: Session = Depends(get_db)):
+def investment_memo(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Confidential investment memorandum (PDF) composed from live project data — executive summary,
     Sources & Uses, the development cost budget, returns (from the latest solved scenario), and a
     risk read. The 'generate a presentation with financials' deliverable."""
@@ -280,7 +280,7 @@ def investment_memo(pid: str, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{pid}/investment-deck.pdf")
-def investment_deck(pid: str, db: Session = Depends(get_db)):
+def investment_deck(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Pitch-deck (slide) variant of the investment memo — landscape, big numbers, the ask."""
     from fastapi import Response
     from .. import report
@@ -294,7 +294,7 @@ def investment_deck(pid: str, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{pid}/dev-budget/gmp-reconciliation")
-def gmp_reconciliation(pid: str, db: Session = Depends(get_db)):
+def gmp_reconciliation(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Tie the developer's construction **hard cost** to the GC's actual **GMP**: the proforma was
     underwritten with a hard-cost line; the GC manages a live GMP (buyout + GC/GR + OH/fee). This
     shows them side by side so the developer sees whether construction is tracking the underwriting."""
@@ -317,7 +317,7 @@ def gmp_reconciliation(pid: str, db: Session = Depends(get_db)):
 
 
 @router.post("/projects/{pid}/dev-budget/sync-gmp")
-def sync_gmp_to_hard(pid: str, db: Session = Depends(get_db)):
+def sync_gmp_to_hard(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("editor"))):
     """Set the developer budget's construction hard cost to the GC's GMP — one click ties the
     underwriting to the live construction number. Replaces hard lines with a single synced GMP line;
     soft / acquisition / contingency are untouched. Returns the recomputed budget summary."""
@@ -341,7 +341,7 @@ def sync_gmp_to_hard(pid: str, db: Session = Depends(get_db)):
 
 @router.get("/projects/{pid}/loan-draws")
 def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, construction_months: int = 18,
-               db: Session = Depends(get_db)):
+               db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Construction-loan draw status from the GC's actual billing: owner invoices are the developer's
     draws to pay the GC, funded equity-first then debt. Returns the sized loan/equity (from Sources &
     Uses) vs drawn-to-date, the equity/loan split, and remaining loan availability — so the developer
@@ -414,7 +414,7 @@ def loan_draws(pid: str, ltc: float = 0.65, rate: float = 0.075, construction_mo
 
 @router.get("/projects/{pid}/loan-draws/request.pdf")
 def loan_draw_request_pdf(pid: str, app_no: int = 1, ltc: float = 0.65, rate: float = 0.075,
-                          db: Session = Depends(get_db)):
+                          db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """The lender draw-request as a PDF — this draw (the GC pay-app amount due) against the
     construction loan, with cumulative draws, equity/loan split, balance, and availability."""
     from fastapi import Response
@@ -432,7 +432,7 @@ def loan_draw_request_pdf(pid: str, app_no: int = 1, ltc: float = 0.65, rate: fl
 
 
 @router.get("/projects/{pid}/construction-draws")
-def construction_draws(pid: str, db: Session = Depends(get_db)):
+def construction_draws(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """The developer's construction draw schedule, sourced from the GC's cost-loaded schedule (the
     same monthly S-curve behind on-schedule × on-budget) and actual owner invoices billed to date —
     so the developer's draw projection is the contractor's real plan, not a generic curve."""
@@ -470,7 +470,7 @@ def construction_draws(pid: str, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{pid}/dev-budget/cost-lines")
-def dev_budget_cost_lines(pid: str, db: Session = Depends(get_db)):
+def dev_budget_cost_lines(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """The budget rolled into proforma cost_lines (the seed the Finance view applies)."""
     from .. import dev_budget as dvb
     from ..models import Project as _P
@@ -482,7 +482,7 @@ def dev_budget_cost_lines(pid: str, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{pid}/proforma/model-metrics")
-def proforma_model_metrics(pid: str, db: Session = Depends(get_db)):
+def proforma_model_metrics(pid: str, db: Session = Depends(get_db), _sec: str = Depends(rbac.require_role("viewer"))):
     """Metrics from the project's source IFC, so the proforma can underwrite against the real
     model (areas → hard cost / rent, etc.) instead of hand-keyed numbers. 409 if no source IFC."""
     from ..deps import source_ifc_path
