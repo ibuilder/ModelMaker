@@ -24,7 +24,7 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 - **Project risk digest** — cost + schedule + open-items + safety drivers with a prioritized narrative;
   `GET /projects/{pid}/risk-digest` + a Report Center "Risk Digest" report.
 
-## Unreleased — audit follow-ups (ties, queue-readiness, RFI triage, schedule alerts)
+### audit follow-ups (ties, queue-readiness, RFI triage, schedule alerts)
 - **Predictive schedule alerts** — `GET /projects/{pid}/schedule/alerts` (+ a section in the Executive
   report): overdue work, late / at-risk starts (incomplete predecessor), behind-schedule SPI, and a
   procurement-risk proxy, from the cost-loaded schedule + CPM.
@@ -33,7 +33,7 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 - **Queue-readiness (no Celery)** — IFC publish extracted to a worker-callable `run_publish(pid)` +
   interrupted-job recovery; rationale in docs/audit-2026-06.md.
 
-## Unreleased — PDF digital signatures (PAdES) + e-sign options
+### PDF digital signatures (PAdES) + e-sign options
 - **Digitally sign (PAdES)** — a contract/CO can be signed with a certificate-based **PAdES** digital
   signature (Bluebeam's model) via **pyHanko**: the document is rendered, signed (tamper-evident,
   self-validating), attached, and the signer + cert **fingerprint** recorded. Uses a self-signed
@@ -43,7 +43,7 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
   `ESIGN_PROVIDER` is configured). Decision write-up in **docs/esign-options.md** (electronic vs
   digital vs SaaS vs OSS; eIDAS / ESIGN Act / UETA; recommendation).
 
-## Unreleased — Report Center (detailed, exportable reports)
+### Report Center (detailed, exportable reports)
 - **📊 Report Center** — a catalog of detailed reports, each downloadable as **PDF or Excel**:
   **Executive Summary** (CPI/SPI/EAC, % complete, open RFIs/submittals/COs, safety), **Cost Report**
   (budget/committed/actual/forecast/variance by category), **EVM / S-Curve** (SPI, EAC, cash-flow
@@ -51,7 +51,7 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
   Signatures**. Built from the existing px / budget / module engines (`reports.py`); endpoints
   `GET /reports` + `GET /projects/{pid}/reports/{report}.{pdf,xlsx}`. Opens from the 📊 toolbar button.
 
-## Unreleased — contract & change-order document lifecycle
+### contract & change-order document lifecycle
 - **Generate contract documents** — from a contract record: **Prime Contract**, **Subcontract**
   (AIA A401-style), and **Change Order** (AIA G701-style, showing original → revised contract sum)
   PDFs, merged with project/contract data (`contracts.py`, reportlab).
@@ -64,14 +64,14 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
   one per party, audited) that render into the document; route/approve via the existing party-gated
   workflow. Endpoints: `GET /scope-library`, `GET …/contracts/{key}/{rid}/document.pdf?doc=&clauses=&attach=`.
 
-## Unreleased — AI estimate (text → BOQ)
+### AI estimate (text → BOQ)
 - **Draft a Bill of Quantities from a description** — the conceptual-estimate tool gains
   **✨ Draft BOQ from description**: type the scope and the AI returns priced line items
   (description / qty / unit / rate / CSI division) with a rolled-up total. Reuses the existing
   Anthropic provider + `ai_enabled()` gate; degrades to a clean stub (no fabricated numbers) when no
   API key is configured. Endpoint `POST /projects/{pid}/ai/estimate`.
 
-## Unreleased — regional classification standards + GAEB export
+### regional classification standards + GAEB export
 - **Regional classifications** — map the model estimate's IFC-class line items to **DIN 276** (DACH),
   **RICS NRM 1** (UK), or **CSI MasterFormat** (US/CA) via `GET /classifications` + a built-in code
   table (`classification.py`).
@@ -79,21 +79,21 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
   estimate as a GAEB 3.2 Bill of Quantities (the DACH tender standard); the conceptual-estimate
   result now has **↧ GAEB · DIN 276 / NRM 1 / MasterFormat** download buttons.
 
-## Unreleased — PDF takeoff & markup
+### PDF takeoff & markup
 - **PDF takeoff** — **Drawings → 📄 PDF Takeoff** opens a PDF drawing (pdf.js, offline worker),
   lets you **calibrate the scale** (draw a line, enter its real length), then **measure distance /
   area**, **count** items, and drop **rectangle** annotations directly on the sheet — with a running
   Σ length / area / count panel, an editable measurement list, and **CSV export** of the takeoff
   lines. Coordinates are stored in PDF user-space so measurements stay correct as you zoom.
 
-## Unreleased — GIS / topography layer
+### GIS / topography layer
 - **Import GIS & topography** — **Open ▾ → Open mesh / point cloud / GIS…** now also opens
   **GeoJSON** (parcels, contours, site vectors → points/lines/filled polygons) and **GeoTIFF DEMs**
   (→ a hypsometric terrain mesh displaced by elevation). Layers are georeferenced (lon/lat projected
   to metres; projected coords pass through), list in the federation panel, and align with the same
   ⛭ transform / working-origin as other reference models. Offline (`geotiff` + `earcut`, no CDN).
 
-## Unreleased — model federation, alignment & federated clash
+### model federation, alignment & federated clash
 - **Navisworks-style model layering** — each reference overlay (mesh / point cloud) now has a ⛭
   transform panel in the federation list: X/Y/Z offset, a **Z-up → Y-up** flip, uniform scale,
   **Move to picked point**, and Reset — so you can align several models in one space.
@@ -105,7 +105,7 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
   intra-model overlaps, lists clashes grouped by model-pair, and turns the top hits into BCF clash
   topics → pins / Issues. (Clash needs real IFC geometry — meshes/point clouds don't clash.)
 
-## Unreleased — multi-format reference models + QR share
+### multi-format reference models + QR share
 - **Open meshes & point clouds** — alongside IFC/Fragments, the viewer now opens **OBJ, STL, PLY,
   glTF/GLB** meshes and **PCD, XYZ, LAS, LAZ** point clouds as **view-only reference overlays** (IFC
   stays the source of truth). LAS/LAZ are decoded locally (offline) via a vendored `laz-perf` WASM;
