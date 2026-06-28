@@ -190,6 +190,19 @@ export interface FinancialStatements {
   two_sided_budget: { uses: StatementLine[]; sources: StatementLine[]; total_uses: number; total_sources: number; balanced: boolean };
 }
 
+export interface Appraisal {
+  inputs: { replacement_cost_new: number; land_value: number; depreciation_pct: number;
+    stabilized_noi: number; cap_rate: number; subject_sqft: number; subject_units: number | null; has_proforma: boolean };
+  cost: { approach: string; replacement_cost_new: number; depreciation_pct: number; depreciation_amount: number;
+    depreciated_improvements: number; land_value: number; value: number };
+  income: { approach: string; stabilized_noi: number; cap_rate: number; value: number; method: string };
+  sales_comparison: { approach: string; comp_count: number; basis: string; median_price_psf: number | null;
+    median_price_per_unit: number | null; implied_cap_rate: number | null; value: number };
+  reconciliation: { value: number; contributions: { approach: string; value: number; weight: number }[];
+    approaches_used: string[]; range: { low: number; high: number; spread_pct: number } };
+  comp_count: number;
+}
+
 export interface ProformaResult {
   sources_uses: { total_uses: number; loan_amount: number; loan_fees: number; interest_reserve: number; equity: number; ltc: number; effective_ltc: number; lp_contribution: number; gp_contribution: number };
   debt_sizing?: { binding_constraint: string; stabilized_value: number; actual_dscr: number | null; actual_debt_yield: number | null; actual_ltv: number | null; caps: Record<string, number> };
@@ -430,6 +443,31 @@ export class ApiClient {
   /** URL of a generated report — fmt = pdf | xlsx. */
   reportUrl(pid: string, report: string, fmt: "pdf" | "xlsx") {
     return this.url(`/projects/${pid}/reports/${report}.${fmt}`);
+  }
+
+  // --- disposition & valuation (real-estate marketing) ----------------------
+  /** Tri-approach valuation for a project (cost + income + sales-comparison + reconciliation). */
+  appraisal(pid: string) {
+    return this.json<Appraisal>(`/projects/${pid}/appraisal`);
+  }
+  /** Persist appraisal overrides (weights, depreciation, land value, …) and recompute. */
+  saveAppraisal(pid: string, overrides: Record<string, unknown>) {
+    return this.json<Appraisal>(`/projects/${pid}/appraisal`, {
+      method: "POST", body: JSON.stringify(overrides) });
+  }
+  /** Listing fields pre-populated from the project's proforma + model (off-plan auto-fill). */
+  listingAutofill(pid: string) {
+    return this.json<{ data: Record<string, unknown> }>(`/projects/${pid}/listings/autofill`);
+  }
+  /** Mint a signed, expiring public link to a listing (for a QR / shared deep link). */
+  shareListing(pid: string, lid: string, ttl?: number) {
+    const q = ttl ? `?ttl=${ttl}` : "";
+    return this.json<{ url: string; sig: string; exp: number; expires_in: number }>(
+      `/projects/${pid}/listings/${lid}/share${q}`, { method: "POST" });
+  }
+  /** The RESO Data Dictionary payload for a listing (the bridge seam to WPRealWise / MLS). */
+  listingReso(pid: string, lid: string) {
+    return this.json<{ reso: Record<string, unknown> }>(`/projects/${pid}/listings/${lid}/reso`);
   }
 
   // --- contract documents (generate / scope library / sign) -----------------

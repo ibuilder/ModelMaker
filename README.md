@@ -167,7 +167,13 @@ Deliverables** — with a sticky live-solved returns bar.
 
 ## Recent platform work
 
-- **Production readiness (latest, v0.1.85)** — a DB-pinging `/ready` (+ `/readyz`) readiness probe
+- **Disposition & valuation (latest, v0.1.86)** — close the loop from build to **sell/lease**: a
+  `listing` module that **auto-fills from the model + proforma** (areas/NOI/cap/asking price), a
+  one-click **marketing fact sheet** + a signed **public link/QR** to share off-plan, and a
+  **tri-approach appraisal** (cost + income + sales-comparison, reconciled) with a Valuation tab and
+  PDF/Excel report. RESO-aligned so listings can later push to an MLS / the WPRealWise suite. See
+  [docs/realestate-marketing.md](docs/realestate-marketing.md).
+- **Production readiness (v0.1.85)** — a DB-pinging `/ready` (+ `/readyz`) readiness probe
   (503 when the DB is down) alongside the cheap `/health` liveness check; the login brute-force lockout
   now shares its counter across workers via `AEC_REDIS_URL` (the API runs multi-worker), fail-open to
   in-process; `docker-compose.prod.yml` is hardened by default (RBAC, require-secret, HSTS, secure
@@ -222,7 +228,7 @@ Deliverables** — with a sticky live-solved returns bar.
   cost burn; **QTO by floor & discipline**. Plus **multi-user** (members → role-scoped persona
   views), bulk site-photo + camera capture, and an optional **paid Revit (.rvt)→IFC bridge** (APS,
   feature-flagged with a cost gate; IFC stays the source of truth). One click (lot→building→deal)
-  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.85).
+  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.86).
 - **Rendering, families & computational design (M-theme)** — a viewer **render mode** (directional
   sun + soft shadows, ACES/PBR, IBL), a NOAA **sun-&-shadow study** (date · time · lat/long), and a
   Matterport-style first-person **walkthrough**; Revit-style **`IfcMaterialLayerSet` assemblies** on

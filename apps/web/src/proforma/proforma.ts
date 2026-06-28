@@ -1,6 +1,7 @@
-import type { ApiClient, MassingParams, MassingResult, ProformaResult, FinancialStatements, StatementLine } from "../api/client";
+import type { ApiClient, MassingParams, MassingResult, ProformaResult, FinancialStatements, StatementLine, Appraisal } from "../api/client";
 import { escapeHtml } from "../ui/feedback";
-import { signedBars, donut, lineChart, stackedBar, tornado, money as cmoney } from "../ui/charts";
+import { signedBars, donut, lineChart, stackedBar, tornado, groupedBar, money as cmoney } from "../ui/charts";
+import { showQrModal } from "../ui/qr";
 
 /**
  * Real-estate development finance (Proforma) view — edit the key deal drivers, solve live,
@@ -111,7 +112,7 @@ export class ProformaUI {
 
     // sub-tabs — Overview is the executive command center (default landing), then the detail panels
     const TABS: [string, string][] = [["over", "Overview"], ["feas", "Feasibility"], ["cap", "Budget & Capital"],
-                                      ["uw", "Underwriting"], ["fin", "Statements"], ["deliver", "Deliverables"]];
+                                      ["uw", "Underwriting"], ["fin", "Statements"], ["appr", "Valuation"], ["deliver", "Deliverables"]];
     const tabbar = document.createElement("div"); tabbar.className = "pf-subtabs";
     const sections: Record<string, HTMLElement> = {}; const tabBtns: Record<string, HTMLButtonElement> = {};
     for (const [key, label] of TABS) {
@@ -125,6 +126,7 @@ export class ProformaUI {
       for (const [key] of TABS) { sections[key].style.display = key === k ? "block" : "none"; tabBtns[key].classList.toggle("active", key === k); }
       localStorage.setItem("pf-tab", k);
       if (k === "fin") void this.renderStatements(sections.fin);   // (re)compute statements from the live deal
+      if (k === "appr") void this.renderAppraisal(sections.appr);  // tri-approach valuation + disposition
     };
     // route each panel into its section by temporarily pointing this.root at the section
     const self = this as unknown as { root: HTMLElement };
@@ -290,6 +292,104 @@ export class ProformaUI {
       { label: "Distributions", values: cfy.map((r) => r.distributions) },
       { label: "Net change in cash", values: cfy.map((r) => r.net_change_in_cash), cls: "fin-total" },
     ]));
+  }
+
+  /** Valuation tab: tri-approach appraisal (cost + income + sales) + disposition (listing, share). */
+  private async renderAppraisal(host: HTMLElement) {
+    const pid = this.projectId();
+    if (!pid) { host.innerHTML = `<div class="meta">Open or save a project to value it and create a listing.</div>`; return; }
+    host.innerHTML = `<div class="meta">Computing valuation…</div>`;
+    let v: Appraisal;
+    try { v = await this.api.appraisal(pid); }
+    catch (e) { host.innerHTML = `<div class="meta">Couldn't value this project: ${escapeHtml((e as Error).message)}.<br>Save a proforma scenario (Underwriting) and add Comparables (Finance) first.</div>`; return; }
+    host.innerHTML = "";
+    const rec = v.reconciliation;
+    const head = document.createElement("div"); head.className = "fin-card";
+    head.innerHTML = `<div class="section-title">Opinion of value</div>`
+      + `<div style="font-size:28px;font-weight:800">${money(rec.value)}</div>`
+      + `<div class="meta">Range ${money(rec.range.low)} – ${money(rec.range.high)} · spread ${pct(rec.range.spread_pct)} · `
+      + `${v.comp_count} comparable${v.comp_count === 1 ? "" : "s"}</div>`;
+    host.appendChild(head);
+
+    // bar: indicated value by approach
+    if (rec.contributions.length) {
+      const chart = document.createElement("div"); chart.className = "fin-card";
+      chart.innerHTML = `<div class="section-title">Indicated value by approach</div>` + groupedBar(
+        rec.contributions.map((c) => ({ label: c.approach.replace(/_/g, " "), bars: [{ name: "Value", value: c.value }] })),
+        { fmt: cmoney, height: 180 });
+      host.appendChild(chart);
+    }
+
+    // three approach cards
+    const cards = document.createElement("div"); cards.className = "fin-grid";
+    const row = (a: string, b: string) => `<tr><td>${a}</td><td class="num">${b}</td></tr>`;
+    cards.innerHTML = `
+      <div class="fin-card"><div class="section-title">Cost approach</div><table class="fin-table">
+        ${row("Replacement cost new", money(v.cost.replacement_cost_new))}
+        ${row("Less depreciation", "-" + money(v.cost.depreciation_amount))}
+        ${row("Plus land", money(v.cost.land_value))}
+        <tr class="fin-total"><td>Value</td><td class="num">${money(v.cost.value)}</td></tr></table></div>
+      <div class="fin-card"><div class="section-title">Income approach</div><table class="fin-table">
+        ${row("Stabilized NOI", money(v.income.stabilized_noi))}
+        ${row("Cap rate", (v.income.cap_rate * 100).toFixed(2) + "%")}
+        <tr class="fin-total"><td>Value (direct cap)</td><td class="num">${money(v.income.value)}</td></tr></table></div>
+      <div class="fin-card"><div class="section-title">Sales comparison</div><table class="fin-table">
+        ${row("Comps used", String(v.sales_comparison.comp_count))}
+        ${row("Basis", escapeHtml(v.sales_comparison.basis))}
+        ${row("Median $/SF", v.sales_comparison.median_price_psf ? money(v.sales_comparison.median_price_psf) : "—")}
+        <tr class="fin-total"><td>Value</td><td class="num">${money(v.sales_comparison.value)}</td></tr></table></div>`;
+    host.appendChild(cards);
+
+    // reconciliation weights — editable, persisted
+    const recCard = document.createElement("div"); recCard.className = "fin-card";
+    recCard.innerHTML = `<div class="section-title">Reconciliation weights</div>`;
+    const wrap = document.createElement("div"); wrap.className = "pf-form";
+    const wKeys: [string, string][] = [["income", "Income"], ["sales_comparison", "Sales"], ["cost", "Cost"]];
+    const inputs: Record<string, HTMLInputElement> = {};
+    const cur: Record<string, number> = {};
+    for (const c of rec.contributions) cur[c.approach] = c.weight;
+    for (const [k, label] of wKeys) {
+      const f = document.createElement("label"); f.className = "pf-field";
+      f.innerHTML = `<span>${label} %</span>`;
+      const inp = document.createElement("input"); inp.type = "number"; inp.step = "any";
+      inp.value = String(Math.round((cur[k] ?? 0) * 100)); inputs[k] = inp; f.appendChild(inp); wrap.appendChild(f);
+    }
+    recCard.appendChild(wrap);
+    const save = document.createElement("button"); save.className = "file-btn"; save.textContent = "Save weights & recompute";
+    save.onclick = async () => {
+      const weights: Record<string, number> = {};
+      for (const [k] of wKeys) { const n = parseFloat(inputs[k].value); if (!isNaN(n)) weights[k] = n / 100; }
+      save.disabled = true;
+      try { await this.api.saveAppraisal(pid, { weights }); await this.renderAppraisal(host); }
+      catch (e) { this.setStatus("Save failed: " + (e as Error).message); save.disabled = false; }
+    };
+    recCard.appendChild(save);
+    host.appendChild(recCard);
+
+    // disposition: reports + create-listing + share
+    const disp = document.createElement("div"); disp.className = "fin-card";
+    disp.innerHTML = `<div class="section-title">Disposition &amp; marketing</div>`
+      + `<div class="meta">Valuation report and a BIM-native listing kit — generated from the model + proforma.</div>`;
+    const bar = document.createElement("div"); bar.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px";
+    const link = (label: string, href: string) => { const a = document.createElement("a"); a.className = "file-btn"; a.textContent = label; a.href = href; a.target = "_blank"; a.rel = "noopener"; return a; };
+    bar.appendChild(link("⬇ Valuation report (PDF)", this.api.reportUrl(pid, "appraisal", "pdf")));
+    bar.appendChild(link("⬇ Valuation (Excel)", this.api.reportUrl(pid, "appraisal", "xlsx")));
+    bar.appendChild(link("⬇ Listing fact sheet (PDF)", this.api.reportUrl(pid, "listing_factsheet", "pdf")));
+    const mk = document.createElement("button"); mk.className = "file-btn"; mk.textContent = "✚ Auto-fill & create listing";
+    mk.onclick = async () => {
+      mk.disabled = true;
+      try {
+        const { data } = await this.api.listingAutofill(pid);
+        const rec2 = await this.api.createModuleRecord(pid, "listing", { data });
+        this.setStatus(`Listing ${rec2.ref} created (auto-filled from the proforma).`);
+        const share = await this.api.shareListing(pid, rec2.id);
+        await showQrModal(this.api.url(share.url), "Share listing");
+      } catch (e) { this.setStatus("Couldn't create listing: " + (e as Error).message); }
+      finally { mk.disabled = false; }
+    };
+    bar.appendChild(mk);
+    disp.appendChild(bar);
+    host.appendChild(disp);
   }
 
   /** Deliverables tab: the investor outputs (investment memo + pitch deck PDFs). */

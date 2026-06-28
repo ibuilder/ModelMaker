@@ -30,6 +30,8 @@ REPORTS: dict[str, tuple[str, str]] = {
     "safety": ("Safety / Incident Log", "Logs"),
     "contracts": ("Contracts & Signatures", "Contracts"),
     "financials": ("Financial Statements", "Finance"),
+    "appraisal": ("Valuation (Tri-Approach Appraisal)", "Finance"),
+    "listing_factsheet": ("Listing Fact Sheet", "Disposition"),
 }
 
 
@@ -245,9 +247,103 @@ def _financials(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _appraisal(db: Session, pid: str, name: str) -> Report:
+    """Tri-approach valuation: cost + income + sales-comparison, reconciled — from the project's
+    proforma, estimate inputs and recorded comparables."""
+    from . import marketing
+    v = marketing.compute_appraisal(db, pid)
+    rec = v["reconciliation"]
+    r = Report("Valuation — Tri-Approach Appraisal", name)
+    r.kpi("Opinion of value", _money(rec["value"]))
+    r.kpi("Value range", f"{_money(rec['range']['low'])} – {_money(rec['range']['high'])}")
+    r.kpi("Approaches used", ", ".join(rec["approaches_used"]) or "—")
+    r.kpi("Comparables", v["comp_count"])
+    r.table("Approaches", ["Approach", "Indicated value", "Weight"],
+            [[c["approach"].replace("_", " ").title(), _money(c["value"]), f"{c['weight'] * 100:.0f}%"]
+             for c in rec["contributions"]] or [["(insufficient data)", "$0", "—"]])
+    co, inc, sa = v["cost"], v["income"], v["sales_comparison"]
+    r.table("Cost approach", ["Item", "Amount"], [
+        ["Replacement cost new", _money(co["replacement_cost_new"])],
+        ["Less depreciation", f"-{_money(co['depreciation_amount'])} ({co['depreciation_pct'] * 100:.0f}%)"],
+        ["Plus land value", _money(co["land_value"])],
+        ["Cost-approach value", _money(co["value"])],
+    ])
+    r.table("Income approach (direct cap)", ["Item", "Amount"], [
+        ["Stabilized NOI", _money(inc["stabilized_noi"])],
+        ["Cap rate", f"{inc['cap_rate'] * 100:.2f}%"],
+        ["Income-approach value", _money(inc["value"])],
+    ])
+    r.table("Sales-comparison approach", ["Item", "Amount"], [
+        ["Comparables used", str(sa["comp_count"])],
+        ["Basis", sa["basis"]],
+        ["Median $/SF", _money(sa["median_price_psf"]) if sa["median_price_psf"] else "—"],
+        ["Implied cap rate", f"{sa['implied_cap_rate'] * 100:.2f}%" if sa["implied_cap_rate"] else "—"],
+        ["Sales-comparison value", _money(sa["value"])],
+    ])
+    if rec["contributions"]:
+        r.chart("bar", "Indicated value by approach",
+                [c["approach"].replace("_", " ").title() for c in rec["contributions"]],
+                [{"name": "Value", "values": [round(c["value"]) for c in rec["contributions"]]}])
+    return r
+
+
+def _latest_listing(db: Session, pid: str) -> dict | None:
+    recs = _records(db, "listing", pid)
+    if not recs:
+        return None
+    # prefer an active/under-contract listing, else the most recent
+    for st in ("active", "under_contract", "coming_soon"):
+        for x in recs:
+            if x.get("workflow_state") == st:
+                return x
+    return recs[-1]
+
+
+def _listing_factsheet(db: Session, pid: str, name: str) -> Report:
+    """Marketing fact sheet generated from the project's listing record (auto-filled from the model
+    + proforma). The off-plan marketing kit: key facts, highlights, location."""
+    rec = _latest_listing(db, pid)
+    r = Report("Listing Fact Sheet", name)
+    if not rec:
+        r.kpi("Status", "No listing yet — create one in Finance ▸ Listings (Auto-fill from project).")
+        return r
+    d = rec.get("data") or {}
+    r.kpi("Price", _money(d.get("list_price")))
+    if d.get("price_psf"):
+        r.kpi("$/SF", _money(d.get("price_psf")))
+    if d.get("cap_rate"):
+        r.kpi("Cap rate", f"{d.get('cap_rate')}%")
+    if d.get("noi"):
+        r.kpi("Stabilized NOI", _money(d.get("noi")))
+    r.kpi("Status", str(rec.get("workflow_state", "")).replace("_", " ").title())
+    facts = [
+        ["Address", d.get("address", "")],
+        ["Asset type", d.get("asset_type", "")],
+        ["Location", " ".join(str(d.get(k, "")) for k in ("city", "state", "zip_code")).strip()],
+        ["Beds / Baths", f"{d.get('beds', '—')} / {d.get('baths', '—')}"],
+        ["Living / rentable SF", str(d.get("sqft", "—"))],
+        ["Units", str(d.get("num_units", "—"))],
+        ["Unit mix", d.get("unit_mix", "—")],
+        ["Year built / completion", str(d.get("year_built", "—"))],
+        ["Lot SF", str(d.get("lot_sqft", "—"))],
+    ]
+    r.table("Key facts", ["Item", "Detail"], [[a, b] for a, b in facts if b not in ("", None)])
+    if d.get("public_description"):
+        r.table("Description", ["", ""], [["", d["public_description"]]])
+    if d.get("highlights"):
+        r.table("Highlights", ["", ""], [["", d["highlights"]]])
+    if d.get("virtual_tour_url"):
+        r.table("3D tour", ["", ""], [["Link", d["virtual_tour_url"]]])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
+    if report == "appraisal":
+        return _appraisal(db, pid, name)
+    if report == "listing_factsheet":
+        return _listing_factsheet(db, pid, name)
     if report == "executive":
         return _executive(db, pid, name)
     if report == "risk":

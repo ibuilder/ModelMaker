@@ -4,6 +4,27 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.86 — disposition & valuation (real-estate marketing)
+Close the development loop from build to **sell/lease** and **market value** — the two things only a
+BIM-native platform can do, because ModelMaker owns the model + proforma. (See
+[docs/realestate-marketing.md](docs/realestate-marketing.md).)
+- **BIM-native marketing kit** — a config-driven `listing` module (RESO-aligned fields + a workflow
+  mirroring RESO `StandardStatus`) that **auto-fills from the project**: areas/unit-mix from the model,
+  NOI/cap/asking price from the proforma. One click generates a **Listing Fact Sheet** PDF and a
+  signed, expiring **public link + QR** to share a listing without a session (the only anonymous
+  surface — token-scoped, read-only, rate-limited).
+- **Tri-approach appraisal** — `appraisal.py` fuses the three classic approaches from data already
+  in-system: **Cost** (replacement cost from the estimate + land − depreciation), **Income** (NOI ÷
+  cap from the proforma), **Sales comparison** (adjusted $/SF from the `comparable` module),
+  reconciled into an opinion of value with a range. New **Valuation** tab in Finance (three approach
+  cards, editable reconciliation weights, value-by-approach chart) + a **Valuation report** (PDF/Excel).
+- **RESO export seam** — `marketing.to_reso()` serializes a listing to RESO Data Dictionary fields, so
+  a later bridge can push listings to WPRealWise / an MLS as a serialization, not a rewrite.
+- Endpoints: `GET /projects/{pid}/listings/autofill`, `GET|POST /projects/{pid}/appraisal`,
+  `GET …/listings/{lid}/reso`, `POST …/listings/{lid}/share`, `GET …/listings/{lid}/public`.
+  Tests: `test_appraisal.py` (engine) + `test_marketing.py` (autofill → appraisal → reports → RESO →
+  signed public link).
+
 ## v0.1.85 — production readiness
 - **Readiness probe:** new `GET /ready` (and `/readyz`) pings the DB (`SELECT 1`) and returns `503`
   when it's unreachable, so a load balancer / orchestrator stops routing to a degraded instance;
