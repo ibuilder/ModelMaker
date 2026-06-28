@@ -135,7 +135,7 @@ export interface ModuleRecord {
   attachments?: RecordAttachmentMeta[];
   activity?: { ts: string; actor: string; party: string; action: string; detail: unknown }[];
   comments?: { author: string | null; text: string; created_at: string }[];
-  available_actions?: { action: string; to: string; party: string[] }[];
+  available_actions?: { action: string; to: string; party: string[]; requires?: string[] }[];
 }
 export interface RecordAttachmentMeta {
   id: string; filename: string; size: number; content_type: string | null;

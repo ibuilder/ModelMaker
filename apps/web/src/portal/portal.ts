@@ -1408,6 +1408,26 @@ export class PortalUI {
     this.root.appendChild(save);
   }
 
+  /** Compact workflow state diagram — states left→right in declared order, current one highlighted,
+   *  with reachable next states shown as arrows. Reads the module's workflow (no server call). */
+  private workflowMap(m: ModuleDef, current: string): HTMLElement {
+    const states = m.workflow.states ?? [];
+    const wrap = document.createElement("div"); wrap.className = "wf-map";
+    wrap.style.cssText = "display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin:4px 0 8px;font-size:11px";
+    const nexts = new Set((m.workflow.transitions ?? []).filter((t) => t.from === current).map((t) => t.to));
+    states.forEach((s, i) => {
+      if (i) { const arr = document.createElement("span"); arr.textContent = "→"; arr.style.opacity = "0.4"; wrap.appendChild(arr); }
+      const node = document.createElement("span");
+      const isCur = s === current, isNext = nexts.has(s);
+      node.textContent = s.replace(/_/g, " ");
+      node.style.cssText = "padding:2px 7px;border-radius:10px;white-space:nowrap;border:1px solid var(--border,#3a4654);"
+        + (isCur ? "background:var(--accent,#4a8cff);color:#fff;font-weight:700;"
+                 : isNext ? "background:rgba(74,140,255,0.16);" : "opacity:0.55;");
+      wrap.appendChild(node);
+    });
+    return wrap;
+  }
+
   // --- record detail + workflow actions + activity ---------------------------
   // contract modules → the document they generate, and whether an Exhibit A applies
   private static CONTRACT_DOCS: Record<string, { doc: string; label: string; exhibit: boolean }> = {
@@ -1728,9 +1748,18 @@ export class PortalUI {
     if (acts.length) {
       const ad = document.createElement("div"); ad.className = "section-title"; ad.textContent = "Workflow";
       this.root.appendChild(ad);
+      this.root.appendChild(this.workflowMap(m, r.workflow_state));   // visual state diagram
+      const labelOf = (f: string) => m.fields.find((x) => x.name === f)?.label ?? f;
       for (const a of acts) {
+        // transition field-gate: which required fields are still empty on this record
+        const missing = (a.requires ?? []).filter((f) => {
+          const v = (r.data ?? {})[f]; return v === undefined || v === null || v === "";
+        });
         const b = document.createElement("button"); b.className = "tool-btn";
-        b.textContent = `${a.action} → ${a.to}`; b.style.cssText = "display:block;margin:3px 0;width:100%;text-align:left";
+        b.textContent = `${a.action} → ${a.to}` + (missing.length ? ` (needs ${missing.map(labelOf).join(", ")})` : "");
+        b.style.cssText = "display:block;margin:3px 0;width:100%;text-align:left";
+        b.disabled = missing.length > 0;
+        if (missing.length) b.title = `Fill ${missing.map(labelOf).join(", ")} before ${a.action}`;
         b.onclick = async () => {
           try { await this.host.api.transitionRecord(pid, m.key, rid, a.action); this.openRecord(m, rid); }
           catch (e) { this.host.setStatus(`blocked: ${(e as Error).message}`); }
