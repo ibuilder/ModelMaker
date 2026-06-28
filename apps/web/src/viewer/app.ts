@@ -122,6 +122,38 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   props5d.style.cssText = "margin-top:6px;font-size:11px;line-height:1.5";
   propsPanel.appendChild(props5d);
 
+  // field-verification — mark the selected element installed/verified/deviation (Argyle-style QA)
+  const propsVerify = document.createElement("div"); propsVerify.id = "props-verify";
+  propsVerify.style.cssText = "margin-top:6px;font-size:11px;line-height:1.6";
+  propsPanel.appendChild(propsVerify);
+
+  async function renderVerify(guid: string) {
+    propsVerify.innerHTML = "";
+    if (!connected || !projectId || !guid) return;
+    const setBtn = (label: string, status: string, color: string) => {
+      const b = document.createElement("button");
+      b.className = "file-btn"; b.textContent = label;
+      b.style.cssText = `font-size:11px;padding:2px 8px;border-color:${color}`;
+      b.onclick = async () => {
+        try {
+          await api.setVerification(projectId!, guid, { status });
+          lbl.textContent = ` ${label}`; lbl.style.color = color;
+          setStatus(`element marked ${status}`);
+        } catch (e) { setStatus("verify failed: " + (e as Error).message); }
+      };
+      return b;
+    };
+    const row = document.createElement("div");
+    row.style.cssText = "border-top:1px solid var(--line);padding-top:6px";
+    row.innerHTML = `<div style="font-weight:700">Field verification</div>`;
+    const bar = document.createElement("div"); bar.style.cssText = "display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:3px";
+    bar.append(setBtn("Installed", "installed", "#4a8cff"), setBtn("Verified", "verified", "#33d17a"),
+               setBtn("Deviation", "deviation", "#e2554a"));
+    const lbl = document.createElement("span"); lbl.className = "meta";
+    bar.appendChild(lbl);
+    row.appendChild(bar); propsVerify.appendChild(row);
+  }
+
   async function render5D(guid: string) {
     props5d.innerHTML = "";
     if (!connected || !projectId) return;
@@ -144,7 +176,7 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   }
 
   async function showProps(map: ModelIdMap, guid?: string) {
-    if (guid) void render5D(guid); else props5d.innerHTML = "";
+    if (guid) { void render5D(guid); void renderVerify(guid); } else { props5d.innerHTML = ""; propsVerify.innerHTML = ""; }
     if (connected && projectId && guid) {
       try { renderProps(await api.element(projectId, guid)); return; } catch { /* fall through */ }
     }
@@ -393,6 +425,34 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   toolBtn("◐", "Color selection", () => selection && colorize.color(selection, "#ffb000"));
   toolBtn("⌫", "Clear measurements", () => measure.deleteCurrent());
   toolBtn("⊞", "Show all (H)", async () => { await visibility.showAll(); await colorize.reset(); });
+  toolBtn("✦", "Ask the model — plain-English questions about the data", () => {
+    if (!connected || !projectId) { notify("open a project to ask about its model", "error"); return; }
+    showResult("Ask the model", (body) => {
+      body.innerHTML = `<div class="meta" style="margin-bottom:8px">Ask in plain English — e.g. “how many fire-rated doors on level 3?”, “total curtain-wall area”, “which storeys have the most elements?”. Answers are grounded in this model's property index.</div>`;
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.placeholder = "Type a question…";
+      inp.style.cssText = "width:100%;padding:8px;box-sizing:border-box";
+      const ans = document.createElement("div"); ans.style.cssText = "margin-top:10px;white-space:pre-wrap;line-height:1.5";
+      const go = document.createElement("button"); go.className = "file-btn"; go.textContent = "Ask"; go.style.marginTop = "8px";
+      const run = async () => {
+        const q = inp.value.trim(); if (!q) return;
+        ans.textContent = "Thinking…"; go.disabled = true;
+        try {
+          const r = await api.askModel(projectId!, q);
+          ans.textContent = r.answer || "";
+          if (r.source !== "claude") {
+            const note = r.source === "disabled" ? "AI key not set — showing the model snapshot the assistant would use." : "";
+            ans.textContent = (r.answer || "") + (note ? "\n\n" + note : "")
+              + (r.snapshot ? "\n\n" + JSON.stringify(r.snapshot, null, 2) : "");
+          }
+        } catch (e) { ans.textContent = "Couldn't ask: " + (e as Error).message; }
+        finally { go.disabled = false; }
+      };
+      go.onclick = () => void run();
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") void run(); });
+      body.append(inp, go, ans); inp.focus();
+    });
+  });
   toolDivider();   // ── measure / visibility ──┊── collaboration ──
 
   // ---- live presence + shared viewpoints ----------------------------------

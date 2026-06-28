@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
 
-from .. import storage
+from .. import ai, storage
 from ..rbac import require_role
 
 router = APIRouter()
@@ -72,3 +72,44 @@ def element(pid: str, guid: str, _: str = Depends(require_role("viewer"))):
     if not rec:
         raise HTTPException(404, "element not found")
     return rec
+
+
+def _model_snapshot(pid: str) -> dict:
+    """A compact, grounded summary of the model's data for the AI assistant (or for direct display
+    when AI is off): element total, counts by class + storey, the property sets present, and the
+    indexer's precomputed counts/facets."""
+    idx = _INDEX.get(pid, {})
+    by_class: dict[str, int] = {}
+    by_storey: dict[str, int] = {}
+    pset_keys: set[str] = set()
+    for e in idx.values():
+        by_class[e.get("ifc_class", "?")] = by_class.get(e.get("ifc_class", "?"), 0) + 1
+        st = e.get("storey") or "(unassigned)"
+        by_storey[st] = by_storey.get(st, 0) + 1
+        psets = e.get("psets") or e.get("properties") or {}
+        if isinstance(psets, dict):
+            pset_keys.update(psets.keys())
+    meta = _META.get(pid, {})
+    return {
+        "project": meta.get("project"),
+        "total_elements": len(idx),
+        "counts_by_class": dict(sorted(by_class.items(), key=lambda x: -x[1])[:40]),
+        "counts_by_storey": by_storey,
+        "property_sets": sorted(pset_keys)[:60],
+        "indexer_counts": meta.get("counts"),
+        "facets": meta.get("facets"),
+    }
+
+
+@router.post("/projects/{pid}/ask")
+def ask_model(pid: str, body: dict = Body(...), _: str = Depends(require_role("viewer"))):
+    """Ask a plain-English question about the model. Grounds the answer in a snapshot of the property
+    index (counts by class/storey, Psets, facets); uses the configured AI provider, and degrades to
+    returning the snapshot itself when no AI key is set (so the data is still useful offline)."""
+    _ensure_loaded(pid)
+    if pid not in _INDEX:
+        raise HTTPException(404, "no properties index for project — upload one first")
+    question = (body.get("question") or "").strip()
+    if not question:
+        raise HTTPException(422, "question required")
+    return ai.ask(question, _model_snapshot(pid))

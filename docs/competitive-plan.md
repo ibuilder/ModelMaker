@@ -71,3 +71,21 @@ punchlist, daily diary/HSE, property-development lifecycle, AI chat, self-hosted
 - OCR/YOLO photo-&-PDF auto-takeoff (PaddleOCR/YOLOv11) — heavy ML pipeline + models.
 - Accommodation / worker-camp module — niche.
 - A separate Cesium 3D globe — we georeference in the main viewer instead.
+
+## Argyle + Flinker scan (v0.1.88)
+
+A scan of [Argyle](https://www.argyle.build/) (AR field verification for $100M+ industrial) and
+[Flinker](https://flinker.app/) (self-hosted OpenBIM inside Microsoft 365). ModelMaker already
+overlaps Flinker heavily (self-hosted, IFC/IDS/BCF viewer, CDE-like store, dashboards, AI assists);
+Argyle is a category we lacked (field verification). Built to our open, $0, no-AR-hardware identity:
+
+- **Ask the model (A)** — Flinker "IFC Copilot" parity: `POST /ask` answers plain-English questions
+  grounded in the property index; degrades to the data snapshot without an AI key.
+- **Field verification + install coverage (B)** — Argyle's core value without AR: mark elements
+  installed/verified/deviation vs design (photo-anchored), a coverage % dashboard + deviation log.
+- **Embeddable viewer + outbound webhooks (D)** — Flinker SDK / Power Automate parity: `?embed=1`
+  chrome-less viewer for `<iframe>`/Teams; module-transition webhooks for external automation.
+
+**Deliberately skipped:** AR-headset overlay (Magic Leap/iPad — hardware-heavy; a phased WebXR phone
+overlay is a future option) and MS-365-native packaging (Power BI visual / SharePoint tabs — cuts
+against the framework-agnostic, self-hosted posture; the `?embed=1` iframe covers the Teams-tab case).

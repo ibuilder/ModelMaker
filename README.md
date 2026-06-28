@@ -167,7 +167,13 @@ Deliverables** — with a sticky live-solved returns bar.
 
 ## Recent platform work
 
-- **Workflow engine upgrades (latest, v0.1.87)** — config-driven modules engine gains **transition
+- **Model intelligence, field verification & embeddability (latest, v0.1.88)** — **Ask the model** in
+  plain English (`/ask`, grounded in the property index; degrades to a data snapshot without an AI key);
+  **field verification** — mark elements installed/verified/deviation vs design (photo-anchored) with an
+  **install-coverage** dashboard + deviation log for the ops handover; an **`?embed=1`** chrome-less,
+  read-only viewer for `<iframe>`/Teams embeds; and **outbound webhooks** on workflow transitions
+  (Power Automate / Zapier). Adapted from Argyle + Flinker to the open, self-hosted posture.
+- **Workflow engine upgrades (v0.1.87)** — config-driven modules engine gains **transition
   field-gating** (`requires: [field]` — RFI can't be Answered without an answer), a **Company/Contact
   directory** with first-class `reference` lookups (e.g. a subcontract's vendor), a cross-module
   **due/overdue SLA feed** ("⏰ Deadlines" on the portal home), and an **in-app workflow map** on the
@@ -233,7 +239,7 @@ Deliverables** — with a sticky live-solved returns bar.
   cost burn; **QTO by floor & discipline**. Plus **multi-user** (members → role-scoped persona
   views), bulk site-photo + camera capture, and an optional **paid Revit (.rvt)→IFC bridge** (APS,
   feature-flagged with a cost gate; IFC stays the source of truth). One click (lot→building→deal)
-  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.87).
+  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.88).
 - **Rendering, families & computational design (M-theme)** — a viewer **render mode** (directional
   sun + soft shadows, ACES/PBR, IBL), a NOAA **sun-&-shadow study** (date · time · lat/long), and a
   Matterport-style first-person **walkthrough**; Revit-style **`IfcMaterialLayerSet` assemblies** on
@@ -481,6 +487,8 @@ GET    /reports · /projects/{id}/reports/{report}.{pdf,xlsx}   Report Center (P
 GET    /opendata/permit-cities · /projects/{id}/opendata/permits[.geojson]   municipal permit feed
 POST   /projects/{id}/opendata/permits/import   seed the GC permit log from a city's open data
 GET    /projects/{id}/dashboard · /due-feed    role-tailored dashboard · cross-module due/overdue SLA feed
+POST   /projects/{id}/ask                      plain-English Q&A grounded in the model's property index
+GET    /projects/{id}/verification/coverage    install coverage (verified/installed %) + PUT .../{guid} · /deviations
 # disposition & valuation (real estate)
 GET/POST /projects/{id}/appraisal             tri-approach valuation (cost · income · sales-comparison, reconciled)
 GET    /projects/{id}/listings/autofill        listing fields pre-filled from the model + proforma

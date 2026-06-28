@@ -4,6 +4,25 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.88 — model intelligence, field verification & embeddability
+Three features adapted from a scan of **Argyle** (AR field verification) and **Flinker** (OpenBIM in
+M365) — built to ModelMaker's open, self-hosted, $0 identity (no AR hardware, no MS-365 lock-in).
+- **Ask the model** — `POST /projects/{id}/ask` answers plain-English questions ("how many fire-rated
+  doors on L3?", "total curtain-wall area") grounded in a snapshot of the property index (counts by
+  class/storey, Psets, facets). Uses the configured AI provider; **degrades to the data snapshot**
+  when no key is set. A "✦ Ask" button in the Model workspace.
+- **Field verification + install coverage** — mark elements **installed / verified / deviation**
+  against design (keyed by GUID, photo-anchored) from the element panel; a coverage summary
+  (`GET …/verification/coverage`, % verified/installed of the model total) + a **deviation log** for
+  the verified-handover to operations. Argyle's core value, no AR hardware. New `ElementVerification`
+  table + `routers/verification.py`.
+- **Embeddable viewer + outbound webhooks** — `?embed=1` renders a chrome-less, read-only viewer for
+  an `<iframe>` / web-component / Teams tab; module transitions fire **outbound webhooks**
+  (`AEC_WEBHOOK_URLS`, fail-open) so Power Automate / Zapier / a custom listener can react. New
+  `webhooks.py`.
+- Tests: `test_ask.py`, `test_verification.py`, `test_webhooks.py`. Verified live (Ask snapshot,
+  embed chrome-less, webhook dispatch + fail-open).
+
 ## v0.1.87 — workflow engine upgrades (emanager parity)
 Cross-cutting upgrades to the config-driven modules engine — each lights up across all ~75 modules.
 Adopted from a gap analysis of the WordPress **emanager** platform + Procore/Autodesk best practice

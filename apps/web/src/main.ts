@@ -786,4 +786,9 @@ function initNav() {
   setWorkspace(savedWs && (!allowWs || allowWs.includes(savedWs)) ? savedWs : currentWs);
 }
 
-startup().finally(initNav);
+// Embeddable mode: `?embed=1` hides the app chrome (top bar, rails, tabs) and shows just the 3D
+// viewer for the given ?project= — for an <iframe>/web-component embed (Teams tab, partner portal,
+// a marketing site). Read-only by nature; pair with a signed link for unauthenticated sharing.
+const _embed = new URLSearchParams(location.search).get("embed") === "1";
+if (_embed) document.body.classList.add("embed");
+startup().finally(() => { initNav(); if (_embed) setWorkspace("model"); });

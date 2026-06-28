@@ -478,6 +478,29 @@ export class ApiClient {
     return this.json<{ reso: Record<string, unknown> }>(`/projects/${pid}/listings/${lid}/reso`);
   }
 
+  // --- model intelligence + field verification ------------------------------
+  /** Ask a plain-English question about the model; grounded in the property-index snapshot. */
+  askModel(pid: string, question: string) {
+    return this.json<{ answer?: string; snapshot?: unknown; source: string }>(
+      `/projects/${pid}/ask`, { method: "POST", body: JSON.stringify({ question }) });
+  }
+  /** Install-coverage summary (verified/installed % vs the model total, deviation count). */
+  verificationCoverage(pid: string) {
+    return this.json<{ total_elements: number; tracked: number; verified: number; installed: number;
+      deviations: number; verified_pct: number; installed_pct: number; by_status: Record<string, number> }>(
+      `/projects/${pid}/verification/coverage`);
+  }
+  /** Set an element's field-verification status (installed | verified | deviation | pending). */
+  setVerification(pid: string, guid: string, body: { status: string; note?: string }) {
+    return this.json<{ guid: string; status: string; ifc_class?: string }>(
+      `/projects/${pid}/verification/${guid}`, { method: "PUT", body: JSON.stringify(body) });
+  }
+  /** The deviation log (elements flagged as not matching design). */
+  verificationDeviations(pid: string) {
+    return this.json<{ guid: string; ifc_class?: string; storey?: string; note?: string }[]>(
+      `/projects/${pid}/verification/deviations`);
+  }
+
   // --- contract documents (generate / scope library / sign) -----------------
   /** URL of a generated contract document — doc = agreement | prime | co | exhibit. */
   contractDocUrl(pid: string, key: string, rid: string, doc: string, clauses?: string, attach = false) {

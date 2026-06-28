@@ -323,3 +323,21 @@ class SyncSchedule(Base):
     last_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ElementVerification(Base):
+    """Field verification of a model element against design (Argyle-style spatial QA, photo-anchored).
+    Keyed by IFC GlobalId so it survives re-conversion. status: pending | installed | verified |
+    deviation. Drives the install-coverage dashboard and the deviation log handed to operations."""
+    __tablename__ = "element_verifications"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String, index=True)
+    guid: Mapped[str] = mapped_column(String, index=True)
+    ifc_class: Mapped[str | None] = mapped_column(String, nullable=True)
+    storey: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="installed", index=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    photo_key: Mapped[str | None] = mapped_column(String, nullable=True)  # storage key for a field photo
+    verified_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    modified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

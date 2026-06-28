@@ -647,3 +647,12 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
 .att-drop .meta { font-size: 10px; }
 .att-drop.over { border-color: var(--accent); background: var(--accent-soft); }
 .att-drop.busy { opacity: .6; pointer-events: none; }
+
+/* Embeddable mode (?embed=1): hide app chrome, show only the 3D viewer for an <iframe>/web-component */
+body.embed #topbar,
+body.embed #rail,
+body.embed #rail-panel,
+body.embed #rail-resize,
+body.embed #viewer-tools,
+body.embed #statusbar { display: none !important; }
+body.embed #workspaces { display: none; }
