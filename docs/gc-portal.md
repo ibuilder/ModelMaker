@@ -23,14 +23,14 @@ activity timeline. Adding a module = dropping a JSON file in `services/api/modul
     "initial": "draft",
     "transitions": [
       {"from": "draft", "to": "open", "action": "submit", "party": ["GC"]},
-      {"from": "open", "to": "answered", "action": "respond", "party": ["Consultant"]},
+      {"from": "open", "to": "answered", "action": "respond", "party": ["Consultant"], "requires": ["answer"]},
       {"from": "answered", "to": "closed", "action": "accept", "party": ["GC"]}
     ]
   }
 }
 ```
 
-**69 modules across 12 sections** ship today (Preconstruction, Engineering, Change
+**78 modules across 14 sections** ship today (Preconstruction, Engineering, Change
 Management, Field, Quality, Safety, Sustainability, Contracts, Cost, BIM, Closeout,
 Resources). Regenerate/extend via `services/api/generate_modules.py`.
 
@@ -42,6 +42,34 @@ Resources). Regenerate/extend via `services/api/generate_modules.py`.
 
 Enforced when `AEC_RBAC=1`; the caller is identified by `X-User` (swap for your IdP/JWT).
 The project creator becomes admin + GC. Set party roles via `POST /projects/{id}/members`.
+
+## Transition field-gating
+
+Workflow transitions can declare `"requires": ["<field>"]` (see the RFI example above): the engine
+refuses the transition — and the UI **disables the workflow button** — until those fields are filled.
+So an RFI can't move to **Answered** without an answer, a punchlist item can't be **verified** without
+its photo, and so on. Field-gating composes with the party-role gate.
+
+## Directory (Company / Contact)
+
+A first-class **directory** ships as two config modules — **Company** and **Contact** — so vendors,
+consultants and owners' reps are real records, not free-text strings. Any module field can declare a
+`reference` to a directory record (e.g. `subcontract.vendor_company → Company`,
+`rfi.assigned_contact → Contact`), giving typeahead lookup, a stable link, and rollups back to the
+referenced company/contact.
+
+## Deadlines / SLA feed
+
+`GET /projects/{id}/due-feed` is a **cross-module due/overdue feed**: it scans every due-bearing
+module (11 of them — RFIs, submittals, change orders, tasks, inspections, punchlist, …), computes
+due/overdue status against each record's due date, and returns one ranked SLA list. A **"Deadlines"**
+widget on the portal home surfaces overdue + due-this-week items at a glance.
+
+## Workflow map
+
+Every record view shows an **in-app workflow map** — a state diagram of the module's workflow with
+the current state highlighted and the available (party- and field-gated) transitions drawn as edges,
+so anyone can see where a record is and what moves it forward.
 
 ## Change-order chain (records hand off across modules)
 
@@ -116,11 +144,15 @@ GET    /projects/{id}/elements/{guid}/5d          per-element 5D (cost + progres
 GET    /projects/{id}/5d/heatmap?by=cost|progress model heatmap (cost or % complete)
 GET    /projects/{id}/schedule/{gantt,lob}.svg    schedule visuals
 GET    /projects/{id}/dashboard                    role-tailored dashboard
+GET    /projects/{id}/due-feed                     cross-module due/overdue SLA feed
+GET/POST /projects/{id}/appraisal                  tri-approach appraisal (cost/income/sales-comp)
 ```
 
 ## Verified
 
 `test_modules.py` (engine, party-gated workflow, change-order chain, pins, comments,
-CSV/PDF), `test_cost.py` (G702/G703 + T&M), `test_dashboard.py` (role tailoring). The web
+CSV/PDF), `test_cost.py` (G702/G703 + T&M), `test_dashboard.py` (role tailoring),
+`test_workflow_gate.py` (transition field-gating), `test_due_feed.py` (cross-module SLA feed),
+`test_directory.py` (Company/Contact + reference lookups). The web
 Portal renders the dashboard, module catalog, forms (incl. signature pads), records with
 workflow buttons, and the pins on the model.

@@ -73,6 +73,7 @@
     <a href="#underwrite">3 · Underwrite a deal</a>
     <a href="#run">4 · Run a project</a>
     <a href="#turnover">5 · Hand it over</a>
+    <a href="#dispose">6 · List &amp; value it</a>
     <a href="#glossary">Glossary</a>
     <a href="#faq">FAQ</a>
   </div>
@@ -191,8 +192,13 @@
       progress), or open the <b>cost / progress heatmap</b> to color the whole model by spend or % complete.</li>
     <li>Bill the owner: generate the <b>pay application (G702/G703)</b> PDF from the Schedule of Values —
       it draws straight from the budget lines, with retainage and stored-materials handled.</li>
+    <li>Watch the <b>Deadlines</b> widget on the portal home — a cross-module feed of what's
+      <b>overdue</b> or <b>due this week</b> across RFIs, submittals, change orders, inspections and more.</li>
     <li>Ask the <b>"Ask AI"</b> box plain-English questions like "what's overdue?" or "are we over budget?"</li>
   </ol>
+  <div class="note">Workflow buttons stay <b>disabled until the required fields are filled</b> (an RFI can't be
+    Answered without an answer), and every record view shows a <b>workflow map</b> — a small state diagram of
+    where the record is and what moves it forward.</div>
   <div class="note">Working with a team? Invite members from the account menu and give each a <b>capability
     role</b> (viewer → admin, gates what they can edit) and a <b>party role</b> (GC, Owner, Owner's Rep,
     Consultant, Subcontractor — sets their default view and who can move a workflow forward).</div>
@@ -210,6 +216,22 @@
     <li>Export <b>COBie</b> (the standard facilities-handover spreadsheet), the <b>QTO</b>, and a one-click
       <b>turnover package</b> (as-built IFC + COBie + closeout docs).</li>
   </ol>
+
+  <h2 id="dispose">Tutorial 6 · List &amp; value it</h2>
+  <p class="sub">Take the finished (or off-plan) building to market and put a defensible value on it.</p>
+  <ol class="steps">
+    <li>In <b>Finance</b>, open the <b>Listing</b> panel and click <b>Auto-fill from model + proforma</b>.
+      It pulls the address, areas, unit mix, amenities and price straight from the IFC model and the deal —
+      no retyping.</li>
+    <li>Generate the <b>marketing fact sheet PDF</b> (a BIM-native Listing Fact Sheet), then <b>Share</b> to
+      get a <b>signed public link + QR code</b> — read-only, so you can market a building <b>off-plan</b>
+      before it's built.</li>
+    <li>Open the <b>Valuation</b> tab to appraise it three ways — <b>cost</b>, <b>income</b>, and
+      <b>sales-comparison</b> (with comps) cards — then set the <b>reconciliation weights</b> to blend them
+      into a <b>final value</b>. Download the <b>Valuation report</b> (PDF or Excel).</li>
+  </ol>
+  <div class="note tip">💡 The listing is <b>RESO-aligned</b>, so the same data exports cleanly for an
+    MLS push (no re-keying for your broker).</div>
 
   <h2 id="glossary">Glossary — plain English</h2>
   <table class="gl">
@@ -237,6 +259,10 @@
     <tr><td>4D</td><td>The 3D model + time — scrub a slider to see what's built on any day.</td></tr>
     <tr><td>COBie</td><td>The standard spreadsheet handed to the building's operator at turnover (assets, warranties, manuals).</td></tr>
     <tr><td>Clash / IDS</td><td>Clash = two elements overlapping. IDS = a checklist your model must satisfy (data quality).</td></tr>
+    <tr><td>Appraisal</td><td>A defensible estimate of a property's value — here done three ways (cost, income, sales-comparison) and reconciled into a final number.</td></tr>
+    <tr><td>RESO</td><td>Real Estate Standards Organization — the common data dictionary MLS systems use, so a listing's fields export cleanly for an MLS push.</td></tr>
+    <tr><td>Listing / days-on-market</td><td>The marketing record for a property offered for sale. Days-on-market = how long it's been listed.</td></tr>
+    <tr><td>Comp (sales comparable)</td><td>A recently sold, similar property used to estimate value by comparison in the sales-comparison approach.</td></tr>
   </table>
 
   <h2 id="faq">FAQ</h2>
@@ -251,6 +277,8 @@
     <p class="muted">Yes (on the connected/server stack). Invite members and give each a capability role (viewer → admin) and a party role (GC, Owner, Owner's Rep, Consultant, Subcontractor). The party role tailors their view and controls who can advance a workflow; the capability role gates what they can edit.</p>
     <h3>What does it cost?</h3>
     <p class="muted">The single-project desktop app is free with no per-seat license. A paid connected/cloud tier is planned.</p>
+    <h3>Can I list or appraise the building?</h3>
+    <p class="muted">Yes. The Finance workspace auto-fills a RESO-aligned <b>Listing</b> from the model + proforma, generates a marketing fact sheet PDF and a signed public link/QR (even off-plan), and the <b>Valuation</b> tab appraises the building three ways (cost, income, sales-comparison) into a reconciled final value with a downloadable report.</p>
     <h3>How do I get help?</h3>
     <p class="muted">Re-open the in-app tour with the <b>?</b> button, or file an issue on <a href="https://github.com/ibuilder/ModelMaker/issues">GitHub</a>.</p>
   </div>

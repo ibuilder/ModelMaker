@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/demo-in%20browser-33d17a)](https://ibuilder.github.io/ModelMaker/app/)
 
-> **Open, self-hosted, IFC-native AEC platform.** A web **BIM viewer + modeling**, a **73-module GC
+> **Open, self-hosted, IFC-native AEC platform.** A web **BIM viewer + modeling**, a **78-module GC
 > portal** (RFIs, pay apps, CPM schedule, TRIR), and a **development proforma** — **one model, from
 > acquisition to turnover.** Generate a building from a zoning envelope, then coordinate, draw,
 > schedule & underwrite it. Built on **That Open + IfcOpenShell**. **$0 to run.**
@@ -114,7 +114,7 @@ A construction-management portal on top of the viewer — full writeup in
 [docs/gc-portal.md](docs/gc-portal.md). Highlights:
 
 - **Module engine** — every process (RFIs, Submittals, PCO/Change-Order chain, Daily
-  Reports, …) is a `module.json` → its own auto-created table. **71 modules / 12 sections**,
+  Reports, …) is a `module.json` → its own auto-created table. **78 modules / 14 sections**,
   no per-module code. Each gets CRUD, role-gated workflow, comments, CSV/PDF, pins, timeline.
 - **Two role dimensions** — capability roles (viewer→admin) + party roles
   (GC/Owner/OwnersRep/Consultant/Subcontractor) that gate workflow transitions.
@@ -312,7 +312,7 @@ Deliverables** — with a sticky live-solved returns bar.
   Open/Save menu. The Tauri 2 shell spawns this backend as a sidecar for a **native window**;
   mobile (Capacitor/Tauri-mobile) is next.
 - **UX** — the ⚙ Tools panel is a collapsible, **persona-ordered**, state-aware accordion with
-  **readable result modals** (cost/energy/IDS/clash); the **73-module portal catalog** gains ★
+  **readable result modals** (cost/energy/IDS/clash); the **78-module portal catalog** gains ★
   favorites + collapsible persona-aware sections + a filter; the viewer toolbar is grouped. The
   project picker tags each project's model type (`.frag`/`.ifc`). (See `docs/ux-findings.md`.)
 - **Installable + offline** — PWA (manifest + Workbox service worker; lean ~97 KB precache,
@@ -374,12 +374,12 @@ GC portal schedule visuals (from the `schedule_activity` module):
 
 Platform interface (vector renders of the redesigned UI — see the [live demo](https://ibuilder.github.io/ModelMaker/app/) for the running app):
 
-| Tools panel + readable results | 73-module portal catalog |
+| Tools panel + readable results | 78-module portal catalog |
 |---|---|
 | ![tools panel](docs/img/ui-tools-panel.svg) | ![portal catalog](docs/img/ui-portal-catalog.svg) |
 
 The ⚙ Tools panel is a persona-ordered, collapsible, state-aware accordion (secondary tools fold
-under "More tools"; analysis opens in a readable modal); the GC-portal catalog tames 71 modules
+under "More tools"; analysis opens in a readable modal); the GC-portal catalog tames 78 modules
 with ★ favorites, collapsible persona-aware sections, and a filter.
 
 ## Architecture
@@ -406,7 +406,7 @@ apps/editor-bridge/  Bonsai-MCP config + authoring recipes (desktop path)
 services/converter/  IFC→.frag (Node) + optional RVT→IFC via APS (paid, flagged)
 services/api/        FastAPI: BCF, properties, exports, clash/validate, drawings, edit/publish,
                        GC portal (modules, cost, schedule, dashboard)
-services/api/modules/  71 module.json definitions (GC portal — one table each)
+services/api/modules/  78 module.json definitions (GC portal — one table each)
 services/data/       IfcOpenShell: index, QTO, COBie, spaces, schedule, clash, IDS, drawings, edit,
                        massing (zoning→IFC), families (starter IFC type library)
 packages/            shared types
@@ -477,10 +477,15 @@ GET    /projects/{id}/cost/{g703,g702,summary} financials (+ g702.pdf, POST /cos
 GET    /projects/{id}/schedule/{gantt,lob}.svg  Gantt + Line-of-Balance
 GET    /projects/{id}/schedule/{cpm,alerts,optimize}  CPM · predictive alerts · acceleration advisory
 GET    /projects/{id}/{risk-digest}           cost+schedule+open-items+safety risk digest
-GET    /reports · /projects/{id}/reports/{report}.{pdf,xlsx}   Report Center (PDF + Excel)
+GET    /reports · /projects/{id}/reports/{report}.{pdf,xlsx}   Report Center (PDF + Excel; incl. appraisal · listing_factsheet)
 GET    /opendata/permit-cities · /projects/{id}/opendata/permits[.geojson]   municipal permit feed
 POST   /projects/{id}/opendata/permits/import   seed the GC permit log from a city's open data
-GET    /projects/{id}/dashboard               role-tailored dashboard
+GET    /projects/{id}/dashboard · /due-feed    role-tailored dashboard · cross-module due/overdue SLA feed
+# disposition & valuation (real estate)
+GET/POST /projects/{id}/appraisal             tri-approach valuation (cost · income · sales-comparison, reconciled)
+GET    /projects/{id}/listings/autofill        listing fields pre-filled from the model + proforma
+GET    /projects/{id}/listings/{lid}/reso      RESO Data Dictionary export (MLS / WPRealWise bridge seam)
+POST   /projects/{id}/listings/{lid}/share · GET .../public   signed, read-only public listing link (QR share)
 
 # interoperability + portability
 GET/POST /connections[/{id}]                  data-source connections (Postgres/Supabase/Procore/ACC)

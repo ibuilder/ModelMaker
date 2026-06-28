@@ -7,7 +7,7 @@ The single product roadmap. Supporting detail lives in:
 [competitive-plan.md](competitive-plan.md), [ux-findings.md](ux-findings.md).
 
 Three pillars on one IFC-keyed model: **BIM viewer** · **GC portal** (config-driven modules) ·
-**developer/finance** (proforma). Shipped continuously — latest release **v0.1.11**.
+**developer/finance** (proforma). Shipped continuously — latest release **v0.1.87**.
 
 ---
 
@@ -81,8 +81,17 @@ contingency 5–10%; Uses = Acquisition + Hard + Soft + Financing; Sources = Deb
   equity); per-period draw spread feeding interest reserve. Endpoint + Finance S&U view + memo section.
 - ✅ **DONE — B3 property & tax assumptions.** `dev_property.py` + GET/PUT `/projects/{id}/property`
   + "🏢 Property & tax" Finance panel: parcel/areas/purchase + tax table (school/county/town/fire →
-  total) → OPEX, purchase → acquisition line; per-SF ratios. *Next: appraisal/market comps section.*
+  total) → OPEX, purchase → acquisition line; per-SF ratios. ✅ **DONE — appraisal/market comps** (see B7).
 - **B6 — Pitch-deck variant** of the memo (10–20 slides) + market/timeline sections, photos.
+- ✅ **DONE — B7 disposition & marketing kit** (v0.1.86). A RESO-aligned `listing` config module that
+  **auto-fills from the model + proforma** (`marketing.py`), a BIM-native **Listing Fact Sheet PDF** +
+  a **signed public listing link/QR** (read-only — market a building off-plan), and a **RESO Data
+  Dictionary** export seam. `GET /listings/autofill`, `POST /listings/{lid}/share`, `GET
+  /listings/{lid}/public`, `GET /listings/{lid}/reso`. See [realestate-marketing.md](realestate-marketing.md).
+- ✅ **DONE — B8 tri-approach appraisal** (v0.1.86). `appraisal.py` values the asset three ways —
+  **cost + income + sales-comparison** (with comps) — and **reconciles** them into a final value;
+  surfaced as a **Valuation** tab in Finance with a **Valuation report (PDF/Excel)**. `GET|POST
+  /projects/{id}/appraisal`. See [realestate-marketing.md](realestate-marketing.md).
 
 ## U. Underwriting realism  ★ next major theme
 The engine solves the math correctly, but it accepts un-risk-adjusted inputs — e.g. feeding
@@ -157,6 +166,16 @@ and ASU.
 - ✅ **DONE — C3 4D sequencing.** `fourd.timeline()` + `GET /projects/{id}/schedule/4d` maps elements
   onto the takt plan (trade × floor) → scrubable frames (cumulative % built/day), with a **viewer
   scrub** (the Schedule tools slider isolates built-to-date) + a takt **line-of-balance chart**.
+- ✅ **DONE — C4 workflow-engine upgrades / emanager parity** (v0.1.87; see
+  [emanager-gap-analysis.md](emanager-gap-analysis.md)):
+  - **Transition field-gating** — transitions declare `requires:[field]`; the engine refuses and the
+    UI disables the workflow button until those fields are filled (e.g. RFI can't be Answered without an answer).
+  - **Company / Contact directory + reference lookups** — first-class directory config modules with
+    `reference` field lookups (e.g. `subcontract.vendor_company`).
+  - **Due / overdue SLA feed** — `GET /projects/{id}/due-feed` scans all due-bearing modules into one
+    ranked feed, surfaced by a **"Deadlines"** portal-home widget.
+  - **In-app workflow map** — a state diagram of the module workflow on the record view (current state
+    highlighted, gated transitions drawn as edges).
 
 ## M. Materials, rendering & computational design  ★ next major theme
 Closing gaps vs Revit (families/materials), Rhino/Revit/Matterport (rendering), and Dynamo
@@ -271,7 +290,7 @@ a11y pass. Plus: mobile (Capacitor) build hardening; RVT→IFC (APS) polish.
 ---
 
 ## Status & what's left
-The headline themes are **shipped** (v0.1.14): generative design + **Test Fit** (A1/A3/A4/A5/A6),
+The headline themes are **shipped** (v0.1.87): generative design + **Test Fit** (A1/A3/A4/A5/A6),
 the **developer/finance portal** (B1 budgets · B2 Sources & Uses · B3 property/tax · B4 specialty ·
 B5 investment memo), the full **lifecycle** (acquisition→turnover), **AI assistant**, **SSO**, and
 the production-blocking hardening (see [production-readiness.md](production-readiness.md) — now

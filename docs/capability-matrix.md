@@ -35,6 +35,13 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
 | **COLLABORATION & COST** | | | | |
 | Multi-user / cloud collab | Partial | Yes | Partial | **Built** — server API + project-scoped RBAC (viewer/reviewer/editor/admin), audit log; Postgres/MinIO stack |
 | Licensing | Free | Paid | Paid | **Free / open** (GPL editor kept separate) |
+| **DISPOSITION & VALUATION** | | | | |
+| Listing / marketing kit (RESO-aligned) | No | No | No | **Built** — `marketing.py`, model+proforma autofill + Listing Fact Sheet PDF + signed public link/QR |
+| Appraisal (cost + income + sales-comp) | No | No | No | **Built** — `appraisal.py`, tri-approach reconciled, Valuation tab + PDF/Excel |
+| **WORKFLOW & DIRECTORY** | | | | |
+| Transition field-gating (`requires:[field]`) | No | Partial | No | **Built** — workflow buttons disable until required fields are filled (e.g. RFI needs an answer to be Answered) |
+| Company / Contact directory + reference lookups | No | view | No | **Built** (Procore-parity) — config modules + first-class `reference` lookups (e.g. `subcontract.vendor_company`) |
+| Due / overdue SLA feed | No | Partial | No | **Built** (Procore-parity) — `GET /due-feed` cross-module + a "Deadlines" portal-home widget |
 
 ## Verified this round
 - **Clash detection** (`services/data/.../clash.py`): bakes world geometry via the

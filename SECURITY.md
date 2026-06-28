@@ -61,6 +61,11 @@ DB during the deploy for those. Take a backup first; the additive sync intention
   a `Content-Security-Policy` (framing-only by default; opt-in strict resource policy), optional HSTS.
 - **Direct downloads:** `model.frag` and attachments accept short-lived **HMAC-signed URLs** as an
   alternative to a session (for QR share / worker fetch / deep links); the auth cookie is `Secure` over HTTPS.
+- **Public listings (disposition):** the listing share link (`GET /projects/{id}/listings/{lid}/public`)
+  is the **only intentionally-anonymous** surface — it requires a valid HMAC-signed URL **even when RBAC
+  is off**, is read-only, returns **only owner-authored public fields** (price, description, beds/baths,
+  tour link — never internal financials like NOI/cap), is project- and listing-scoped (no swapping ids),
+  and is covered by the per-IP rate limiter. Minting a link requires a project member (`viewer`).
 - **Input / data:** Pydantic-validated request models; SQLAlchemy parameterized queries; the data-source
   SQL browser is **read-only** (single SELECT/WITH, no DDL/DML, row-capped); storage keys are
   containment-checked (no path traversal) and upload filenames sanitized.

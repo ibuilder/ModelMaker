@@ -6,12 +6,14 @@ shipped capabilities (no vaporware). Tone: confident, concrete, builder-to-build
 ## Taglines
 - **The whole building lifecycle, on one model.**
 - From a zoning lot to a finished building — generate it, underwrite it, build it, hand it over.
+- From a lot to a closed sale — one IFC model carries the deal all the way to disposition.
 - The AEC market is a patchwork of point tools. This isn't.
 - IFC-native, open, self-hosted. No per-seat license.
 
 ## One-liner
 An open, self-hosted AEC platform that spans **acquisition → turnover on one IFC model** — BIM
-viewer, generative design + Test Fit, development proforma, GC portal, 4D construction and turnover.
+viewer, generative design + Test Fit, development proforma, GC portal, 4D construction and turnover,
+disposition & appraisal.
 
 ## Elevator pitch (≈60 words)
 Most teams stitch together a feasibility tool, a BIM authoring tool, a construction-management
@@ -25,6 +27,8 @@ run the job, and hand it over — open, self-hosted, and free to run on one mach
 - **Developer finance** — line-item budgets, Sources & Uses, specialty (energy + vertical farm), investment memo + pitch deck.
 - **Underwriting that's honest** — risk-adjusted revenue + guardrails that flag returns outside market bands.
 - **GC portal** — RFIs, change orders, pay apps, CPM + takt + 4D, lean PPC, safety, closeout — config-driven.
+- **Off-plan listing kit** — a BIM-native Listing Fact Sheet + a signed public link/QR, auto-filled from the model & proforma.
+- **Tri-approach appraisal** — cost + income + sales-comparison reconciled into a Valuation report, RESO-aligned for MLS.
 - **Grounded in the literature** — Willis (form follows finance), Salvadori (structure), the Empire State takt assembly line.
 
 ## Sample social post (X / LinkedIn)
