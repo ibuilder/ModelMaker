@@ -317,6 +317,23 @@ export class PortalUI {
       } else {
         main.appendChild(Object.assign(el("div", "empty-state"), { textContent: "✓ Nothing in your court — you are caught up" }));
       }
+      // MAIN — overdue / due-soon (cross-module SLA feed)
+      void this.host.api.dueFeed(pid, 7).then((due) => {
+        if (!due.counts.overdue && !due.counts.due_soon) return;
+        main.appendChild(Object.assign(el("div", "section-title"),
+          { textContent: `⏰ Deadlines — ${due.counts.overdue} overdue · ${due.counts.due_soon} due this week` }));
+        const rowFor = (x: typeof due.overdue[number], overdue: boolean) => {
+          const row = el("button", "portal-mod") as HTMLButtonElement;
+          const when = overdue ? `${Math.abs(x.days)}d overdue` : (x.days === 0 ? "due today" : `in ${x.days}d`);
+          row.innerHTML = `<span class="ic">${x.icon}</span> <b>${x.ref}</b> ${x.title ?? ""} `
+            + `<span class="badge ${overdue ? "rfi" : "open"}">${when}</span>`;
+          row.onclick = () => { const m = this.mods.find((mm) => mm.key === x.module); if (m) this.openRecord(m, x.id); };
+          main.appendChild(row);
+        };
+        for (const x of due.overdue.slice(0, 10)) rowFor(x, true);
+        for (const x of due.due_soon.slice(0, 6)) rowFor(x, false);
+      }).catch(() => {});
+
       // MAIN — recent notifications
       void this.host.api.notifications(pid).then((notes) => {
         if (!notes.length) return;

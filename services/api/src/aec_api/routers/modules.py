@@ -207,6 +207,13 @@ def notifications(pid: str, db: Session = Depends(get_db), user: str = Depends(c
     return mod_engine.notifications(db, pid, user, _party(pid, db, user))
 
 
+@router.get("/projects/{pid}/due-feed")
+def due_feed(pid: str, days: int = 7, db: Session = Depends(get_db),
+            _: str = Depends(require_role("viewer"))):
+    """Cross-module SLA feed — open records past or near their due date (overdue / due-soon)."""
+    return mod_engine.due_feed(db, pid, soon_days=days)
+
+
 def _build_digests(db: Session, pid: str) -> list[dict]:
     """Per-member work-queue digests for everyone on the project who has open items."""
     project = db.get(Project, pid)

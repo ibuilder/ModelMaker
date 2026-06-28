@@ -545,6 +545,62 @@ def my_work(db: Session, project_id: str, user: str, party: str | None) -> list[
     return out
 
 
+_DUE_FIELDS = ("due_date", "response_due", "need_by", "due")
+
+
+def _due_field_name(mod: dict) -> str | None:
+    names = {f["name"] for f in mod.get("fields", [])}
+    return next((c for c in _DUE_FIELDS if c in names), None)
+
+
+def _terminal_states(mod: dict) -> set[str]:
+    """States with no outgoing transition — a record there is done (closed/void/executed/…)."""
+    wf = mod.get("workflow", {})
+    froms = {t["from"] for t in wf.get("transitions", [])}
+    return {s for s in wf.get("states", []) if s not in froms}
+
+
+def due_feed(db: Session, project_id: str, soon_days: int = 7) -> dict:
+    """Cross-module SLA feed: open records (not in a terminal state) past or near their due date,
+    bucketed overdue / due-soon. Scans only modules that actually carry a due-date field. Drives the
+    'overdue / due this week' dashboard queue — the project-wide deadline view emanager added."""
+    from datetime import date, timedelta
+    today = date.today()
+    soon = today + timedelta(days=max(0, soon_days))
+    overdue: list[dict] = []
+    due_soon: list[dict] = []
+    for key, mod in REGISTRY.items():
+        df = _due_field_name(mod)
+        if not df or key not in TABLES:
+            continue
+        terminal = _terminal_states(mod)
+        t = TABLES[key]
+        for r in db.execute(select(t.c.id, t.c.ref, t.c.title, t.c.workflow_state, t.c.assignee, t.c.data)
+                            .where(t.c.project_id == project_id)):
+            m = r._mapping
+            if m["workflow_state"] in terminal:
+                continue
+            dd = (m["data"] or {}).get(df)
+            if not dd:
+                continue
+            try:
+                d = date.fromisoformat(str(dd)[:10])
+            except ValueError:
+                continue
+            item = {"module": key, "module_name": mod.get("name", key), "icon": mod.get("icon", "•"),
+                    "id": m["id"], "ref": m["ref"], "title": m["title"], "state": m["workflow_state"],
+                    "assignee": m["assignee"], "due_date": d.isoformat(), "days": (d - today).days}
+            if d < today:
+                overdue.append(item)
+            elif d <= soon:
+                due_soon.append(item)
+    overdue.sort(key=lambda x: x["due_date"])
+    due_soon.sort(key=lambda x: x["due_date"])
+    return {"overdue": overdue, "due_soon": due_soon,
+            "counts": {"overdue": len(overdue), "due_soon": len(due_soon)},
+            "as_of": today.isoformat(), "horizon_days": soon_days}
+
+
 def add_comment(db: Session, key: str, project_id: str, rid: str, text: str,
                 author: str) -> dict:
     get_record(db, key, project_id, rid)  # 404 if missing

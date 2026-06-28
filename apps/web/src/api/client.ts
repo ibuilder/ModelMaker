@@ -159,6 +159,14 @@ export interface NotifItem {
   title: string | null; action: string; actor: string | null; ts: string | null; reason: string;
 }
 export interface SavedViewDef { id: string; name: string; config: { q?: string; state?: string; sort?: { col: string; dir: 1 | -1 } }; }
+export interface DueItem {
+  module: string; module_name: string; icon: string; id: string; ref: string;
+  title: string | null; state: string; assignee: string | null; due_date: string; days: number;
+}
+export interface DueFeed {
+  overdue: DueItem[]; due_soon: DueItem[];
+  counts: { overdue: number; due_soon: number }; as_of: string; horizon_days: number;
+}
 
 export interface StatementLine { label: string; amount: number; subtotal?: boolean; total?: boolean }
 export interface FinancialStatements {
@@ -823,6 +831,10 @@ export class ApiClient {
   }
   notifications(pid: string) {
     return this.json<NotifItem[]>(`/projects/${pid}/notifications`);
+  }
+  /** Cross-module SLA feed — open records past or near their due date (overdue / due-soon). */
+  dueFeed(pid: string, days = 7) {
+    return this.json<DueFeed>(`/projects/${pid}/due-feed?days=${days}`);
   }
   // --- drawing markup (2D sheet pins; promotable to RFIs) ----------------
   drawingMarkup(pid: string, sheet: string) {
