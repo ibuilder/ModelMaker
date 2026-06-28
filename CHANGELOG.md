@@ -4,6 +4,24 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.87 — workflow engine upgrades (emanager parity)
+Cross-cutting upgrades to the config-driven modules engine — each lights up across all ~75 modules.
+Adopted from a gap analysis of the WordPress **emanager** platform + Procore/Autodesk best practice
+(see [docs/emanager-gap-analysis.md](docs/emanager-gap-analysis.md)).
+- **Transition field-gating** — a workflow transition can declare `requires: [field, …]` that must be
+  filled before it fires (RFI can't be *Answered* without an answer). `available_actions` advertises
+  it; the action button disables with a "(needs …)" hint until satisfied. Generalizes the attachment
+  evidence-gate.
+- **Company / Contact directory + first-class lookups** — new `company` + `contact` modules; vendor /
+  sub / contact fields become `reference` lookups into the directory (`subcontract.vendor_company`),
+  with the picker, resolution and reverse links for free.
+- **Due dates / SLA feed** — `GET /projects/{pid}/due-feed` + a "⏰ Deadlines" portal-home widget:
+  open records past or near their due date (overdue / due-this-week), across the 11 modules with a
+  due field; terminal/closed records excluded.
+- **In-app workflow map** — the record view renders a compact state diagram (current state
+  highlighted, reachable next-states emphasized). (Saved views already existed.)
+- Tests: `test_workflow_gate.py`, `test_due_feed.py`, `test_directory.py` (backend 54 suites).
+
 ## v0.1.86 — disposition & valuation (real-estate marketing)
 Close the development loop from build to **sell/lease** and **market value** — the two things only a
 BIM-native platform can do, because ModelMaker owns the model + proforma. (See

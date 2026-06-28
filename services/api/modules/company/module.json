@@ -1,0 +1,27 @@
+{
+  "key": "company",
+  "name": "Companies",
+  "section": "Resources",
+  "icon": "🏢",
+  "ref_prefix": "ORG",
+  "title_field": "name",
+  "fields": [
+    { "name": "name", "label": "Company name", "type": "text", "required": true },
+    { "name": "type", "label": "Type", "type": "select",
+      "options": ["General Contractor", "Subcontractor", "Owner", "Architect", "Engineer", "Consultant", "Vendor", "Supplier", "Authority"] },
+    { "name": "trade", "label": "Trade / CSI", "type": "text" },
+    { "name": "contact_name", "label": "Primary contact", "type": "text" },
+    { "name": "email", "label": "Email", "type": "text" },
+    { "name": "phone", "label": "Phone", "type": "text" },
+    { "name": "address", "label": "Address", "type": "textarea" },
+    { "name": "license_no", "label": "License #", "type": "text" },
+    { "name": "dbe_status", "label": "DBE / MWBE", "type": "select", "options": ["", "DBE", "MBE", "WBE", "SBE", "VOSB"] },
+    { "name": "notes", "label": "Notes", "type": "textarea" }
+  ],
+  "workflow": { "initial": "active", "states": ["active", "inactive"],
+    "transitions": [
+      { "from": "active", "to": "inactive", "action": "deactivate", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "inactive", "to": "active", "action": "reactivate", "party": ["GC", "Owner", "OwnersRep"] }
+    ] },
+  "list_columns": ["type", "trade", "phone"]
+}

@@ -167,7 +167,12 @@ Deliverables** — with a sticky live-solved returns bar.
 
 ## Recent platform work
 
-- **Disposition & valuation (latest, v0.1.86)** — close the loop from build to **sell/lease**: a
+- **Workflow engine upgrades (latest, v0.1.87)** — config-driven modules engine gains **transition
+  field-gating** (`requires: [field]` — RFI can't be Answered without an answer), a **Company/Contact
+  directory** with first-class `reference` lookups (e.g. a subcontract's vendor), a cross-module
+  **due/overdue SLA feed** ("⏰ Deadlines" on the portal home), and an **in-app workflow map** on the
+  record view — adopted from an emanager gap analysis (see [docs/emanager-gap-analysis.md](docs/emanager-gap-analysis.md)).
+- **Disposition & valuation (v0.1.86)** — close the loop from build to **sell/lease**: a
   `listing` module that **auto-fills from the model + proforma** (areas/NOI/cap/asking price), a
   one-click **marketing fact sheet** + a signed **public link/QR** to share off-plan, and a
   **tri-approach appraisal** (cost + income + sales-comparison, reconciled) with a Valuation tab and
@@ -228,7 +233,7 @@ Deliverables** — with a sticky live-solved returns bar.
   cost burn; **QTO by floor & discipline**. Plus **multi-user** (members → role-scoped persona
   views), bulk site-photo + camera capture, and an optional **paid Revit (.rvt)→IFC bridge** (APS,
   feature-flagged with a cost gate; IFC stays the source of truth). One click (lot→building→deal)
-  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.86).
+  seeds all three pillars. See the [CHANGELOG](CHANGELOG.md) (v0.1.53→v0.1.87).
 - **Rendering, families & computational design (M-theme)** — a viewer **render mode** (directional
   sun + soft shadows, ACES/PBR, IBL), a NOAA **sun-&-shadow study** (date · time · lat/long), and a
   Matterport-style first-person **walkthrough**; Revit-style **`IfcMaterialLayerSet` assemblies** on

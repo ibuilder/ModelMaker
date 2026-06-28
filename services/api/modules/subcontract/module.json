@@ -15,6 +15,13 @@
       "fieldset": "Contract"
     },
     {
+      "name": "vendor_company",
+      "label": "Vendor (directory)",
+      "type": "reference",
+      "module": "company",
+      "fieldset": "Contract"
+    },
+    {
       "name": "trade",
       "label": "Trade",
       "type": "text",
@@ -61,7 +68,10 @@
       "name": "bond_required",
       "label": "Bond Required?",
       "type": "select",
-      "options": ["No", "Yes"],
+      "options": [
+        "No",
+        "Yes"
+      ],
       "fieldset": "Dates & compliance"
     },
     {
