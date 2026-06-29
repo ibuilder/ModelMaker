@@ -673,10 +673,15 @@ def transition(db: Session, key: str, project_id: str, rid: str, action: str,
     _log(db, project_id, key, rid, actor, party, f"transition:{action}",
          {"from": rec["workflow_state"], "to": tr["to"], "note": note})
     db.commit()
-    # fire an outbound webhook (opt-in, fail-open) so external automation can react
-    from . import webhooks
+    # fire an outbound webhook (opt-in, fail-open) so external automation can react — include the
+    # record's resolved distribution (CC) emails so a listener can notify them.
+    from . import distribution as _dist, webhooks
+    try:
+        recipients = _dist.record_emails(db, project_id, key, rec.get("data"))
+    except Exception:                              # noqa: BLE001 — never block a transition
+        recipients = []
     webhooks.record_transition(project_id, key, rid, rec.get("ref"),
-                               rec["workflow_state"], tr["to"], action, actor)
+                               rec["workflow_state"], tr["to"], action, actor, distribution=recipients)
     return get_record(db, key, project_id, rid)
 
 

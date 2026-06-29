@@ -4,11 +4,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from .. import submittals as sub_engine, tm as tm_engine
+from .. import distribution as dist_engine, submittals as sub_engine, tm as tm_engine
 from ..db import get_db
 from ..rbac import require_role
 
 router = APIRouter()
+
+
+@router.get("/projects/{pid}/modules/{key}/{rid}/distribution")
+def record_distribution(pid: str, key: str, rid: str, db: Session = Depends(get_db),
+                        _: str = Depends(require_role("viewer"))):
+    """Resolve a record's distribution (CC) field against the contact directory → recipients + emails."""
+    return dist_engine.for_record(db, pid, key, rid)
 
 
 @router.get("/projects/{pid}/tm-summary")

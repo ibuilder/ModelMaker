@@ -59,11 +59,14 @@ def dispatch(event: str, payload: dict) -> int:
 
 
 def record_transition(project_id: str, module: str, rid: str, ref: str | None,
-                      frm: str, to: str, action: str, actor: str | None) -> None:
-    """Emit a `record.transition` webhook (best-effort)."""
+                      frm: str, to: str, action: str, actor: str | None,
+                      distribution: list[str] | None = None) -> None:
+    """Emit a `record.transition` webhook (best-effort). `distribution`: resolved CC emails so an
+    external automation can notify the record's distribution list."""
     try:
         dispatch("record.transition", build_payload(
             "record.transition", project_id=project_id, module=module, record_id=rid,
-            ref=ref, **{"from": frm}, to=to, action=action, actor=actor))
+            ref=ref, **{"from": frm}, to=to, action=action, actor=actor,
+            distribution=distribution or []))
     except Exception as e:                            # noqa: BLE001
         _log.warning("webhook dispatch error: %s", e)

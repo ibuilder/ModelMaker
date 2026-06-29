@@ -120,6 +120,12 @@
       "type": "reference",
       "module": "drawing",
       "fieldset": "Impacts & references"
+    },
+    {
+      "name": "distribution",
+      "label": "Distribution (CC)",
+      "type": "textarea",
+      "fieldset": "Distribution"
     }
   ],
   "workflow": {

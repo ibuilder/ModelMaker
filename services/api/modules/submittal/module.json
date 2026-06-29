@@ -2,7 +2,7 @@
   "key": "submittal",
   "name": "Submittals",
   "section": "Engineering",
-  "icon": "▤",
+  "icon": "\u25a4",
   "ref_prefix": "SUB",
   "title_field": "title",
   "pinnable": true,
@@ -107,6 +107,12 @@
       "type": "reference",
       "module": "drawing",
       "fieldset": "Cost & references"
+    },
+    {
+      "name": "distribution",
+      "label": "Distribution (CC)",
+      "type": "textarea",
+      "fieldset": "Distribution"
     }
   ],
   "list_columns": [

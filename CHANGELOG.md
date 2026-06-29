@@ -4,6 +4,13 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.95 — RFI/submittal distribution lists
+- RFIs & submittals gain a **Distribution (CC)** field; `distribution.py` resolves it (names or emails,
+  comma/semicolon/newline-separated) against the **Contact directory** into recipients + emails.
+- `GET /projects/{id}/modules/{key}/{rid}/distribution` returns the resolved list; the resolved emails
+  now ride the **record.transition webhook** (`distribution: [...]`) so a listener can notify the CC list.
+- Tests in `test_distribution.py` (backend 62/62; rfi/submittal fieldsets kept contiguous).
+
 ## v0.1.94 — drawing transmittals + issuance diff
 - The drawing-set register now classifies each current sheet as **new** vs **revised** (issuance diff)
   and reports `new_count` / `revised_count`.

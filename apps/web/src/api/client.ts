@@ -560,6 +560,11 @@ export class ApiClient {
     const q = new URLSearchParams({ ...(to ? { to } : {}), ...(note ? { note } : {}) }).toString();
     return this.url(`/projects/${pid}/drawing-set/transmittal.pdf${q ? "?" + q : ""}`);
   }
+  /** Resolve a record's distribution (CC) field against the contact directory → recipients + emails. */
+  recordDistribution(pid: string, key: string, rid: string) {
+    return this.json<{ ref: string; recipients: { name: string; email: string | null; resolved: boolean }[];
+      emails: string[] }>(`/projects/${pid}/modules/${key}/${rid}/distribution`);
+  }
   /** Time & Material (eTicket) cost rollup — labor/material/equipment, billed vs unbilled. */
   tmSummary(pid: string) {
     return this.json<{ ticket_count: number; labor_total: number; material_total: number;
