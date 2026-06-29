@@ -4,6 +4,18 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.4 — Live e-signature bridge (DocuSeal, self-hosted OSS)
+- The feature-flagged 3rd-party e-signature bridge (`esign_bridge.py`) now **implements DocuSeal
+  end-to-end** over its REST API (stdlib `urllib`, no SDK): create a template from the rendered PDF →
+  open a submission with the signers → return submission id + per-signer signing URLs.
+- New `POST /projects/{pid}/contracts/{key}/{rid}/send-for-signature` (renders the doc, routes it,
+  stores `data.esign_submission`, audited) + a **"Send for signature"** action in the contract record
+  tools; `POST /esign/webhook` reflects provider completion. `GET /esign/status` now reports whether the
+  configured provider is `implemented`. Off unless `ESIGN_PROVIDER=docuseal` + `ESIGN_API_KEY`/`ESIGN_BASE_URL`.
+- Clients `esignStatus`, `sendForSignature`; transport is monkeypatchable + unit-tested (gating 409,
+  template+submission shaping, stored submission, webhook parse). Other providers keep an actionable
+  stub. Backend 62/62.
+
 ## v0.2.3 — Change-order log + meeting action-item tracker (analytics suite rounded out)
 - New `changeorders.py` + `GET /projects/{pid}/change-orders/log`: the **CO value pipeline**
   (pending / approved / executed / rejected), reason mix, schedule-day exposure, ball-in-court, plus

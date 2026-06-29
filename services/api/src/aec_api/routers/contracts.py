@@ -72,6 +72,47 @@ def sign_contract(pid: str, key: str, rid: str, body: dict = Body(...),
     return {"signatures": (out.get("data") or {}).get("signatures", [])}
 
 
+@router.post("/projects/{pid}/contracts/{key}/{rid}/send-for-signature")
+def send_for_signature(pid: str, key: str, rid: str, body: dict = Body(default={}),
+                       db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):
+    """Route a contract/CO document through the configured 3rd-party e-signature provider (DocuSeal et
+    al.) for legally-binding multi-party signing. `signers` is a list of {email, name?, party?}. Stores
+    the submission id + per-signer signing URLs on the record `data.esign_submission` (audited)."""
+    if not esign_bridge.is_enabled():
+        raise HTTPException(409, esign_bridge.status()["message"])
+    signers = [s for s in (body.get("signers") or []) if (s or {}).get("email")]
+    if not signers:
+        raise HTTPException(422, "at least one signer with an email is required")
+    doc = (body or {}).get("doc") or _DEFAULT_DOC.get(key, "agreement")
+    clause_ids = [c for c in ((body or {}).get("clauses") or "").split(",") if c] or None
+    rec = me.get_record(db, key, pid, rid)
+    subject = (rec.get("data") or {}).get("subject") or f"{key} {rec.get('ref') or rid}"
+    try:
+        pdf = contracts.render(db, key, pid, rid, doc, clause_ids)
+        result = esign_bridge.send_for_signature(pdf, signers, subject)
+    except (RuntimeError, NotImplementedError) as e:
+        raise HTTPException(502, f"e-signature provider error: {e}")
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(503, f"send-for-signature failed: {e}")
+    me.update_record(db, key, pid, rid, {"esign_submission": result}, user, None)
+    audit.record(db, action="contract.send_for_signature", actor=user, method="POST",
+                 path=f"/projects/{pid}/contracts/{key}/{rid}/send-for-signature",
+                 detail={"provider": result.get("provider"), "submission_id": result.get("submission_id")})
+    db.commit()
+    return result
+
+
+@router.post("/esign/webhook")
+def esign_webhook(body: dict = Body(default={}), db: Session = Depends(get_db)):
+    """Receive a provider completion webhook (e.g. DocuSeal form.completed). Anonymous surface — the
+    payload carries no authority; we only log the normalized completion for audit/reconciliation."""
+    info = esign_bridge.parse_completion(body or {})
+    audit.record(db, action="contract.esign_webhook", actor="provider", method="POST",
+                 path="/esign/webhook", detail=info)
+    db.commit()
+    return {"ok": True, **info}
+
+
 @router.post("/projects/{pid}/contracts/{key}/{rid}/digital-sign")
 def digital_sign(pid: str, key: str, rid: str, body: dict = Body(default={}),
                  db: Session = Depends(get_db), user: str = Depends(require_role("reviewer"))):

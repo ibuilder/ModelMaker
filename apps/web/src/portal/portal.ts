@@ -1486,6 +1486,19 @@ export class PortalUI {
         void this.openRecord(m, rid);
       } catch (e) { toast(`digital sign failed: ${(e as Error).message}`, "error"); }
     });
+    btn("📨 Send for signature", "Route through the configured e-signature provider (DocuSeal etc.)", async () => {
+      try {
+        const st = await api.esignStatus();
+        if (!st.bridge.enabled) { toast(st.bridge.message, "info"); return; }
+        const emails = prompt("Signer email(s), comma-separated:");
+        if (!emails) return;
+        const signers = emails.split(",").map((e) => ({ email: e.trim() })).filter((s) => s.email);
+        if (!signers.length) return;
+        const res = await api.sendForSignature(pid, m.key, rid, signers);
+        toast(`sent via ${res.provider} · submission ${res.submission_id ?? "?"}`, "success");
+        void this.openRecord(m, rid);
+      } catch (e) { toast(`send for signature failed: ${(e as Error).message}`, "error"); }
+    });
     const sigs = (r.data?.signatures as { party: string; name: string }[] | undefined) ?? [];
     const dsigs = (r.data?.digital_signatures as { signer: string; fingerprint: string }[] | undefined) ?? [];
     if (sigs.length || dsigs.length) {

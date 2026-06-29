@@ -56,5 +56,50 @@ with TestClient(app) as c:
     ds = (rec.get("data") or {}).get("digital_signatures") or []
     assert len(ds) == 1 and ds[0]["fingerprint"] == out["fingerprint"] and ds[0]["doc"] == "agreement", ds
 
+    # --- 3rd-party bridge: gating (off) -------------------------------------
+    r = c.post(f"/projects/{pid}/contracts/subcontract/{sc}/send-for-signature",
+               json={"signers": [{"email": "owner@acme.test", "name": "Owner"}]})
+    assert r.status_code == 409, ("bridge should be gated off", r.status_code, r.text[:200])
+
+    # --- 3rd-party bridge: DocuSeal flow (transport monkeypatched) -----------
+    os.environ["ESIGN_PROVIDER"] = "docuseal"
+    os.environ["ESIGN_API_KEY"] = "test-token"
+    os.environ["ESIGN_BASE_URL"] = "https://docuseal.local"
+    _orig_post = esign_bridge.post_json
+    calls = []
+
+    def fake_post(url, headers, payload):
+        calls.append(url)
+        if url.endswith("/api/templates/pdf"):
+            assert headers.get("X-Auth-Token") == "test-token", headers
+            assert payload["documents"][0]["file"], "PDF must be base64-embedded"
+            return {"id": 4242, "name": payload["name"]}
+        if url.endswith("/api/submissions"):
+            assert payload["template_id"] == 4242, payload
+            return [{"submission_id": 99, "email": s["email"], "role": s["role"], "slug": "abc123"}
+                    for s in payload["submitters"]]
+        raise AssertionError(f"unexpected url {url}")
+
+    esign_bridge.post_json = fake_post
+    try:
+        assert esign_bridge.is_enabled() is True and esign_bridge.status()["implemented"] is True
+        r = c.post(f"/projects/{pid}/contracts/subcontract/{sc}/send-for-signature",
+                   json={"signers": [{"email": "owner@acme.test", "name": "Owner", "party": "Owner"}]})
+        assert r.status_code == 200, r.text[:300]
+        out = r.json()
+        assert out["provider"] == "DocuSeal (self-hosted)" and out["submission_id"] == 99, out
+        assert out["signers"][0]["url"] == "https://docuseal.local/s/abc123", out
+        assert calls == ["https://docuseal.local/api/templates/pdf", "https://docuseal.local/api/submissions"], calls
+        rec = c.get(f"/projects/{pid}/modules/subcontract/{sc}").json()
+        assert (rec.get("data") or {}).get("esign_submission", {}).get("submission_id") == 99, rec.get("data")
+        w = c.post("/esign/webhook", json={"event_type": "form.completed",
+                                           "data": {"submission_id": 99, "email": "owner@acme.test"}})
+        assert w.status_code == 200 and w.json()["completed"] is True and w.json()["submission_id"] == 99, w.text
+    finally:
+        esign_bridge.post_json = _orig_post
+        for k in ("ESIGN_PROVIDER", "ESIGN_API_KEY", "ESIGN_BASE_URL"):
+            os.environ.pop(k, None)
+
 print("ESIGN OK - PAdES signature embedded + detected; stable cert fingerprint; status gating "
-      "(self-signed available, 3rd-party bridge off); digital-sign attaches signed PDF + records signer")
+      "(self-signed available, 3rd-party bridge off); digital-sign attaches signed PDF + records signer; "
+      "DocuSeal bridge: gated off->409, send routes template+submission, stores submission, webhook parsed")

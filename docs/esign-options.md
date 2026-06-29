@@ -24,10 +24,17 @@ the contract lifecycle (generate → markup → sign) in the GC portal.
    - Signer certificate: a **self-signed platform certificate** generated + cached locally by default
      (no cost, fully offline — an *advanced* signature). Set **`ESIGN_P12`** (+ `ESIGN_P12_PASS`) to a
      PKCS#12 to sign with your organisation's / a CA-issued certificate instead.
-3. **3rd-party bridge** (scoped, feature-flagged, `esign_bridge.py`) — for legally-binding, multi-party
-   signing when a project requires it. Off unless `ESIGN_PROVIDER` (+ `ESIGN_API_KEY` / `ESIGN_BASE_URL`)
-   is set; `GET /esign/status` reports availability. The provider's envelope/submission API is wired per
-   deployment (we don't ship dead SDKs).
+3. **3rd-party bridge** (feature-flagged, `esign_bridge.py`) — for legally-binding, multi-party signing
+   when a project requires it. Off unless `ESIGN_PROVIDER` (+ `ESIGN_API_KEY` / `ESIGN_BASE_URL`) is set;
+   `GET /esign/status` reports availability (incl. whether the chosen provider is `implemented`).
+   - **DocuSeal** (self-hosted OSS) is **implemented end-to-end** (stdlib `urllib`, no SDK): a
+     **"Send for signature"** action on a contract/CO renders the document, creates a DocuSeal template
+     from the PDF, opens a submission with the signers, and stores the submission id + per-signer signing
+     URLs on the record (`data.esign_submission`, audited). Set `ESIGN_PROVIDER=docuseal`,
+     `ESIGN_API_KEY`, and `ESIGN_BASE_URL` (your DocuSeal instance). Completion is reflected via
+     **`POST /esign/webhook`** (point DocuSeal's webhook there).
+   - Documenso / DocuSign / Adobe / Dropbox Sign: the bridge surface + status are in place; each
+     provider's submission/envelope flow is wired per credentialed deployment (we don't ship dead SDKs).
 
 ## 3rd-party platform options (for the bridge)
 | Option | Type | Notes |

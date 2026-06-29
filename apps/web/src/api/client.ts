@@ -700,6 +700,19 @@ export class ApiClient {
     return this.json<{ signed: boolean; fingerprint: string; kind: string }>(
       `/projects/${pid}/contracts/${key}/${rid}/digital-sign`, { method: "POST", body: "{}" });
   }
+  /** Digital-signature capability — built-in PAdES + the optional 3rd-party bridge (DocuSeal etc.). */
+  esignStatus() {
+    return this.json<{ pades: { available: boolean; kind: string };
+      bridge: { enabled: boolean; provider: string | null; implemented: boolean; message: string } }>(
+      `/esign/status`);
+  }
+  /** Route a contract/CO through the configured 3rd-party e-signature provider (DocuSeal etc.). */
+  sendForSignature(pid: string, key: string, rid: string, signers: { email: string; name?: string; party?: string }[]) {
+    return this.json<{ provider: string; submission_id: number | string | null;
+      signers: { email: string; role: string; url: string | null }[]; status: string }>(
+      `/projects/${pid}/contracts/${key}/${rid}/send-for-signature`,
+      { method: "POST", body: JSON.stringify({ signers }) });
+  }
   /** Triage an RFI (AI): category / discipline / urgency / ball-in-court + a draft response. */
   triageRfi(pid: string, rid: string) {
     return this.json<{ ai_enabled: boolean; source: string; discipline: string; category: string;
