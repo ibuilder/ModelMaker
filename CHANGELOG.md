@@ -4,6 +4,21 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.90 — accessibility pass: every feature reachable in the UI
+A UX audit found seven computed features were API/report-only (no buttons). All are now wired in:
+- **Finance ▸ Valuation tab** gains a **Rent roll** card (occupancy/WALT/in-place income + "value
+  from rent roll"), an **Investor cap table** card with **capital-call / distribution** tools, and
+  the existing appraisal/disposition cards.
+- **Report Center ▸ Project tools & analytics** adds launchers for the **Project assistant**,
+  **WH-347 certified payroll** (week picker + preview), **Drawing-set register**, **ITB coverage**,
+  and **Field-verification coverage**. (The rent_roll/cap_table/appraisal/listing reports already
+  auto-list there.)
+- **Login** now shows an "SSO available — set `AEC_OAUTH_*`" hint when no providers are configured,
+  instead of silently hiding sign-in options.
+- Verified live (all surfaces render, console clean), authz re-audited (every new endpoint
+  `require_role` + project-scoped; financial writes = editor), `npm audit` 0 vulns, and the new
+  tables (`mod_lease`, `mod_investor`, `element_verifications`) confirmed to migrate on **Postgres**.
+
 ## v0.1.89 — operate, capital, payroll, drawing-set, assistant & ITB
 Six gaps closed from a competitive + open-source scan (OpenConstructionERP, Procore/ACC, RE
 asset-mgmt / syndication tools). See [docs/competitive-plan.md](docs/competitive-plan.md).
