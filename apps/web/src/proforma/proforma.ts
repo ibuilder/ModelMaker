@@ -447,18 +447,21 @@ export class ProformaUI {
       const tools = document.createElement("div"); tools.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px";
       const amt = document.createElement("input"); amt.type = "number"; amt.placeholder = "Amount"; amt.style.cssText = "width:120px;padding:4px";
       const out = document.createElement("div"); out.className = "meta"; out.style.marginTop = "6px";
-      const run = (kind: "call" | "distribution") => async () => {
+      const run = (kind: "call" | "distribution", persist: boolean) => async () => {
         const n = parseFloat(amt.value); if (isNaN(n)) return;
         try {
-          const r = kind === "call" ? await this.api.capitalCall(pid, n) : await this.api.distribution(pid, n);
-          out.innerHTML = `<b>${kind === "call" ? "Capital call" : "Distribution"} ${money(r.amount)}</b> — `
+          const r = kind === "call" ? await this.api.capitalCall(pid, n, persist) : await this.api.distribution(pid, n, persist);
+          out.innerHTML = `<b>${persist ? "Recorded " : "Preview "}${kind === "call" ? "capital call" : "distribution"} ${money(r.amount)}</b> — `
             + r.allocations.map((a) => `${escapeHtml(a.investor)}: ${money(a.amount)}`).join(" · ");
+          if (persist) await this.renderInvestors(host);   // refresh totals
         } catch (e) { out.textContent = (e as Error).message; }
       };
-      const callBtn = document.createElement("button"); callBtn.className = "file-btn"; callBtn.textContent = "Capital call"; callBtn.onclick = run("call");
-      const distBtn = document.createElement("button"); distBtn.className = "file-btn"; distBtn.textContent = "Distribution"; distBtn.onclick = run("distribution");
+      const callBtn = document.createElement("button"); callBtn.className = "file-btn"; callBtn.textContent = "Preview call"; callBtn.onclick = run("call", false);
+      const distBtn = document.createElement("button"); distBtn.className = "file-btn"; distBtn.textContent = "Preview dist."; distBtn.onclick = run("distribution", false);
+      const recCall = document.createElement("button"); recCall.className = "file-btn"; recCall.textContent = "Record call"; recCall.title = "Post the call to each investor's contributed total"; recCall.onclick = run("call", true);
+      const recDist = document.createElement("button"); recDist.className = "file-btn"; recDist.textContent = "Record dist."; recDist.title = "Post the distribution to each investor's distributed total"; recDist.onclick = run("distribution", true);
       const cl = document.createElement("a"); cl.className = "file-btn"; cl.textContent = "⬇ Cap table (PDF)"; cl.href = this.api.reportUrl(pid, "cap_table", "pdf"); cl.target = "_blank"; cl.rel = "noopener";
-      tools.append(amt, callBtn, distBtn, cl); cc.append(tools, out); host.appendChild(cc);
+      tools.append(amt, callBtn, distBtn, recCall, recDist, cl); cc.append(tools, out); host.appendChild(cc);
     } catch (e) { host.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }
 

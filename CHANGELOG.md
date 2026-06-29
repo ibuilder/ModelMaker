@@ -4,6 +4,13 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.92 — capital calls & distributions now post to the cap table
+- `POST /capital-call` and `/distribution` accept `persist: true` — posting each allocation to the
+  investor's **contributed** / **distributed** running total, so the cap table's contributed /
+  distributed / unreturned (and the statement PDF) track over time instead of being preview-only.
+- Investors tab: **Preview** vs **Record** buttons; recording refreshes the cap table live.
+- Backend 60/60 (incl. a persisted-call assertion).
+
 ## v0.1.91 — dedicated Operations & Investors tabs + investor statements
 - Finance gains two first-class sub-tabs: **Operations** (the hold-phase rent roll — occupancy, WALT,
   in-place income, value-from-rent-roll) and **Investors** (cap table, capital-call/distribution

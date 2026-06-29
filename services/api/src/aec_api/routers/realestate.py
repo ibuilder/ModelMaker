@@ -23,18 +23,36 @@ def cap_table(pid: str, db: Session = Depends(get_db), _: str = Depends(rbac.req
     return capital.cap_table(_investors(db, pid))
 
 
+def _allocate(db: Session, pid: str, amount: float, kind: str, persist: bool, user: str) -> dict:
+    """Allocate pro-rata; when persist=True, post each allocation to the investor's contributed
+    (call) or distributed (distribution) running total so the cap table tracks over time."""
+    result = capital.allocate(_investors(db, pid), amount, kind=kind)
+    if persist:
+        field = "contributed" if kind == "call" else "distributed"
+        for a in result["allocations"]:
+            if not a.get("id"):
+                continue
+            rec = me.get_record(db, "investor", pid, a["id"])
+            cur = float((rec.get("data") or {}).get(field) or 0.0)
+            me.update_record(db, "investor", pid, a["id"], {field: round(cur + a["amount"], 2)}, user, None)
+        result["persisted"] = True
+    return result
+
+
 @router.post("/projects/{pid}/capital-call")
-def capital_call(pid: str, amount: float = Body(..., embed=True), db: Session = Depends(get_db),
-                 _: str = Depends(rbac.require_role("editor"))):
-    """Allocate a capital call pro-rata by commitment (preview — per-investor amounts)."""
-    return capital.allocate(_investors(db, pid), amount, kind="call")
+def capital_call(pid: str, amount: float = Body(..., embed=True), persist: bool = Body(False, embed=True),
+                 db: Session = Depends(get_db), user: str = Depends(rbac.require_role("editor"))):
+    """Allocate a capital call pro-rata by commitment. persist=true posts it to each investor's
+    contributed total; otherwise it's a preview."""
+    return _allocate(db, pid, amount, "call", persist, user)
 
 
 @router.post("/projects/{pid}/distribution")
-def distribution(pid: str, amount: float = Body(..., embed=True), db: Session = Depends(get_db),
-                 _: str = Depends(rbac.require_role("editor"))):
-    """Allocate a distribution pro-rata by commitment (preview — per-investor amounts)."""
-    return capital.allocate(_investors(db, pid), amount, kind="distribution")
+def distribution(pid: str, amount: float = Body(..., embed=True), persist: bool = Body(False, embed=True),
+                 db: Session = Depends(get_db), user: str = Depends(rbac.require_role("editor"))):
+    """Allocate a distribution pro-rata by commitment. persist=true posts it to each investor's
+    distributed total; otherwise it's a preview."""
+    return _allocate(db, pid, amount, "distribution", persist, user)
 
 
 @router.get("/projects/{pid}/investors/{iid}/statement.pdf")

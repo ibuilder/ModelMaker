@@ -518,15 +518,15 @@ export class ApiClient {
       total_distributed: number; total_unreturned: number; by_class: Record<string, number>;
       rows: Record<string, unknown>[] }>(`/projects/${pid}/cap-table`);
   }
-  /** Allocate a capital call (pro-rata by commitment) — preview per-investor amounts. */
-  capitalCall(pid: string, amount: number) {
-    return this.json<{ kind: string; amount: number; allocations: { investor: string; amount: number }[] }>(
-      `/projects/${pid}/capital-call`, { method: "POST", body: JSON.stringify({ amount }) });
+  /** Allocate a capital call (pro-rata by commitment). persist=true posts it to investor totals. */
+  capitalCall(pid: string, amount: number, persist = false) {
+    return this.json<{ kind: string; amount: number; persisted?: boolean; allocations: { investor: string; amount: number }[] }>(
+      `/projects/${pid}/capital-call`, { method: "POST", body: JSON.stringify({ amount, persist }) });
   }
-  /** Allocate a distribution (pro-rata by commitment) — preview per-investor amounts. */
-  distribution(pid: string, amount: number) {
-    return this.json<{ kind: string; amount: number; allocations: { investor: string; amount: number }[] }>(
-      `/projects/${pid}/distribution`, { method: "POST", body: JSON.stringify({ amount }) });
+  /** Allocate a distribution (pro-rata by commitment). persist=true posts it to investor totals. */
+  distribution(pid: string, amount: number, persist = false) {
+    return this.json<{ kind: string; amount: number; persisted?: boolean; allocations: { investor: string; amount: number }[] }>(
+      `/projects/${pid}/distribution`, { method: "POST", body: JSON.stringify({ amount, persist }) });
   }
   /** URL of a one-page investor capital-account statement PDF. */
   investorStatementUrl(pid: string, iid: string) {

@@ -103,6 +103,6 @@ def allocate(investors: list[dict], amount: float, kind: str = "call") -> dict[s
         if idx == len(ct["rows"]) - 1:                     # absorb rounding into the last row
             a = round(amt - running, 2)
         running += a
-        allocations.append({"ref": r["ref"], "investor": r["investor"],
+        allocations.append({"id": r["id"], "ref": r["ref"], "investor": r["investor"],
                             "ownership_pct": r["ownership_pct"], "amount": a})
     return {"kind": kind, "amount": round(amt, 2), "allocations": allocations}

@@ -72,6 +72,15 @@ with TestClient(app) as c:
     dist = c.post(f"/projects/{pid}/distribution", json={"amount": 500_000}).json()
     assert dist["kind"] == "distribution" and abs(sum(a["amount"] for a in dist["allocations"]) - 500_000) < 0.01, dist
 
+    # persisted capital call posts to each investor's contributed total → cap table updates
+    before = c.get(f"/projects/{pid}/cap-table").json()["total_contributed"]
+    pc = c.post(f"/projects/{pid}/capital-call", json={"amount": 2_000_000, "persist": True}).json()
+    assert pc.get("persisted") is True, pc
+    after = c.get(f"/projects/{pid}/cap-table").json()
+    assert abs(after["total_contributed"] - (before + 2_000_000)) < 1.0, after
+    lp1c = next(r for r in after["rows"] if r["investor"] == "LP One")
+    assert abs(lp1c["contributed"] - 1_200_000) < 1.0, lp1c       # 60% of 2M
+
     # per-investor capital-account statement PDF
     iid = next(r["id"] for r in ct["rows"] if r["investor"] == "LP One")
     stmt = c.get(f"/projects/{pid}/investors/{iid}/statement.pdf")
