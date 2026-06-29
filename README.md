@@ -167,7 +167,19 @@ Deliverables** — with a sticky live-solved returns bar.
 
 ## Recent platform work
 
-- **Operate · capital · payroll · drawings · assistant · ITB (latest, v0.1.89)** — six gaps from a
+- **Construction analytics suite · RE/capital depth · production hardening (latest, v0.2.14)** — a
+  read-side analytics layer over every core field log — **quality** (inspection pass-rate / first-pass
+  yield, NCR disposition→close loop, deficiency ball-in-court), **RFI register** (ball-in-court /
+  overdue / turnaround / cost-schedule impact), **submittal register**, **T&M** (with the
+  field-T&M→change-event→CO tie), **field-log rollup** (manpower / weather lost-days / coverage),
+  **OSHA safety** (TRIR / DART / LTIFR), and a **closeout dashboard** (punchlist ball-in-court,
+  commissioning, warranties) — each a live tool + an exportable PDF/Excel report, stitched into an
+  executive **project-health rollup**. Plus **real-estate / capital depth**: a feature-flagged
+  **WPRealWise / MLS listing syndication** bridge (RESO), **lease management** (renewals · escalations ·
+  CAM recovery), cap-table-tied **equity-waterfall distribution scenarios**, **investor-portal** signed
+  statement sharing, and **comparables import** (CSV / RESO). Hardened for production: empty-project
+  robustness (regression-locked), **non-root API container**, and a tested `/metrics` Prometheus surface.
+- **Operate · capital · payroll · drawings · assistant · ITB (v0.1.89)** — six gaps from a
   competitive/open-source scan: an **operating rent roll** (leases → occupancy/WALT/expirations,
   feeding the appraisal income approach), an **investor cap table** with pro-rata capital calls &
   distributions, **WH-347 certified payroll** from timesheets, a controlled **drawing-set register**

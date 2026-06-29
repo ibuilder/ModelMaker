@@ -242,7 +242,13 @@ async function openReportCenter() {
   tool("💵 T&M / eTicket rollup", () => showResult("Time & Material rollup", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const s = await api.tmSummary(pid); body.innerHTML = `<div class="meta">${s.ticket_count} tickets · labor ${money(s.labor_total)} · material ${money(s.material_total)} · equipment ${money(s.equipment_total)} · <b>total ${money(s.grand_total)}</b> · unbilled ${money(s.unbilled_total)}</div>`;
-      table(body, ["Ref", "Subject", "Total", "Status"], s.rows.map((r: any) => [r.ref ?? "", r.subject ?? "", money(r.total), r.status])); }
+      table(body, ["Ref", "Subject", "Total", "Status"], s.rows.map((r: any) => [r.ref ?? "", r.subject ?? "", money(r.total), r.status]));
+      // T&M rolled up by the change event each ticket is linked to (field T&M -> CO -> billing)
+      const bce = await api.tmByChangeEvent(pid);
+      if (bce.groups.length) {
+        body.insertAdjacentHTML("beforeend", `<div class="meta" style="margin-top:8px">By change event · linked ${money(bce.linked_total)} · unassigned ${money(bce.unassigned_total)}</div>`);
+        table(body, ["Change event", "Subject", "Tickets", "Total"], bce.groups.map((g: any) => [g.ref ?? "—", g.subject ?? "", g.ticket_count, money(g.total)]));
+      } }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
   tool("💲 Change-order log", () => showResult("Change-order log", async (body) => {

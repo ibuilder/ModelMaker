@@ -4,6 +4,14 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.15 — Wrap-up: reachability, docs & GitHub refresh
+- UI reachability audit of the whole v0.2.x arc — all new features confirmed reachable; closed the one
+  gap by folding the **T&M-by-change-event** breakdown into the T&M rollup tool (was PDF-only).
+- Docs refreshed to current: README "Recent platform work" now leads with the construction-analytics
+  suite + RE/capital depth + production hardening; `SECURITY.md` documents the second signed-anonymous
+  surface (investor `statement.public.pdf`) and the non-root API container; GitHub About updated.
+- Verified green: backend 65/65, web typecheck + vitest (49) + Pages build, `npm audit` 0 vulnerabilities.
+
 ## v0.2.14 — Production hardening: non-root API container + observability test
 - The API image now runs as a **non-root user** (`appuser`, uid 10001) — `/app` and the `ifc-data`
   volume path are chowned before mount so the named volume inherits writable ownership; added a
