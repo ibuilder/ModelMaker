@@ -68,7 +68,15 @@ function loginModal() {
   row.append(cancel, go); card.append(u, p, msg, row, resetLink);
   // SSO buttons (only the providers configured on the server), shown above the password form
   void D.api.authProviders().then(({ providers }) => {
-    if (!providers.length) return;
+    if (!providers.length) {
+      // no OAuth configured — tell the operator SSO is available rather than silently hiding it
+      const hint = document.createElement("div"); hint.className = "meta";
+      hint.style.cssText = "margin-top:8px;font-size:11px";
+      hint.innerHTML = "Single sign-on (Google · Microsoft · Procore) is supported — set the "
+        + "<code>AEC_OAUTH_*</code> client IDs on the server to show the buttons here.";
+      card.appendChild(hint);
+      return;
+    }
     const wrap = document.createElement("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:6px";
     for (const pv of providers) {
       const b = document.createElement("button"); b.className = "file-btn";

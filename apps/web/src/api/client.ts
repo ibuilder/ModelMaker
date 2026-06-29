@@ -463,6 +463,10 @@ export class ApiClient {
     return this.json<Appraisal>(`/projects/${pid}/appraisal`, {
       method: "POST", body: JSON.stringify(overrides) });
   }
+  /** Re-run the appraisal with the income approach valued off the actual rent roll's in-place income. */
+  appraisalFromRentRoll(pid: string) {
+    return this.json<Appraisal>(`/projects/${pid}/appraisal?rentroll=1`);
+  }
   /** Listing fields pre-populated from the project's proforma + model (off-plan auto-fill). */
   listingAutofill(pid: string) {
     return this.json<{ data: Record<string, unknown> }>(`/projects/${pid}/listings/autofill`);

@@ -3,12 +3,14 @@ import { DrawingsUI } from "./drawings/drawings";
 import { PortalUI } from "./portal/portal";
 import { ProformaUI } from "./proforma/proforma";
 import { ApiClient } from "./api/client";
-import { toast } from "./ui/feedback";
+import { toast, escapeHtml } from "./ui/feedback";
+import { money } from "./ui/charts";
 import { autoCheck, checkForUpdates, currentVersion } from "./ui/update";
 import { maybeWelcome, showWelcome } from "./ui/onboarding";
 import { mountChecklist, reopenChecklist } from "./ui/checklist";
 import { FieldCapture } from "./field/field";
 import { modalShell } from "./ui/modal";
+import { showResult } from "./ui/result";
 import { buildMenu, closeMenus } from "./ui/menus";
 import { buildAuthControl } from "./account/accountUI";
 import type { Settings, ViewerApp } from "./viewer/app";
@@ -124,6 +126,58 @@ async function openReportCenter() {
       row.append(name, pdf, xls); card.appendChild(row);
     }
   }
+  // interactive / parameterized analytics that aren't plain PDF reports
+  const th = document.createElement("div"); th.className = "section-title"; th.textContent = "Project tools & analytics"; th.style.marginTop = "8px"; card.appendChild(th);
+  const tool = (label: string, fn: () => void) => {
+    const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = label;
+    b.style.cssText = "display:block;width:100%;text-align:left;margin:2px 0"; b.onclick = fn; card.appendChild(b);
+  };
+  const table = (body: HTMLElement, headers: string[], rows: (string | number)[][]) => {
+    body.innerHTML += `<table class="fin-table" style="width:100%;font-size:12px"><tr>`
+      + headers.map((h) => `<th style="text-align:left">${escapeHtml(h)}</th>`).join("") + "</tr>"
+      + rows.map((r) => "<tr>" + r.map((c) => `<td>${escapeHtml(String(c))}</td>`).join("") + "</tr>").join("")
+      + "</table>";
+  };
+  tool("🤖 Project assistant — ask about RFIs, budget, schedule…", () => showResult("Project assistant", (body) => {
+    const inp = document.createElement("input"); inp.type = "text"; inp.placeholder = "e.g. how many open RFIs? what's the SPI?"; inp.style.cssText = "width:100%;padding:8px;box-sizing:border-box";
+    const ans = document.createElement("div"); ans.style.cssText = "margin-top:10px;white-space:pre-wrap;line-height:1.5";
+    const go = document.createElement("button"); go.className = "file-btn"; go.textContent = "Ask"; go.style.marginTop = "8px";
+    const run = async () => { const q = inp.value.trim(); if (!q) return; ans.textContent = "Thinking…"; go.disabled = true;
+      try { const r = await api.askProject(pid, q); ans.textContent = r.answer || ""; if (r.source !== "claude" && r.snapshot) ans.textContent = (r.answer || "") + "\n\n" + JSON.stringify(r.snapshot, null, 2); }
+      catch (e) { ans.textContent = (e as Error).message; } finally { go.disabled = false; } };
+    go.onclick = () => void run(); inp.addEventListener("keydown", (e) => { if (e.key === "Enter") void run(); });
+    body.append(inp, go, ans); inp.focus();
+  }));
+  tool("💵 Certified payroll (WH-347)", () => showResult("Certified payroll (WH-347)", (body) => {
+    body.innerHTML = `<div class="meta">Weekly Davis-Bacon certified payroll from timesheets × labor rates.</div>`;
+    const wk = document.createElement("input"); wk.type = "date"; wk.style.cssText = "margin:8px 8px 8px 0;padding:6px";
+    const open = document.createElement("button"); open.className = "file-btn"; open.textContent = "⬇ Open WH-347 PDF";
+    open.onclick = () => window.open(api.wh347Url(pid, wk.value || undefined), "_blank");
+    const sum = document.createElement("button"); sum.className = "file-btn"; sum.textContent = "Preview"; sum.style.marginLeft = "4px";
+    const out = document.createElement("div"); out.style.marginTop = "10px";
+    sum.onclick = async () => { try { const p = await api.payroll(pid, wk.value || undefined); out.innerHTML = `<div class="meta">Week ${p.week_ending} · ${p.worker_count} workers · ${p.total_hours} h · total ${money(p.total_gross)}</div>`;
+      table(out, ["Worker", "Hours", "Gross"], p.rows.map((r: any) => [r.worker, r.total, money(r.gross)])); } catch (e) { out.textContent = (e as Error).message; } };
+    body.append(wk, open, sum, out);
+  }));
+  tool("📐 Drawing-set register", () => showResult("Drawing-set register", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const d = await api.drawingSet(pid); body.innerHTML = `<div class="meta">${d.current_count} current · ${d.superseded_count} superseded · ${d.sheet_count} sheets</div>`;
+      table(body, ["Sheet", "Title", "Discipline", "Current rev", "Revs"], d.sheet_index.map((s: any) => [s.sheet_number, s.title ?? "", s.discipline ?? "", s.current_revision ?? "", s.revisions])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
+  tool("📋 ITB coverage (bid invitations)", () => showResult("ITB coverage", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const t = await api.itb(pid); body.innerHTML = `<div class="meta">${t.package_count} packages · ${t.total_responses}/${t.total_invited} responses · ${t.packages_without_bids} with no bids</div>`;
+      table(body, ["Package", "Invited", "Responses", "Coverage"], t.rows.map((r: any) => [r.package, r.invited, r.responses, r.coverage])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
+  tool("✓ Field-verification coverage", () => showResult("Field-verification coverage", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const c = await api.verificationCoverage(pid); body.innerHTML =
+      `<div style="font-size:22px;font-weight:700">${c.verified_pct}% verified · ${c.installed_pct}% installed</div>`
+      + `<div class="meta">${c.verified} verified · ${c.installed} installed · ${c.deviations} deviations · of ${c.total_elements} elements</div>`; }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
 }
 
 /**

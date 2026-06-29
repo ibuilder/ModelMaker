@@ -366,6 +366,63 @@ export class ProformaUI {
     recCard.appendChild(save);
     host.appendChild(recCard);
 
+    // operating rent roll (hold phase) — occupancy / WALT / in-place income
+    try {
+      const rr = await this.api.rentRoll(pid);
+      if (rr.lease_count > 0) {
+        const rc = document.createElement("div"); rc.className = "fin-card";
+        rc.innerHTML = `<div class="section-title">Rent roll (operating)</div>`
+          + `<table class="fin-table">`
+          + `<tr><td>Occupancy</td><td class="num">${rr.occupancy_pct}%</td></tr>`
+          + `<tr><td>Leases</td><td class="num">${rr.lease_count}</td></tr>`
+          + `<tr><td>Base rent / yr</td><td class="num">${money(rr.base_rent_annual)}</td></tr>`
+          + `<tr><td>In-place income</td><td class="num">${money(rr.in_place_gross_income)}</td></tr>`
+          + `<tr class="fin-total"><td>WALT</td><td class="num">${rr.walt_years} yrs</td></tr></table>`;
+        const rb = document.createElement("div"); rb.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px";
+        const rl = (label: string, href: string) => { const a = document.createElement("a"); a.className = "file-btn"; a.textContent = label; a.href = href; a.target = "_blank"; a.rel = "noopener"; return a; };
+        rb.appendChild(rl("⬇ Rent roll (PDF)", this.api.reportUrl(pid, "rent_roll", "pdf")));
+        const rrv = document.createElement("button"); rrv.className = "file-btn"; rrv.textContent = "Value from rent roll";
+        rrv.title = "Re-run the appraisal income approach off in-place income";
+        rrv.onclick = async () => {
+          try { const v = await this.api.appraisalFromRentRoll(pid);
+            this.setStatus(`Income approach (in-place): ${money(v.income.value)}`); }
+          catch (e) { this.setStatus("Couldn't value from rent roll: " + (e as Error).message); }
+        };
+        rb.appendChild(rrv); rc.appendChild(rb); host.appendChild(rc);
+      }
+    } catch { /* no leases yet — skip the card */ }
+
+    // investor cap table + capital calls / distributions
+    try {
+      const ct = await this.api.capTable(pid);
+      if (ct.investor_count > 0) {
+        const cc = document.createElement("div"); cc.className = "fin-card";
+        cc.innerHTML = `<div class="section-title">Investor cap table</div>`
+          + `<table class="fin-table"><tr><th style="text-align:left">Investor</th><th>Commit</th><th>Own %</th><th>Unreturned</th></tr>`
+          + ct.rows.map((r: any) => `<tr><td>${escapeHtml(String(r.investor ?? ""))}</td>`
+              + `<td class="num">${money(r.commitment)}</td><td class="num">${r.ownership_pct}%</td>`
+              + `<td class="num">${money(r.unreturned)}</td></tr>`).join("")
+          + `<tr class="fin-total"><td>Total</td><td class="num">${money(ct.total_commitment)}</td><td></td>`
+          + `<td class="num">${money(ct.total_unreturned)}</td></tr></table>`;
+        const tools = document.createElement("div"); tools.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px";
+        const amt = document.createElement("input"); amt.type = "number"; amt.placeholder = "Amount"; amt.style.cssText = "width:120px;padding:4px";
+        const out = document.createElement("div"); out.className = "meta"; out.style.marginTop = "6px";
+        const run = (kind: "call" | "distribution") => async () => {
+          const n = parseFloat(amt.value); if (isNaN(n)) return;
+          try {
+            const r = kind === "call" ? await this.api.capitalCall(pid, n) : await this.api.distribution(pid, n);
+            out.innerHTML = `<b>${kind === "call" ? "Capital call" : "Distribution"} ${money(r.amount)}</b> — `
+              + r.allocations.map((a) => `${escapeHtml(a.investor)}: ${money(a.amount)}`).join(" · ");
+          } catch (e) { out.textContent = (e as Error).message; }
+        };
+        const callBtn = document.createElement("button"); callBtn.className = "file-btn"; callBtn.textContent = "Capital call"; callBtn.onclick = run("call");
+        const distBtn = document.createElement("button"); distBtn.className = "file-btn"; distBtn.textContent = "Distribution"; distBtn.onclick = run("distribution");
+        const cl = document.createElement("a"); cl.className = "file-btn"; cl.textContent = "⬇ Cap table (PDF)"; cl.href = this.api.reportUrl(pid, "cap_table", "pdf"); cl.target = "_blank"; cl.rel = "noopener";
+        tools.append(amt, callBtn, distBtn, cl);
+        cc.append(tools, out); host.appendChild(cc);
+      }
+    } catch { /* no investors yet — skip the card */ }
+
     // disposition: reports + create-listing + share
     const disp = document.createElement("div"); disp.className = "fin-card";
     disp.innerHTML = `<div class="section-title">Disposition &amp; marketing</div>`
