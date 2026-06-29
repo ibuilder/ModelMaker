@@ -4,6 +4,16 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.14 — Production hardening: non-root API container + observability test
+- The API image now runs as a **non-root user** (`appuser`, uid 10001) — `/app` and the `ifc-data`
+  volume path are chowned before mount so the named volume inherits writable ownership; added a
+  container-level `HEALTHCHECK` for bare `docker run` (compose already health-gates the stack).
+- New `test_metrics.py` (65 suites) locks the `/metrics` Prometheus surface: text exposition with
+  `http_requests_total` + latency summary + in-flight gauge + uptime, counted by route template and
+  incrementing across requests.
+- Closes the production/ops phase — backup/restore runbook, `/metrics`, full healthchecks +
+  depends-on conditions, rate-limit env knobs, and the Caddy HTTPS overlay were already in place.
+
 ## v0.2.13 — Polish & harden: empty-project robustness + a11y
 - New `test_empty_project.py` (64 suites): every analytics / RE surface (14 endpoints + 13 PDF/XLSX
   reports) must return 200 with a sane zeroed structure on a brand-new project — guards the "no data

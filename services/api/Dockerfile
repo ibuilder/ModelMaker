@@ -41,7 +41,18 @@ COPY --from=converter /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=converter /conv/node_modules /app/node_modules
 COPY services/converter /app/services/converter
 
+# Run as a non-root user (defence-in-depth). Create the runtime dirs and chown /app BEFORE the
+# named volumes mount: Docker initializes an empty named volume from the image path's contents +
+# ownership, so ifc-data (/app/ifc) and the storage dir inherit appuser ownership and stay writable.
+RUN useradd -m -u 10001 appuser \
+    && mkdir -p /app/ifc /app/storage \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
+# container-level liveness (compose also defines this; this covers a bare `docker run`)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
 # multiple workers so one slow request (e.g. an IFC reconvert) can't freeze the whole
 # API. Default 1 (safe for sqlite dev); compose sets UVICORN_WORKERS higher for Postgres.
 CMD ["sh", "-c", "uvicorn aec_api.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}"]

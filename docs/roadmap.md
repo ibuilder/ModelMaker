@@ -21,10 +21,10 @@ User-directed sequence as of v0.2.8. Carry this out in order; each item ships as
    - [x] Equity waterfall / distribution scenario modeling (`distwaterfall.py`) — **v0.2.10**
    - [x] Investor-portal document sharing (signed statement links via `signing.py`) — **v0.2.11**
    - [x] Comps-import automation (bulk CSV / RESO → `comparable`, `comps.py`) — **v0.2.12** ✅ phase complete
-2. **Polish & harden existing** — UX consistency pass; empty/loading/error states; accessibility;
-   perf on large models; broader test coverage of the newer analytics/RE surfaces.
-3. **Production / ops** — deploy automation; backups/restore runbook; observability
-   (metrics/healthchecks/logging); rate-limit tuning; container/image hardening.
+2. [x] **Polish & harden existing** — empty-project robustness (regression-locked), malformed-input
+   safety, waterfall no-investor guard, a11y labels on new inputs — **v0.2.13**.
+3. [x] **Production / ops** — non-root API container + `/metrics` test — **v0.2.14**; backup/restore
+   runbook, healthchecks + depends-on conditions, rate-limit env knobs, Caddy HTTPS overlay already shipped.
 
 Construction-depth analytics (the prior theme) shipped fully in v0.2.0–v0.2.7 (6-log suite,
 closeout dashboard, executive project-health rollup, e-sign bridge, E57 import, GIS basemaps,
