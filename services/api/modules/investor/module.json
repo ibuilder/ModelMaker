@@ -1,0 +1,31 @@
+{
+  "key": "investor",
+  "name": "Investors",
+  "section": "Capital",
+  "icon": "💼",
+  "ref_prefix": "INV",
+  "title_field": "investor",
+  "fields": [
+    { "name": "investor", "label": "Investor", "type": "text", "required": true },
+    { "name": "investor_company", "label": "Entity (directory)", "type": "reference", "module": "company" },
+    { "name": "entity_type", "label": "Entity type", "type": "select",
+      "options": ["Individual", "LLC", "Trust", "IRA", "Partnership", "Corporation"] },
+    { "name": "investor_class", "label": "Class", "type": "select", "options": ["LP", "GP", "Co-GP"] },
+    { "name": "commitment", "label": "Commitment", "type": "currency", "required": true },
+    { "name": "contributed", "label": "Contributed to date", "type": "currency" },
+    { "name": "distributed", "label": "Distributed to date", "type": "currency" },
+    { "name": "email", "label": "Email", "type": "text" },
+    { "name": "notes", "label": "Notes", "type": "textarea" }
+  ],
+  "workflow": {
+    "initial": "prospect",
+    "states": ["prospect", "committed", "funded", "exited"],
+    "transitions": [
+      { "from": "prospect", "to": "committed", "action": "commit", "party": ["GC", "Owner", "OwnersRep"], "requires": ["commitment"] },
+      { "from": "committed", "to": "funded", "action": "fund", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "funded", "to": "exited", "action": "exit", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "committed", "to": "prospect", "action": "rescind", "party": ["GC", "Owner", "OwnersRep"] }
+    ]
+  },
+  "list_columns": ["investor_class", "commitment", "contributed"]
+}

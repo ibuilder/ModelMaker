@@ -32,6 +32,8 @@ REPORTS: dict[str, tuple[str, str]] = {
     "financials": ("Financial Statements", "Finance"),
     "appraisal": ("Valuation (Tri-Approach Appraisal)", "Finance"),
     "listing_factsheet": ("Listing Fact Sheet", "Disposition"),
+    "rent_roll": ("Rent Roll", "Operations"),
+    "cap_table": ("Investor Cap Table", "Capital"),
 }
 
 
@@ -337,11 +339,56 @@ def _listing_factsheet(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _rent_roll(db: Session, pid: str, name: str) -> Report:
+    from . import rentroll
+    rr = rentroll.rent_roll(db, pid)
+    r = Report("Rent Roll", name)
+    r.kpi("Occupancy", f"{rr['occupancy_pct']}%")
+    r.kpi("Leases", rr["lease_count"])
+    r.kpi("Occupied SF", f"{rr['occupied_sf']:,}")
+    r.kpi("Base rent / yr", _money(rr["base_rent_annual"]))
+    r.kpi("In-place income", _money(rr["in_place_gross_income"]))
+    r.kpi("WALT", f"{rr['walt_years']} yrs")
+    r.table("Leases", ["Suite", "Tenant", "Rentable SF", "Base rent/yr", "$/SF", "Type", "Expires", "Status"],
+            [[x.get("suite", ""), x.get("tenant", ""), f"{x['rentable_sf']:,}", _money(x["base_rent_annual"]),
+              _money(x["rent_psf"]), x.get("lease_type", ""), x.get("end_date", ""), x.get("status", "")]
+             for x in rr["rows"]] or [["(no active leases)"] + [""] * 7])
+    exp = rr["expirations_by_year"]
+    if exp:
+        r.table("Lease expirations by year", ["Year", "Leases", "SF", "Expiring rent"],
+                [[y, e["count"], f"{e['sf']:,}", _money(e["rent"])] for y, e in exp.items()])
+        r.chart("bar", "Expiring rent by year", list(exp.keys()),
+                [{"name": "Expiring rent", "values": [round(e["rent"]) for e in exp.values()]}])
+    return r
+
+
+def _cap_table(db: Session, pid: str, name: str) -> Report:
+    from . import capital
+    ct = capital.cap_table(me.list_records(db, "investor", pid, limit=100000) if "investor" in me.TABLES else [])
+    r = Report("Investor Cap Table", name)
+    r.kpi("Investors", ct["investor_count"])
+    r.kpi("Total commitment", _money(ct["total_commitment"]))
+    r.kpi("Contributed", _money(ct["total_contributed"]))
+    r.kpi("Distributed", _money(ct["total_distributed"]))
+    r.kpi("Unreturned capital", _money(ct["total_unreturned"]))
+    r.table("Cap table", ["Investor", "Class", "Commitment", "Ownership %", "Contributed", "Distributed", "Unreturned"],
+            [[x["investor"], x["investor_class"], _money(x["commitment"]), f"{x['ownership_pct']:.2f}%",
+              _money(x["contributed"]), _money(x["distributed"]), _money(x["unreturned"])]
+             for x in ct["rows"]] or [["(no investors)"] + [""] * 6])
+    if ct["by_class"]:
+        r.table("By class", ["Class", "Commitment"], [[k, _money(v)] for k, v in ct["by_class"].items()])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
     if report == "appraisal":
         return _appraisal(db, pid, name)
+    if report == "rent_roll":
+        return _rent_roll(db, pid, name)
+    if report == "cap_table":
+        return _cap_table(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "executive":

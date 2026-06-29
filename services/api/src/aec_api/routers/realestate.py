@@ -6,11 +6,43 @@ from __future__ import annotations
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
-from .. import marketing, modules as me, rbac, signing
+from .. import capital, marketing, modules as me, rbac, rentroll, signing
 from ..db import get_db
 from ..models import Project
 
 router = APIRouter()
+
+
+def _investors(db: Session, pid: str) -> list[dict]:
+    return me.list_records(db, "investor", pid, limit=100000) if "investor" in me.TABLES else []
+
+
+@router.get("/projects/{pid}/cap-table")
+def cap_table(pid: str, db: Session = Depends(get_db), _: str = Depends(rbac.require_role("viewer"))):
+    """Investor cap table — ownership by commitment + contributed/distributed/unreturned totals."""
+    return capital.cap_table(_investors(db, pid))
+
+
+@router.post("/projects/{pid}/capital-call")
+def capital_call(pid: str, amount: float = Body(..., embed=True), db: Session = Depends(get_db),
+                 _: str = Depends(rbac.require_role("editor"))):
+    """Allocate a capital call pro-rata by commitment (preview — per-investor amounts)."""
+    return capital.allocate(_investors(db, pid), amount, kind="call")
+
+
+@router.post("/projects/{pid}/distribution")
+def distribution(pid: str, amount: float = Body(..., embed=True), db: Session = Depends(get_db),
+                 _: str = Depends(rbac.require_role("editor"))):
+    """Allocate a distribution pro-rata by commitment (preview — per-investor amounts)."""
+    return capital.allocate(_investors(db, pid), amount, kind="distribution")
+
+
+@router.get("/projects/{pid}/rent-roll")
+def get_rent_roll(pid: str, db: Session = Depends(get_db),
+                  _: str = Depends(rbac.require_role("viewer"))):
+    """Operating rent roll — occupancy, WALT, lease-expiration schedule + in-place income from the
+    `lease` module (the hold phase). Feeds the appraisal income approach (`/appraisal?rentroll=1`)."""
+    return rentroll.rent_roll(db, pid)
 
 
 @router.get("/projects/{pid}/listings/autofill")
@@ -49,6 +81,9 @@ def get_appraisal(pid: str, request: Request, db: Session = Depends(get_db),
                 pass
     if weights or saved.get("weights"):
         overrides["weights"] = {**(saved.get("weights") or {}), **weights}
+    # income approach can value off the *actual* rent roll's in-place income instead of the proforma
+    if qp.get("rentroll") == "1":
+        overrides["stabilized_noi"] = rentroll.rent_roll(db, pid).get("in_place_gross_income", 0.0)
     return marketing.compute_appraisal(db, pid, overrides)
 
 

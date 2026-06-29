@@ -1,0 +1,40 @@
+{
+  "key": "lease",
+  "name": "Leases",
+  "section": "Operations",
+  "icon": "🔑",
+  "ref_prefix": "LSE",
+  "title_field": "tenant",
+  "fields": [
+    { "name": "tenant", "label": "Tenant", "type": "text", "required": true },
+    { "name": "tenant_company", "label": "Tenant (directory)", "type": "reference", "module": "company" },
+    { "name": "suite", "label": "Suite / unit", "type": "text" },
+    { "name": "rentable_sf", "label": "Rentable SF", "type": "number", "required": true },
+    { "name": "base_rent_annual", "label": "Base rent ($/yr)", "type": "currency", "required": true },
+    { "name": "lease_type", "label": "Lease type", "type": "select",
+      "options": ["NNN", "Gross", "Modified Gross", "Percentage", "Ground"] },
+    { "name": "start_date", "label": "Commencement", "type": "date" },
+    { "name": "end_date", "label": "Expiration", "type": "date" },
+    { "name": "escalation_pct", "label": "Annual escalation %", "type": "number" },
+    { "name": "renewal_options", "label": "Renewal options", "type": "text" },
+    { "name": "free_rent_months", "label": "Free rent (months)", "type": "number" },
+    { "name": "ti_allowance_psf", "label": "TI allowance $/SF", "type": "number" },
+    { "name": "security_deposit", "label": "Security deposit", "type": "currency" },
+    { "name": "recovery_psf", "label": "Recoveries (CAM/tax) $/SF", "type": "number" },
+    { "name": "notes", "label": "Notes", "type": "textarea" }
+  ],
+  "workflow": {
+    "initial": "draft",
+    "states": ["draft", "active", "holdover", "expired", "terminated", "renewed"],
+    "transitions": [
+      { "from": "draft", "to": "active", "action": "execute", "party": ["GC", "Owner", "OwnersRep"], "requires": ["start_date", "end_date"] },
+      { "from": "active", "to": "holdover", "action": "holdover", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "active", "to": "renewed", "action": "renew", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "active", "to": "expired", "action": "expire", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "active", "to": "terminated", "action": "terminate", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "holdover", "to": "renewed", "action": "renew", "party": ["GC", "Owner", "OwnersRep"] },
+      { "from": "holdover", "to": "expired", "action": "expire", "party": ["GC", "Owner", "OwnersRep"] }
+    ]
+  },
+  "list_columns": ["suite", "rentable_sf", "base_rent_annual"]
+}

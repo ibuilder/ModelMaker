@@ -501,6 +501,30 @@ export class ApiClient {
       `/projects/${pid}/verification/deviations`);
   }
 
+  // --- operate (rent roll) + capital (investors) ----------------------------
+  /** Operating rent roll — occupancy, WALT, expiration schedule, in-place income. */
+  rentRoll(pid: string) {
+    return this.json<{ occupancy_pct: number; lease_count: number; base_rent_annual: number;
+      in_place_gross_income: number; walt_years: number; expirations_by_year: Record<string, unknown>;
+      rows: Record<string, unknown>[] }>(`/projects/${pid}/rent-roll`);
+  }
+  /** Investor cap table — ownership by commitment + contributed/distributed totals. */
+  capTable(pid: string) {
+    return this.json<{ investor_count: number; total_commitment: number; total_contributed: number;
+      total_distributed: number; total_unreturned: number; by_class: Record<string, number>;
+      rows: Record<string, unknown>[] }>(`/projects/${pid}/cap-table`);
+  }
+  /** Allocate a capital call (pro-rata by commitment) — preview per-investor amounts. */
+  capitalCall(pid: string, amount: number) {
+    return this.json<{ kind: string; amount: number; allocations: { investor: string; amount: number }[] }>(
+      `/projects/${pid}/capital-call`, { method: "POST", body: JSON.stringify({ amount }) });
+  }
+  /** Allocate a distribution (pro-rata by commitment) — preview per-investor amounts. */
+  distribution(pid: string, amount: number) {
+    return this.json<{ kind: string; amount: number; allocations: { investor: string; amount: number }[] }>(
+      `/projects/${pid}/distribution`, { method: "POST", body: JSON.stringify({ amount }) });
+  }
+
   // --- contract documents (generate / scope library / sign) -----------------
   /** URL of a generated contract document — doc = agreement | prime | co | exhibit. */
   contractDocUrl(pid: string, key: string, rid: string, doc: string, clauses?: string, attach = false) {
