@@ -64,12 +64,39 @@ with TestClient(app) as c:
     rebar = next(r for r in reg["rows"] if r["spec_section"] == "03 20 00")
     assert rebar["overdue"] is True and rebar["turnaround_days"] == 10, rebar
 
+    # --- Quality: inspections / NCR loop / deficiency ball-in-court -----------
+    i1 = mk(c, pid, "inspection", {"subject": "Footing", "date": "2026-06-02", "result": "Pass",
+                                   "inspection_type": "In-Progress"})
+    mk(c, pid, "inspection", {"subject": "Slab", "date": "2026-06-03", "result": "Fail",
+                              "inspection_type": "In-Progress"})
+    mk(c, pid, "inspection", {"subject": "Final elec", "date": "2026-06-04", "result": "Conditional",
+                              "inspection_type": "Final", "agency": "City"})
+    nc = mk(c, pid, "ncr", {"subject": "Honeycombing", "severity": "Major", "disposition": "Repair",
+                            "corrective_action": "Patch per spec", "due_date": "2020-01-01"})  # overdue (open)
+    trans(c, pid, "ncr", nc, "disposition")  # open -> dispositioned (still open, still overdue)
+    df1 = mk(c, pid, "deficiency", {"description": "Scuffed door", "severity": "Minor",
+                                    "trade": "Carpentry", "due_date": "2030-01-01"})
+    trans(c, pid, "deficiency", df1, "correct")  # open -> corrected => GC's court
+    mk(c, pid, "deficiency", {"description": "Missing sealant", "severity": "Minor", "trade": "Glazing"})  # open => sub's court
+    q = c.get(f"/projects/{pid}/quality/summary").json()
+    assert q["inspections"]["total"] == 3, q["inspections"]
+    assert q["inspections"]["passed"] == 1 and q["inspections"]["failed"] == 1, q["inspections"]
+    # pass rate = (pass + conditional)/decided = 2/3; first-pass yield = 1/3
+    assert q["inspections"]["pass_rate"] == 66.7 and q["inspections"]["first_pass_yield"] == 33.3, q["inspections"]
+    assert q["ncrs"]["ncr_count"] == 1 and q["ncrs"]["overdue_count"] == 1, q["ncrs"]
+    assert q["ncrs"]["by_disposition"].get("Repair") == 1, q["ncrs"]
+    assert q["deficiencies"]["deficiency_count"] == 2, q["deficiencies"]
+    assert q["deficiencies"]["ball_in_court"].get("GC (verify)") == 1, q["deficiencies"]
+    assert q["deficiencies"]["ball_in_court"].get("Subcontractor") == 1, q["deficiencies"]
+    assert q["deficiencies"]["overdue_count"] == 0, q["deficiencies"]  # one due-2030, one no due
+
     # --- reports render -------------------------------------------------------
     cat = {x["id"] for x in c.get("/reports").json()["reports"]}
-    assert {"tm_log", "submittal_register"} <= cat, cat
-    for rid in ("tm_log", "submittal_register"):
+    assert {"tm_log", "submittal_register", "quality"} <= cat, cat
+    for rid in ("tm_log", "submittal_register", "quality"):
         pdf = c.get(f"/projects/{pid}/reports/{rid}.pdf")
         assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF" and len(pdf.content) > 1200, (rid, pdf.status_code)
 
 print("CONSTRUCTION-DEPTH OK - T&M rollup $10k (labor/material/equip split, billed+unbilled); submittal "
-      "register: 2 subs, 1 overdue, avg turnaround 10d, by spec section; tm_log + submittal_register PDFs render")
+      "register: 2 subs, 1 overdue, avg turnaround 10d, by spec section; quality: pass rate 66.7%/FPY 33.3%, "
+      "1 NCR overdue (Repair), deficiency ball-in-court GC vs Sub; tm_log + submittal_register + quality PDFs render")

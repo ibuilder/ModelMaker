@@ -582,6 +582,20 @@ export class ApiClient {
       avg_turnaround_days: number | null; by_section: Record<string, number>; rows: Record<string, unknown>[] }>(
       `/projects/${pid}/submittals/register`);
   }
+  /** Quality dashboard — inspection pass-rate KPIs, NCR loop, deficiency ball-in-court. */
+  qualitySummary(pid: string) {
+    return this.json<{
+      inspections: { total: number; passed: number; failed: number; conditional: number;
+        pass_rate: number | null; first_pass_yield: number | null;
+        by_result: Record<string, number>; by_type: Record<string, number> };
+      ncrs: { ncr_count: number; open_count: number; overdue_count: number;
+        avg_days_to_close: number | null; by_disposition: Record<string, number>;
+        by_severity: Record<string, number>; rows: Record<string, unknown>[] };
+      deficiencies: { deficiency_count: number; open_count: number; overdue_count: number;
+        ball_in_court: Record<string, number>; by_trade: Record<string, number>;
+        rows: Record<string, unknown>[] };
+    }>(`/projects/${pid}/quality/summary`);
+  }
   /** ITB tracking — invited vs responded vs bonded per package + coverage gaps. */
   itb(pid: string) {
     return this.json<{ package_count: number; total_invited: number; total_responses: number;

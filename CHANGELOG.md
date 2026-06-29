@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.97 — Quality dashboard (inspections / NCR loop / deficiency ball-in-court)
+- New `quality.py` engine + `GET /projects/{pid}/quality/summary`: **inspection pass-rate KPIs**
+  (pass rate = pass+conditional / decided, first-pass yield = clean pass / decided, by type & result,
+  agency count); the **NCR disposition→corrective-action→close loop** (by state/disposition/severity,
+  overdue, undispositioned, avg days-to-close); and the **deficiency ball-in-court rollup**
+  (open=Subcontractor, corrected=GC-verify, closed; by trade & severity, overdue).
+- A **Quality Dashboard** report (PDF/Excel) in the Report Center + a "Quality dashboard" tool
+  launcher; client `qualitySummary`. Backend 62/62.
+
 ## v0.1.96 — T&M → change-event tie
 - eTickets gain a **change_event** link; `tm.by_change_event` rolls up field T&M by the change event
   it belongs to (`GET /tm-by-change-event`), with linked vs unassigned totals — closing the chain

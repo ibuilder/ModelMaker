@@ -36,6 +36,7 @@ REPORTS: dict[str, tuple[str, str]] = {
     "cap_table": ("Investor Cap Table", "Capital"),
     "tm_log": ("T&M / eTicket Log", "Cost"),
     "submittal_register": ("Submittal Register", "Logs"),
+    "quality": ("Quality Dashboard", "Quality"),
 }
 
 
@@ -424,6 +425,34 @@ def _submittal_register(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _quality(db: Session, pid: str, name: str) -> Report:
+    from . import quality
+    q = quality.quality_summary(db, pid)
+    ins, ncr, df = q["inspections"], q["ncrs"], q["deficiencies"]
+    r = Report("Quality Dashboard", name)
+    r.kpi("Inspections", ins["total"])
+    r.kpi("Pass rate", f"{ins['pass_rate']}%" if ins["pass_rate"] is not None else "—")
+    r.kpi("First-pass yield", f"{ins['first_pass_yield']}%" if ins["first_pass_yield"] is not None else "—")
+    r.kpi("Open NCRs", ncr["open_count"])
+    r.kpi("Overdue NCRs", ncr["overdue_count"])
+    r.kpi("Open deficiencies", df["open_count"])
+    r.kpi("Overdue deficiencies", df["overdue_count"])
+    if ins["by_result"]:
+        r.chart("bar", "Inspections by result", list(ins["by_result"].keys()),
+                [{"name": "Count", "values": list(ins["by_result"].values())}])
+    r.table("Inspections by type", ["Type", "Count"],
+            [[k, v] for k, v in ins["by_type"].items()] or [["(none)", ""]])
+    r.table("NCR loop", ["Ref", "Non-conformance", "State", "Disposition", "Severity", "Due", "Corr. action"],
+            [[x.get("ref", ""), x.get("subject", ""), x.get("state", ""), x.get("disposition") or "(undecided)",
+              x.get("severity", ""), ("OVERDUE " if x["overdue"] else "") + str(x.get("due_date") or ""),
+              "yes" if x["has_corrective_action"] else "—"] for x in ncr["rows"]] or [["(no NCRs)"] + [""] * 6])
+    r.table("Deficiency ball-in-court", ["Ref", "Deficiency", "Ball in court", "Trade", "Severity", "Due"],
+            [[x.get("ref", ""), x.get("description", ""), x.get("ball_in_court", ""), x.get("trade", ""),
+              x.get("severity", ""), ("OVERDUE " if x["overdue"] else "") + str(x.get("due_date") or "")]
+             for x in df["rows"]] or [["(no deficiencies)"] + [""] * 5])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -437,6 +466,8 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _tm_log(db, pid, name)
     if report == "submittal_register":
         return _submittal_register(db, pid, name)
+    if report == "quality":
+        return _quality(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "executive":

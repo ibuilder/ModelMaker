@@ -188,6 +188,15 @@ async function openReportCenter() {
       table(body, ["Ref", "Spec", "Title", "Turn (d)", "Status"], s.rows.map((r: any) => [r.ref ?? "", r.spec_section ?? "", r.title ?? "", r.turnaround_days ?? "", (r.overdue ? "OVERDUE " : "") + r.status])); }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
+  tool("🔍 Quality dashboard", () => showResult("Quality dashboard", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const q = await api.qualitySummary(pid); const i = q.inspections, n = q.ncrs, d = q.deficiencies;
+      body.innerHTML = `<div class="meta">${i.total} inspections · pass rate <b>${i.pass_rate ?? "—"}%</b> · first-pass yield ${i.first_pass_yield ?? "—"}% · `
+        + `NCRs ${n.open_count} open / ${n.overdue_count} overdue · deficiencies ${d.open_count} open / ${d.overdue_count} overdue</div>`;
+      table(body, ["Deficiency", "Ball in court", "Trade", "Severity", "Due"],
+        d.rows.map((r: any) => [r.description ?? "", r.ball_in_court ?? "", r.trade ?? "", r.severity ?? "", (r.overdue ? "OVERDUE " : "") + (r.due_date ?? "")])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("✓ Field-verification coverage", () => showResult("Field-verification coverage", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const c = await api.verificationCoverage(pid); body.innerHTML =

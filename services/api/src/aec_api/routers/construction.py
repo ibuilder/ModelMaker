@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from .. import distribution as dist_engine, submittals as sub_engine, tm as tm_engine
+from .. import distribution as dist_engine, quality as quality_engine, submittals as sub_engine, tm as tm_engine
 from ..db import get_db
 from ..rbac import require_role
 
@@ -28,6 +28,12 @@ def tm_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require
 def tm_by_change_event(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """T&M (eTicket) cost rolled up by the change event each ticket is linked to."""
     return tm_engine.by_change_event(db, pid)
+
+
+@router.get("/projects/{pid}/quality/summary")
+def quality_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Quality dashboard — inspection pass-rate KPIs, NCR disposition/close loop, deficiency ball-in-court."""
+    return quality_engine.quality_summary(db, pid)
 
 
 @router.get("/projects/{pid}/submittals/register")
