@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.93 — construction depth: T&M rollup + submittal register
+- **T&M / eTicket cost rollup** (`tm.py`): aggregates eTickets into labor/material/equipment totals,
+  by status, with **billed vs unbilled**; `GET /tm-summary` + a T&M / eTicket Log report.
+- **Submittal register** (`submittals.py`): spec-section-organized log with **turnaround**
+  (received→returned), **ball-in-court**, and **overdue** flags (required-on-site passed, not closed);
+  `GET /submittals/register` + a Submittal Register report.
+- Both auto-list in the Report Center (PDF/Excel) and have interactive launchers in "Project tools &
+  analytics". Tests in `test_construction_depth.py` (backend 61/61).
+
 ## v0.1.92 — capital calls & distributions now post to the cap table
 - `POST /capital-call` and `/distribution` accept `persist: true` — posting each allocation to the
   investor's **contributed** / **distributed** running total, so the cap table's contributed /

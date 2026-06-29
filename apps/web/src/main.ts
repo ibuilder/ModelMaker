@@ -171,6 +171,18 @@ async function openReportCenter() {
       table(body, ["Package", "Invited", "Responses", "Coverage"], t.rows.map((r: any) => [r.package, r.invited, r.responses, r.coverage])); }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
+  tool("💵 T&M / eTicket rollup", () => showResult("Time & Material rollup", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const s = await api.tmSummary(pid); body.innerHTML = `<div class="meta">${s.ticket_count} tickets · labor ${money(s.labor_total)} · material ${money(s.material_total)} · equipment ${money(s.equipment_total)} · <b>total ${money(s.grand_total)}</b> · unbilled ${money(s.unbilled_total)}</div>`;
+      table(body, ["Ref", "Subject", "Total", "Status"], s.rows.map((r: any) => [r.ref ?? "", r.subject ?? "", money(r.total), r.status])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
+  tool("📑 Submittal register", () => showResult("Submittal register", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const s = await api.submittalRegister(pid); body.innerHTML = `<div class="meta">${s.submittal_count} submittals · ${s.open_count} open · ${s.overdue_count} overdue · avg turnaround ${s.avg_turnaround_days ?? "—"} d</div>`;
+      table(body, ["Ref", "Spec", "Title", "Turn (d)", "Status"], s.rows.map((r: any) => [r.ref ?? "", r.spec_section ?? "", r.title ?? "", r.turnaround_days ?? "", (r.overdue ? "OVERDUE " : "") + r.status])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("✓ Field-verification coverage", () => showResult("Field-verification coverage", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const c = await api.verificationCoverage(pid); body.innerHTML =

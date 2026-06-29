@@ -34,6 +34,8 @@ REPORTS: dict[str, tuple[str, str]] = {
     "listing_factsheet": ("Listing Fact Sheet", "Disposition"),
     "rent_roll": ("Rent Roll", "Operations"),
     "cap_table": ("Investor Cap Table", "Capital"),
+    "tm_log": ("T&M / eTicket Log", "Cost"),
+    "submittal_register": ("Submittal Register", "Logs"),
 }
 
 
@@ -380,6 +382,43 @@ def _cap_table(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _tm_log(db: Session, pid: str, name: str) -> Report:
+    from . import tm
+    s = tm.tm_summary(db, pid)
+    r = Report("T&M / eTicket Log", name)
+    r.kpi("Tickets", s["ticket_count"])
+    r.kpi("Labor", _money(s["labor_total"]))
+    r.kpi("Material", _money(s["material_total"]))
+    r.kpi("Equipment", _money(s["equipment_total"]))
+    r.kpi("Grand total", _money(s["grand_total"]))
+    r.kpi("Unbilled", _money(s["unbilled_total"]))
+    r.table("Tickets", ["Ref", "Subject", "Date", "Labor", "Material", "Equip.", "Total", "Status"],
+            [[x.get("ref", ""), x.get("subject", ""), x.get("work_date", ""), _money(x["labor"]),
+              _money(x["material"]), _money(x["equipment"]), _money(x["total"]), x.get("status", "")]
+             for x in s["rows"]] or [["(no T&M tickets)"] + [""] * 7])
+    if s["by_status"]:
+        r.chart("bar", "T&M by status", list(s["by_status"].keys()),
+                [{"name": "Total", "values": [round(v) for v in s["by_status"].values()]}])
+    return r
+
+
+def _submittal_register(db: Session, pid: str, name: str) -> Report:
+    from . import submittals
+    s = submittals.submittal_register(db, pid)
+    r = Report("Submittal Register", name)
+    r.kpi("Submittals", s["submittal_count"])
+    r.kpi("Open", s["open_count"])
+    r.kpi("Overdue", s["overdue_count"])
+    r.kpi("Avg turnaround", f"{s['avg_turnaround_days']} d" if s["avg_turnaround_days"] is not None else "—")
+    r.table("Register", ["Ref", "Spec", "Title", "Type", "Responsible", "Disposition", "Req. on site", "Turn (d)", "Status"],
+            [[x.get("ref", ""), x.get("spec_section", ""), x.get("title", ""), x.get("type", ""),
+              x.get("responsible", ""), x.get("disposition", ""), x.get("required_on_site", ""),
+              x.get("turnaround_days", "") if x.get("turnaround_days") is not None else "",
+              ("OVERDUE " if x["overdue"] else "") + str(x.get("status", ""))]
+             for x in s["rows"]] or [["(no submittals)"] + [""] * 8])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -389,6 +428,10 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _rent_roll(db, pid, name)
     if report == "cap_table":
         return _cap_table(db, pid, name)
+    if report == "tm_log":
+        return _tm_log(db, pid, name)
+    if report == "submittal_register":
+        return _submittal_register(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "executive":

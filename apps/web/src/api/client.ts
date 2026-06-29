@@ -555,6 +555,18 @@ export class ApiClient {
       by_discipline: Record<string, number>; sheet_index: Record<string, unknown>[] }>(
       `/projects/${pid}/drawing-set`);
   }
+  /** Time & Material (eTicket) cost rollup — labor/material/equipment, billed vs unbilled. */
+  tmSummary(pid: string) {
+    return this.json<{ ticket_count: number; labor_total: number; material_total: number;
+      equipment_total: number; grand_total: number; unbilled_total: number; rows: Record<string, unknown>[] }>(
+      `/projects/${pid}/tm-summary`);
+  }
+  /** Spec-section submittal register — turnaround, ball-in-court, overdue. */
+  submittalRegister(pid: string) {
+    return this.json<{ submittal_count: number; open_count: number; overdue_count: number;
+      avg_turnaround_days: number | null; by_section: Record<string, number>; rows: Record<string, unknown>[] }>(
+      `/projects/${pid}/submittals/register`);
+  }
   /** ITB tracking — invited vs responded vs bonded per package + coverage gaps. */
   itb(pid: string) {
     return this.json<{ package_count: number; total_invited: number; total_responses: number;
