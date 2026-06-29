@@ -39,6 +39,7 @@ REPORTS: dict[str, tuple[str, str]] = {
     "quality": ("Quality Dashboard", "Quality"),
     "rfi_register": ("RFI Register", "Logs"),
     "field_log": ("Field-Log Rollup", "Field"),
+    "safety_dashboard": ("Safety Dashboard (OSHA)", "Safety"),
 }
 
 
@@ -497,6 +498,38 @@ def _field_log(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _safety(db: Session, pid: str, name: str) -> Report:
+    from . import safety
+    s = safety.safety_summary(db, pid)
+    inc, obs, tbt, viol = s["incidents"], s["observations"], s["toolbox_talks"], s["violations"]
+    r = Report("Safety Dashboard (OSHA)", name)
+    r.kpi("Incidents", inc["incident_count"])
+    r.kpi("Recordables", inc["recordable_count"])
+    r.kpi("TRIR", inc["trir"] if inc["trir"] is not None else "—")
+    r.kpi("DART", inc["dart_rate"] if inc["dart_rate"] is not None else "—")
+    r.kpi("LTIFR", inc["ltifr"] if inc["ltifr"] is not None else "—")
+    r.kpi("Lost days", inc["total_lost_days"])
+    r.kpi("Observations", obs["observation_count"])
+    r.kpi("Toolbox talks", tbt["talk_count"])
+    note = f"Hours worked {int(inc['hours_worked']):,}" + (" (estimated from manpower)" if s["hours_estimated"] else "")
+    r.kpi("Basis", note)
+    if inc["by_classification"]:
+        r.chart("bar", "Incidents by OSHA class", list(inc["by_classification"].keys()),
+                [{"name": "Count", "values": list(inc["by_classification"].values())}])
+    r.table("Incidents", ["Ref", "Subject", "Date", "OSHA class", "Recordable", "DART", "Lost d", "State"],
+            [[x.get("ref", ""), x.get("subject", ""), x.get("date", ""), x.get("classification", ""),
+              "yes" if x["recordable"] else "—", "yes" if x["dart"] else "—", x.get("lost_days", ""),
+              x.get("state", "")] for x in inc["rows"]] or [["(no incidents)"] + [""] * 7])
+    r.table("Observations (leading indicators)", ["Metric", "Value"],
+            [["Safe", obs["safe_count"]], ["At-risk", obs["at_risk_count"]],
+             ["Safe : at-risk", obs["safe_to_at_risk"] if obs["safe_to_at_risk"] is not None else "—"],
+             ["Closed %", f"{obs['closed_pct']}%" if obs["closed_pct"] is not None else "—"]])
+    r.table("Safety violations", ["Metric", "Value"],
+            [["Total", viol["violation_count"]], ["Open", viol["open_count"]],
+             ["Overdue", viol["overdue_count"]]])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -516,6 +549,8 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _rfi_register(db, pid, name)
     if report == "field_log":
         return _field_log(db, pid, name)
+    if report == "safety_dashboard":
+        return _safety(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "executive":

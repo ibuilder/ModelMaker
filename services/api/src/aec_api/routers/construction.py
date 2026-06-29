@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from .. import (dailylog as dailylog_engine, distribution as dist_engine, quality as quality_engine,
-                rfi as rfi_engine, submittals as sub_engine, tm as tm_engine)
+                rfi as rfi_engine, safety as safety_engine, submittals as sub_engine, tm as tm_engine)
 from ..db import get_db
 from ..rbac import require_role
 
@@ -29,6 +29,14 @@ def tm_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require
 def tm_by_change_event(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """T&M (eTicket) cost rolled up by the change event each ticket is linked to."""
     return tm_engine.by_change_event(db, pid)
+
+
+@router.get("/projects/{pid}/safety/summary")
+def safety_summary(pid: str, hours: float | None = None, db: Session = Depends(get_db),
+                   _: str = Depends(require_role("viewer"))):
+    """Safety analytics — OSHA TRIR/DART/LTIFR, observation mix, toolbox coverage, violations.
+    Pass ?hours=<total worker-hours> for exact rates; otherwise estimated from daily-report manpower."""
+    return safety_engine.safety_summary(db, pid, hours)
 
 
 @router.get("/projects/{pid}/daily-reports/summary")

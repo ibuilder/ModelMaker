@@ -188,6 +188,15 @@ async function openReportCenter() {
       table(body, ["Ref", "Spec", "Title", "Turn (d)", "Status"], s.rows.map((r: any) => [r.ref ?? "", r.spec_section ?? "", r.title ?? "", r.turnaround_days ?? "", (r.overdue ? "OVERDUE " : "") + r.status])); }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
+  tool("⚑ Safety dashboard (OSHA)", () => showResult("Safety dashboard (OSHA)", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const s = await api.safetySummary(pid); const i = s.incidents, o = s.observations, t = s.toolbox_talks;
+      body.innerHTML = `<div class="meta">${i.incident_count} incidents · ${i.recordable_count} recordable · <b>TRIR ${i.trir ?? "—"}</b> · DART ${i.dart_rate ?? "—"} · LTIFR ${i.ltifr ?? "—"} · ${i.total_lost_days} lost days`
+        + ` · ${o.observation_count} observations (safe:at-risk ${o.safe_to_at_risk ?? "—"}) · ${t.talk_count} toolbox talks`
+        + `<br><span style="opacity:.7">on ${i.hours_worked.toLocaleString()} worker-hours${s.hours_estimated ? " (estimated from manpower)" : ""}</span></div>`;
+      table(body, ["Incident", "Date", "OSHA class", "Recordable", "DART", "Lost d"], i.rows.map((r: any) => [r.subject ?? "", r.date ?? "", r.classification ?? "", r.recordable ? "yes" : "—", r.dart ? "yes" : "—", r.lost_days ?? ""])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("☼ Field-log rollup", () => showResult("Field-log rollup", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const s = await api.fieldLogSummary(pid); body.innerHTML = `<div class="meta">${s.report_count} daily reports · coverage ${s.coverage_pct ?? "—"}% · total manpower ${s.total_manpower} · avg ${s.avg_manpower ?? "—"}/day · peak ${s.peak_manpower.count} (${s.peak_manpower.date ?? "—"}) · weather lost-days ${s.weather_lost_days} · ${s.delay_days} delay days</div>`;

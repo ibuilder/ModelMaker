@@ -582,6 +582,22 @@ export class ApiClient {
       avg_turnaround_days: number | null; by_section: Record<string, number>; rows: Record<string, unknown>[] }>(
       `/projects/${pid}/submittals/register`);
   }
+  /** Safety analytics — OSHA TRIR/DART/LTIFR, observation mix, toolbox coverage, violations. */
+  safetySummary(pid: string, hours?: number) {
+    const qs = hours != null ? `?hours=${hours}` : "";
+    return this.json<{
+      hours_estimated: boolean;
+      incidents: { incident_count: number; recordable_count: number; dart_count: number;
+        lost_time_count: number; total_lost_days: number; open_count: number; hours_worked: number;
+        trir: number | null; dart_rate: number | null; ltifr: number | null;
+        severity_rate: number | null; by_classification: Record<string, number>;
+        rows: Record<string, unknown>[] };
+      observations: { observation_count: number; safe_count: number; at_risk_count: number;
+        closed_pct: number | null; safe_to_at_risk: number | null; by_category: Record<string, number> };
+      toolbox_talks: { talk_count: number; total_attendees: number; avg_attendees: number | null };
+      violations: { violation_count: number; open_count: number; overdue_count: number };
+    }>(`/projects/${pid}/safety/summary${qs}`);
+  }
   /** Field-log rollup — manpower trend, weather-impact lost-days, reporting coverage. */
   fieldLogSummary(pid: string) {
     return this.json<{ report_count: number; submitted_count: number; coverage_pct: number | null;

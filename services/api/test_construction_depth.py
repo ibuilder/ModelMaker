@@ -126,10 +126,35 @@ with TestClient(app) as c:
     assert fl["delay_days"] == 1, fl
     assert fl["span_days"] == 3 and fl["logged_days"] == 3 and fl["coverage_pct"] == 100.0, fl
 
+    # --- Safety dashboard (OSHA rates) ----------------------------------------
+    mk(c, pid, "incident", {"subject": "Cut hand", "date": "2026-06-02", "classification": "Recordable",
+                            "severity": "Recordable", "osha_recordable": "Yes"})
+    mk(c, pid, "incident", {"subject": "Back strain", "date": "2026-06-05", "classification": "Lost Time",
+                            "severity": "Lost Time", "osha_recordable": "Yes", "lost_days": 5})
+    mk(c, pid, "incident", {"subject": "Trip, no injury", "date": "2026-06-06", "classification": "Near Miss",
+                            "severity": "Near Miss"})
+    mk(c, pid, "observation", {"description": "Good housekeeping", "type": "Safe", "category": "Safe"})
+    mk(c, pid, "observation", {"description": "No guardrail", "type": "At-Risk", "category": "Hazard",
+                               "severity": "High"})
+    mk(c, pid, "toolbox_talk", {"topic": "Ladder safety", "date": "2026-06-01", "attendees": 18})
+    # exact rates on a supplied 100,000 worker-hours base: TRIR = 2*200000/100000 = 4.0; DART (1 lost-time) = 2.0
+    saf = c.get(f"/projects/{pid}/safety/summary?hours=100000").json()
+    assert saf["hours_estimated"] is False, saf
+    assert saf["incidents"]["incident_count"] == 3, saf["incidents"]
+    assert saf["incidents"]["recordable_count"] == 2, saf["incidents"]
+    assert saf["incidents"]["trir"] == 4.0, saf["incidents"]
+    assert saf["incidents"]["dart_rate"] == 2.0, saf["incidents"]
+    assert saf["incidents"]["total_lost_days"] == 5, saf["incidents"]
+    assert saf["observations"]["safe_count"] == 1 and saf["observations"]["at_risk_count"] == 1, saf["observations"]
+    assert saf["toolbox_talks"]["total_attendees"] == 18, saf["toolbox_talks"]
+    # without hours, it estimates from daily-report manpower (32 man-days x 8h = 256h)
+    est = c.get(f"/projects/{pid}/safety/summary").json()
+    assert est["hours_estimated"] is True and est["incidents"]["hours_worked"] == 256, est["incidents"]
+
     # --- reports render -------------------------------------------------------
     cat = {x["id"] for x in c.get("/reports").json()["reports"]}
-    assert {"tm_log", "submittal_register", "quality", "rfi_register", "field_log"} <= cat, cat
-    for rid in ("tm_log", "submittal_register", "quality", "rfi_register", "field_log"):
+    assert {"tm_log", "submittal_register", "quality", "rfi_register", "field_log", "safety_dashboard"} <= cat, cat
+    for rid in ("tm_log", "submittal_register", "quality", "rfi_register", "field_log", "safety_dashboard"):
         pdf = c.get(f"/projects/{pid}/reports/{rid}.pdf")
         assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF" and len(pdf.content) > 1200, (rid, pdf.status_code)
 
@@ -137,4 +162,5 @@ print("CONSTRUCTION-DEPTH OK - T&M rollup $10k (labor/material/equip split, bill
       "register: 2 subs, 1 overdue, avg turnaround 10d, by spec section; quality: pass rate 66.7%/FPY 33.3%, "
       "1 NCR overdue (Repair), deficiency ball-in-court GC vs Sub; RFI register: 2 RFIs, 1 overdue, "
       "ball-in-court Consultant vs GC; field-log: 3 reports, 32 manpower, peak 20, 1.5 weather lost-days; "
-      "tm_log + submittal_register + quality + rfi_register + field_log PDFs render")
+      "safety: 3 incidents, 2 recordable, TRIR 4.0/DART 2.0 @100k hrs (est 256h from manpower); "
+      "tm_log + submittal_register + quality + rfi_register + field_log + safety_dashboard PDFs render")

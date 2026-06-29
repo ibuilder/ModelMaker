@@ -4,6 +4,18 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.0 — Safety dashboard (OSHA TRIR / DART) + construction analytics suite complete
+- New `safety.py` engine + `GET /projects/{pid}/safety/summary`: **OSHA incident rates** — TRIR,
+  DART, LTIFR, and severity rate on the 200,000-hour base, computed from the incident module's
+  classification / osha_recordable / lost-days / restricted-days fields. Worker-hours are taken from
+  `?hours=`, else estimated from daily-report manpower (man-days × 8h). Also rolls up the
+  **safety-observation leading-indicator mix** (safe vs at-risk, safe:at-risk ratio, close-out %),
+  **toolbox-talk coverage** (talks + attendees), and the **safety-violation log** (open / overdue / by severity).
+- A **Safety Dashboard (OSHA)** report (PDF/Excel) — distinct from the existing simple Safety/Incident
+  Log — plus a "Safety dashboard (OSHA)" tool launcher; client `safetySummary`. Backend 62/62.
+- **Milestone:** this completes the construction analytics suite — every core field log (submittals,
+  RFIs, T&M, quality, daily reports, safety) now has a first-class rollup, exportable report, and tool launcher.
+
 ## v0.1.99 — Field-log rollup (daily reports → manpower / weather / coverage)
 - New `dailylog.py` engine + `GET /projects/{pid}/daily-reports/summary`: **manpower trend**
   (total / avg-per-day / peak with date, preferring the manpower_log rollup over the typed count),
