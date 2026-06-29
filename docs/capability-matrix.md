@@ -35,9 +35,27 @@ working + verified here; **Bridge** = via the Blender/Bonsai desktop editor (Pha
 | **COLLABORATION & COST** | | | | |
 | Multi-user / cloud collab | Partial | Yes | Partial | **Built** — server API + project-scoped RBAC (viewer/reviewer/editor/admin), audit log; Postgres/MinIO stack |
 | Licensing | Free | Paid | Paid | **Free / open** (GPL editor kept separate) |
+| **CONSTRUCTION ANALYTICS** (read-side rollups; each a live tool + PDF/Excel report) | | | | |
+| Quality dashboard (pass-rate, NCR loop, deficiency ball-in-court) | No | No | No | **Built** — `quality.py` |
+| RFI / submittal registers (ball-in-court, overdue, turnaround) | Partial | No | No | **Built** — `rfi.py`, `submittals.py` |
+| T&M rollup tied to change events → CO → billing | No | No | No | **Built** — `tm.py` (field T&M → change-event → CO) |
+| Field-log rollup (manpower / weather lost-days / coverage) | Partial | No | No | **Built** — `dailylog.py` |
+| OSHA safety dashboard (TRIR / DART / LTIFR) | No | No | No | **Built** — `safety.py` |
+| Closeout dashboard (punchlist BIC, Cx, warranties, O&M) | Partial | No | No | **Built** — `closeout.py` |
+| Executive project-health rollup (per-domain RAG + score) | No | No | No | **Built** — `projecthealth.py` |
+| **OPERATE / ASSET MANAGEMENT** | | | | |
+| Operating rent roll (occupancy / WALT / in-place income) | No | No | No | **Built** — `rentroll.py` |
+| Lease management (renewals · escalations · CAM recovery) | No | No | No | **Built** — `leasemgmt.py` |
+| Investor cap table + equity-waterfall distribution scenarios | No | No | No | **Built** — `capital.py` + `distwaterfall.py` (pref→RoC→promote, per-investor) |
+| Investor-portal signed statement sharing (no-login) | No | No | No | **Built** — HMAC-signed `statement.public.pdf` |
 | **DISPOSITION & VALUATION** | | | | |
-| Listing / marketing kit (RESO-aligned) | No | No | No | **Built** — `marketing.py`, model+proforma autofill + Listing Fact Sheet PDF + signed public link/QR |
+| Listing / marketing kit (RESO-aligned) | No | No | No | **Built** — `marketing.py`, model+proforma autofill + Listing Fact Sheet + Marketing Flyer PDF + signed public link/QR |
 | Appraisal (cost + income + sales-comp) | No | No | No | **Built** — `appraisal.py`, tri-approach reconciled, Valuation tab + PDF/Excel |
+| Comparables import (CSV / RESO) | No | No | No | **Built** — `comps.py` (forgiving header map, feeds sales approach) |
+| MLS / WPRealWise listing syndication (RESO) | No | No | No | **Built** — `re_bridge.py` (feature-flagged outbound push) |
+| **OBSERVABILITY / OPS** | | | | |
+| Prometheus metrics + healthchecks | No | No | No | **Built** — `/metrics`, `/health` + `/ready`, compose healthchecks; non-root API container |
+| Backup / restore runbook | No | No | No | **Built** — `scripts/backup.sh` / `restore.sh` + DR notes |
 | **WORKFLOW & DIRECTORY** | | | | |
 | Transition field-gating (`requires:[field]`) | No | Partial | No | **Built** — workflow buttons disable until required fields are filled (e.g. RFI needs an answer to be Answered) |
 | Company / Contact directory + reference lookups | No | view | No | **Built** (Procore-parity) — config modules + first-class `reference` lookups (e.g. `subcontract.vendor_company`) |
