@@ -547,6 +547,16 @@ export class ApiClient {
       total_distributed: number; total_unreturned: number; by_class: Record<string, number>;
       rows: Record<string, unknown>[] }>(`/projects/${pid}/cap-table`);
   }
+  /** Run a distribution / equity-waterfall scenario over the cap table (pref → RoC → promote tiers). */
+  waterfallScenario(pid: string, body: { exit_amount?: number; contribution_date?: string;
+    exit_date?: string; distributable?: number[]; dates?: string[]; pref_rate?: number;
+    style?: string; clawback?: boolean } = {}) {
+    return this.json<{ total_distributable: number; lp_distributions: number; gp_distributions: number;
+      lp_irr: number | null; gp_irr: number | null; lp_equity_multiple: number; gp_equity_multiple: number;
+      lp_unreturned: number; pref_rate: number; style: string;
+      periods: Record<string, unknown>[]; per_investor: Record<string, unknown>[] }>(
+      `/projects/${pid}/waterfall`, { method: "POST", body: JSON.stringify(body) });
+  }
   /** Allocate a capital call (pro-rata by commitment). persist=true posts it to investor totals. */
   capitalCall(pid: string, amount: number, persist = false) {
     return this.json<{ kind: string; amount: number; persisted?: boolean; allocations: { investor: string; amount: number }[] }>(

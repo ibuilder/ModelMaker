@@ -104,6 +104,19 @@ with TestClient(app) as c:
     lp1c = next(r for r in after["rows"] if r["investor"] == "LP One")
     assert abs(lp1c["contributed"] - 1_200_000) < 1.0, lp1c       # 60% of 2M
 
+    # --- G2b: distribution / equity-waterfall scenario ------------------------
+    wf = c.post(f"/projects/{pid}/waterfall",
+                json={"exit_amount": 5_000_000, "contribution_date": "2020-01-01",
+                      "exit_date": "2026-01-01"}).json()
+    # a single distribution fully clears (pref + RoC + promote tiers incl. residual) -> nothing retained
+    assert abs(wf["lp_distributions"] + wf["gp_distributions"] - 5_000_000) < 1.0, wf
+    assert wf["gp_distributions"] > 0, wf                          # promote earned on a profitable exit
+    lp_share = sum(p["distribution"] for p in wf["per_investor"] if p["investor_class"] == "LP")
+    assert abs(lp_share - wf["lp_distributions"]) < 1.0, wf        # LP take split across LP investors
+    lp_one = next(p for p in wf["per_investor"] if p["investor"] == "LP One")
+    lp_two = next(p for p in wf["per_investor"] if p["investor"] == "LP Two")
+    assert abs(lp_one["distribution"] - 2 * lp_two["distribution"]) < 1.0, (lp_one, lp_two)  # 6M vs 3M
+
     # per-investor capital-account statement PDF
     iid = next(r["id"] for r in ct["rows"] if r["investor"] == "LP One")
     stmt = c.get(f"/projects/{pid}/investors/{iid}/statement.pdf")
@@ -118,5 +131,6 @@ with TestClient(app) as c:
 
 print("OPERATE+CAPITAL OK - rent roll 60% occ / $950k in-place income (feeds appraisal); lease mgmt: "
       "1 expiring <=90d / $300k at-risk, 3%/yr escalation to yr5, CAM recovers $140k (93% of pool, $10k "
-      "under); cap table ownership (LP One 60%); capital call + distribution pro-rata; "
+      "under); cap table ownership (LP One 60%); capital call + distribution pro-rata; equity waterfall "
+      "$5M exit clears pref+RoC+promote, GP earns promote, LP split 2:1 by commitment; "
       "rent_roll + cap_table + lease_management PDFs render")

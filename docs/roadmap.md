@@ -18,7 +18,7 @@ User-directed sequence as of v0.2.8. Carry this out in order; each item ships as
 1. **Real-estate / capital depth**
    - [x] WPRealWise / MLS listing syndication bridge + marketing flyer (`re_bridge.py`) — **v0.2.8**
    - [x] Lease-management depth — renewals, rent escalations, CAM reconciliation (`leasemgmt.py`) — **v0.2.9**
-   - [ ] Equity waterfall / distribution scenario modeling (tied to the investor cap table)
+   - [x] Equity waterfall / distribution scenario modeling (`distwaterfall.py`) — **v0.2.10**
    - [ ] Investor-portal document sharing (signed statement/report links via the signed-URL infra)
    - [ ] Comps-import automation (bulk CSV / RESO → `comparable` module, feeds sales-comparison appraisal)
 2. **Polish & harden existing** — UX consistency pass; empty/loading/error states; accessibility;

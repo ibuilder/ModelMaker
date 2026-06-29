@@ -6,7 +6,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
-from .. import capital, leasemgmt, marketing, modules as me, rbac, re_bridge, rentroll, signing
+from .. import (capital, distwaterfall, leasemgmt, marketing, modules as me, rbac, re_bridge,
+                rentroll, signing)
 from ..db import get_db
 from ..models import Project
 
@@ -53,6 +54,15 @@ def distribution(pid: str, amount: float = Body(..., embed=True), persist: bool 
     """Allocate a distribution pro-rata by commitment. persist=true posts it to each investor's
     distributed total; otherwise it's a preview."""
     return _allocate(db, pid, amount, "distribution", persist, user)
+
+
+@router.post("/projects/{pid}/waterfall")
+def waterfall_scenario(pid: str, body: dict = Body(default={}), db: Session = Depends(get_db),
+                       _: str = Depends(rbac.require_role("viewer"))):
+    """Run a distribution / equity-waterfall scenario over the cap table. Body: {distributable:[..],
+    dates:[..]} or {exit_amount, contribution_date, exit_date}; optional pref_rate/tiers/style/clawback.
+    Returns LP/GP totals, IRR/EM, period splits, and the per-investor allocation."""
+    return distwaterfall.scenario(db, pid, body)
 
 
 @router.get("/projects/{pid}/investors/{iid}/statement.pdf")

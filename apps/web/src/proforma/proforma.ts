@@ -511,7 +511,38 @@ export class ProformaUI {
       const recDist = document.createElement("button"); recDist.className = "file-btn"; recDist.textContent = "Record dist."; recDist.title = "Post the distribution to each investor's distributed total"; recDist.onclick = run("distribution", true);
       const cl = document.createElement("a"); cl.className = "file-btn"; cl.textContent = "⬇ Cap table (PDF)"; cl.href = this.api.reportUrl(pid, "cap_table", "pdf"); cl.target = "_blank"; cl.rel = "noopener";
       tools.append(amt, callBtn, distBtn, recCall, recDist, cl); cc.append(tools, out); host.appendChild(cc);
+      this.renderWaterfall(host, pid);
     } catch (e) { host.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }
+
+  /** Equity-waterfall scenario card (under Investors): model a distribution / exit through the
+   *  pref → return-of-capital → promote tiers and see each investor's take. */
+  private renderWaterfall(host: HTMLElement, pid: string) {
+    const card = document.createElement("div"); card.className = "fin-card"; card.style.marginTop = "10px";
+    card.innerHTML = `<div class="section-title">Distribution waterfall (scenario)</div>`
+      + `<div class="meta">Model a one-time distribution / exit through pref → return of capital → promote.</div>`;
+    const ctl = document.createElement("div"); ctl.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px";
+    const amt = document.createElement("input"); amt.type = "number"; amt.placeholder = "Exit / distribution $"; amt.style.cssText = "width:160px;padding:4px";
+    const yrs = document.createElement("input"); yrs.type = "number"; yrs.value = "5"; yrs.title = "Years held (contribution → exit)"; yrs.style.cssText = "width:70px;padding:4px";
+    const go = document.createElement("button"); go.className = "file-btn"; go.textContent = "Run waterfall";
+    const out = document.createElement("div"); out.className = "meta"; out.style.marginTop = "6px";
+    go.onclick = async () => {
+      const n = parseFloat(amt.value); if (isNaN(n)) return;
+      const heldYears = Math.max(1, parseInt(yrs.value) || 5);
+      const today = new Date();
+      const c0 = `${today.getFullYear() - heldYears}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+      const exit = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+      go.disabled = true;
+      try {
+        const w = await this.api.waterfallScenario(pid, { exit_amount: n, contribution_date: c0, exit_date: exit });
+        const pct = (v: number | null) => v == null ? "—" : `${(v * 100).toFixed(1)}%`;
+        out.innerHTML = `<b>LP ${money(w.lp_distributions)}</b> (IRR ${pct(w.lp_irr)}, ${w.lp_equity_multiple}x) · `
+          + `<b>GP ${money(w.gp_distributions)}</b> (${w.gp_equity_multiple}x) · pref ${pct(w.pref_rate)} ${escapeHtml(w.style)}<br>`
+          + (w.per_investor as any[]).map((p) => `${escapeHtml(String(p.investor))}: ${money(p.distribution)}`).join(" · ");
+      } catch (e) { out.textContent = (e as Error).message; }
+      finally { go.disabled = false; }
+    };
+    ctl.append(amt, yrs, go); card.append(ctl, out); host.appendChild(card);
   }
 
   /** Deliverables tab: the investor outputs (investment memo + pitch deck PDFs). */

@@ -4,6 +4,17 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.10 — Equity-waterfall distribution scenarios (cap-table-tied)
+- New `distwaterfall.py` + `POST /projects/{pid}/waterfall`: model a distribution / exit through the
+  equity waterfall (preferred return → return of capital → IRR-hurdle **promote tiers**, reusing the
+  proforma `run_waterfall`), then **allocate each side's take pro-rata across the actual investor
+  records** by commitment. Body: `{exit_amount, contribution_date, exit_date}` or `{distributable[],
+  dates[]}`; pref/tiers/style default from the latest proforma scenario, overridable. Returns LP/GP
+  totals, IRR & equity multiple, period splits, and the per-investor allocation.
+- Finance ▸ Investors gains a **Distribution waterfall (scenario)** card (exit $ + years → LP/GP +
+  per-investor); client `waterfallScenario`. Backend 63/63 (waterfall clears to the exit, GP earns
+  promote, LP split 2:1 by commitment).
+
 ## v0.2.9 — Lease-management depth (renewals · escalations · CAM recovery)
 - New `leasemgmt.py` + `GET /projects/{pid}/leases/management`: the **renewal/expiration pipeline**
   (leases expiring ≤90/180/365 days, holdover, options outstanding, rent-at-risk), a forward
