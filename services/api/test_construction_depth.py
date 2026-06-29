@@ -111,14 +111,30 @@ with TestClient(app) as c:
     assert reg["ball_in_court"].get("GC (accept)") == 1, reg    # r2 answered
     assert reg["by_discipline"].get("Structural") == 1, reg
 
+    # --- Field-log rollup -----------------------------------------------------
+    mk(c, pid, "daily_report", {"report_date": "2026-06-01", "weather": "Clear", "manpower": 12,
+                                "weather_impact": "None"})
+    mk(c, pid, "daily_report", {"report_date": "2026-06-02", "weather": "Rain", "manpower": 20,
+                                "weather_impact": "Half-Day Lost", "delays": "Rain stopped concrete"})
+    mk(c, pid, "daily_report", {"report_date": "2026-06-03", "weather": "Snow", "manpower": 0,
+                                "weather_impact": "Full-Day Lost"})
+    fl = c.get(f"/projects/{pid}/daily-reports/summary").json()
+    assert fl["report_count"] == 3, fl
+    assert fl["total_manpower"] == 32, fl
+    assert fl["peak_manpower"]["count"] == 20 and fl["peak_manpower"]["date"] == "2026-06-02", fl
+    assert fl["weather_lost_days"] == 1.5, fl                   # 0 + 0.5 + 1.0
+    assert fl["delay_days"] == 1, fl
+    assert fl["span_days"] == 3 and fl["logged_days"] == 3 and fl["coverage_pct"] == 100.0, fl
+
     # --- reports render -------------------------------------------------------
     cat = {x["id"] for x in c.get("/reports").json()["reports"]}
-    assert {"tm_log", "submittal_register", "quality", "rfi_register"} <= cat, cat
-    for rid in ("tm_log", "submittal_register", "quality", "rfi_register"):
+    assert {"tm_log", "submittal_register", "quality", "rfi_register", "field_log"} <= cat, cat
+    for rid in ("tm_log", "submittal_register", "quality", "rfi_register", "field_log"):
         pdf = c.get(f"/projects/{pid}/reports/{rid}.pdf")
         assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF" and len(pdf.content) > 1200, (rid, pdf.status_code)
 
 print("CONSTRUCTION-DEPTH OK - T&M rollup $10k (labor/material/equip split, billed+unbilled); submittal "
       "register: 2 subs, 1 overdue, avg turnaround 10d, by spec section; quality: pass rate 66.7%/FPY 33.3%, "
       "1 NCR overdue (Repair), deficiency ball-in-court GC vs Sub; RFI register: 2 RFIs, 1 overdue, "
-      "ball-in-court Consultant vs GC; tm_log + submittal_register + quality + rfi_register PDFs render")
+      "ball-in-court Consultant vs GC; field-log: 3 reports, 32 manpower, peak 20, 1.5 weather lost-days; "
+      "tm_log + submittal_register + quality + rfi_register + field_log PDFs render")

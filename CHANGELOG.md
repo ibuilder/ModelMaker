@@ -4,6 +4,14 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.99 — Field-log rollup (daily reports → manpower / weather / coverage)
+- New `dailylog.py` engine + `GET /projects/{pid}/daily-reports/summary`: **manpower trend**
+  (total / avg-per-day / peak with date, preferring the manpower_log rollup over the typed count),
+  **weather-impact lost-day equivalents** (Minor 0.1 / Half 0.5 / Full & Stoppage 1.0), **delay days**,
+  and **reporting coverage** (logged days vs the date span), with by-weather & by-impact breakdowns.
+- A **Field-Log Rollup** report (PDF/Excel) in the Report Center + a "Field-log rollup" tool launcher;
+  client `fieldLogSummary`. Backend 62/62.
+
 ## v0.1.98 — RFI register / log analytics
 - New `rfi.py` engine + `GET /projects/{pid}/rfi/register`: **ball-in-court** (draft→GC, open→Consultant,
   answered→GC-accept, closed/void), **overdue** (date-required passed while awaiting a response),

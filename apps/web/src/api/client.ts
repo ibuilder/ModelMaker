@@ -582,6 +582,14 @@ export class ApiClient {
       avg_turnaround_days: number | null; by_section: Record<string, number>; rows: Record<string, unknown>[] }>(
       `/projects/${pid}/submittals/register`);
   }
+  /** Field-log rollup — manpower trend, weather-impact lost-days, reporting coverage. */
+  fieldLogSummary(pid: string) {
+    return this.json<{ report_count: number; submitted_count: number; coverage_pct: number | null;
+      total_manpower: number; avg_manpower: number | null;
+      peak_manpower: { count: number; date: string | null }; weather_lost_days: number;
+      delay_days: number; by_weather: Record<string, number>; by_impact: Record<string, number>;
+      rows: Record<string, unknown>[] }>(`/projects/${pid}/daily-reports/summary`);
+  }
   /** RFI register — ball-in-court, overdue, response turnaround, cost/schedule-impact exposure. */
   rfiRegister(pid: string) {
     return this.json<{ rfi_count: number; open_count: number; overdue_count: number;

@@ -38,6 +38,7 @@ REPORTS: dict[str, tuple[str, str]] = {
     "submittal_register": ("Submittal Register", "Logs"),
     "quality": ("Quality Dashboard", "Quality"),
     "rfi_register": ("RFI Register", "Logs"),
+    "field_log": ("Field-Log Rollup", "Field"),
 }
 
 
@@ -475,6 +476,27 @@ def _rfi_register(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _field_log(db: Session, pid: str, name: str) -> Report:
+    from . import dailylog
+    s = dailylog.field_log_summary(db, pid)
+    r = Report("Field-Log Rollup", name)
+    r.kpi("Daily reports", s["report_count"])
+    r.kpi("Coverage", f"{s['coverage_pct']}%" if s["coverage_pct"] is not None else "—")
+    r.kpi("Total manpower", s["total_manpower"])
+    r.kpi("Avg/day", s["avg_manpower"] if s["avg_manpower"] is not None else "—")
+    r.kpi("Peak", f"{s['peak_manpower']['count']} ({s['peak_manpower']['date'] or '—'})")
+    r.kpi("Weather lost-days", s["weather_lost_days"])
+    r.kpi("Delay days", s["delay_days"])
+    if s["by_impact"]:
+        r.chart("bar", "Weather impact", list(s["by_impact"].keys()),
+                [{"name": "Days", "values": list(s["by_impact"].values())}])
+    r.table("Daily reports", ["Ref", "Date", "Weather", "Temp", "Impact", "Manpower", "Delay"],
+            [[x.get("ref", ""), x.get("report_date", ""), x.get("weather", ""), x.get("temp_f", ""),
+              x.get("weather_impact", ""), x.get("manpower", ""), "yes" if x["has_delay"] else "—"]
+             for x in s["rows"]] or [["(no daily reports)"] + [""] * 6])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -492,6 +514,8 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _quality(db, pid, name)
     if report == "rfi_register":
         return _rfi_register(db, pid, name)
+    if report == "field_log":
+        return _field_log(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "executive":
