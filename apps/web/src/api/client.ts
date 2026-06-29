@@ -477,6 +477,11 @@ export class ApiClient {
     return this.json<{ url: string; sig: string; exp: number; expires_in: number }>(
       `/projects/${pid}/listings/${lid}/share${q}`, { method: "POST" });
   }
+  /** Bulk-import comparables from CSV or a RESO array into the `comparable` module (feeds appraisal). */
+  importComparables(pid: string, body: { csv?: string; reso?: Record<string, unknown>[] }) {
+    return this.json<{ imported: number; rows: { id: string; ref: string; address: string }[] }>(
+      `/projects/${pid}/comparables/import`, { method: "POST", body: JSON.stringify(body) });
+  }
   /** The RESO Data Dictionary payload for a listing (the bridge seam to WPRealWise / MLS). */
   listingReso(pid: string, lid: string) {
     return this.json<{ reso: Record<string, unknown> }>(`/projects/${pid}/listings/${lid}/reso`);

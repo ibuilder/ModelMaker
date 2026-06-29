@@ -343,6 +343,27 @@ export class ProformaUI {
         <tr class="fin-total"><td>Value</td><td class="num">${money(v.sales_comparison.value)}</td></tr></table></div>`;
     host.appendChild(cards);
 
+    // comps import — paste CSV (or upload) to bulk-load comparables that feed the sales approach
+    const impCard = document.createElement("div"); impCard.className = "fin-card";
+    impCard.innerHTML = `<div class="section-title">Import comparables</div>`
+      + `<div class="meta">Paste CSV (headers like address, price, price_psf, cap_rate, sqft, sale_date) — RESO field names also work — to add comps to the sales-comparison approach.</div>`;
+    const ta = document.createElement("textarea"); ta.placeholder = "address,price,price_psf,cap_rate,sale_date\n123 Main St,5200000,310,5.4,2026-02-01";
+    ta.style.cssText = "width:100%;min-height:70px;margin-top:6px;font-family:monospace;font-size:12px";
+    const ib = document.createElement("div"); ib.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:6px";
+    const imp = document.createElement("button"); imp.className = "file-btn"; imp.textContent = "Import CSV";
+    const file = document.createElement("input"); file.type = "file"; file.accept = ".csv,text/csv"; file.style.fontSize = "12px";
+    file.onchange = async () => { if (file.files?.[0]) ta.value = await file.files[0].text(); };
+    imp.onclick = async () => {
+      const csv = ta.value.trim(); if (!csv) return;
+      imp.disabled = true;
+      try {
+        const r = await this.api.importComparables(pid, { csv });
+        this.setStatus(`Imported ${r.imported} comparable${r.imported === 1 ? "" : "s"}.`);
+        await this.renderAppraisal(host);   // recompute the sales approach with the new comps
+      } catch (e) { this.setStatus("Comps import failed: " + (e as Error).message); imp.disabled = false; }
+    };
+    ib.append(imp, file); impCard.append(ta, ib); host.appendChild(impCard);
+
     // reconciliation weights — editable, persisted
     const recCard = document.createElement("div"); recCard.className = "fin-card";
     recCard.innerHTML = `<div class="section-title">Reconciliation weights</div>`;

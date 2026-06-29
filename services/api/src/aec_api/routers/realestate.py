@@ -6,7 +6,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
-from .. import (capital, distwaterfall, leasemgmt, marketing, modules as me, rbac, re_bridge,
+from .. import (capital, comps, distwaterfall, leasemgmt, marketing, modules as me, rbac, re_bridge,
                 rentroll, signing)
 from ..db import get_db
 from ..models import Project
@@ -133,6 +133,20 @@ def listing_autofill(pid: str, db: Session = Depends(get_db),
                      _: str = Depends(rbac.require_role("viewer"))):
     """Pre-populated listing fields from the project's proforma + model (the off-plan advantage)."""
     return {"data": marketing.autofill_listing(db, pid)}
+
+
+@router.post("/projects/{pid}/comparables/import")
+def import_comparables(pid: str, body: dict = Body(...), db: Session = Depends(get_db),
+                       user: str = Depends(rbac.require_role("editor"))):
+    """Bulk-import comparables from CSV (`{csv}`) or a RESO array (`{reso|rows}`) into the `comparable`
+    module — feeds the sales-comparison appraisal. Forgiving header mapping; rows without an address
+    are skipped. Returns the created count + the parsed rows."""
+    parsed = comps.parse(body)
+    created = []
+    for data in parsed:
+        rec = me.create_record(db, "comparable", pid, {"data": data}, user, None)
+        created.append({"id": rec.get("id"), "ref": rec.get("ref"), "address": data.get("address")})
+    return {"imported": len(created), "rows": created}
 
 
 @router.get("/projects/{pid}/appraisal")

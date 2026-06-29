@@ -4,6 +4,17 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.12 — Comparables import automation (CSV / RESO) — completes RE/capital depth
+- New `comps.py` + `POST /projects/{pid}/comparables/import`: bulk-load comparables from **CSV**
+  (`{csv}`) or a **RESO array** (`{reso|rows}`) into the `comparable` module, feeding the
+  sales-comparison appraisal. Forgiving header mapping (case/space/underscore-insensitive; accepts
+  human headers *and* RESO field names like `UnparsedAddress`/`ClosePrice`/`ClosePricePerSquareFoot`);
+  coerces `$1,250,000`/`5.5%`; rows without an address are skipped.
+- Appraisal tab: an **Import comparables** card (paste CSV or upload a file → recomputes the sales
+  approach); client `importComparables`. Backend 63/63.
+- **Milestone:** completes the real-estate / capital depth phase (syndication bridge, lease management,
+  equity-waterfall scenarios, investor-portal sharing, comps import). Next: polish & harden, then production/ops.
+
 ## v0.2.11 — Investor-portal document sharing (signed statement links)
 - `POST /projects/{pid}/investors/{iid}/share` mints a signed, expiring (default 30-day) link to an
   investor's capital-account statement, and `GET …/statement.public.pdf` serves it behind HMAC sig

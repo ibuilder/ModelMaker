@@ -83,6 +83,24 @@ with TestClient(app) as c:
     again = c.get(f"/projects/{pid}/appraisal").json()
     assert abs(again["reconciliation"]["value"] - saved["income"]["value"]) < 1.0, again["reconciliation"]
 
+    # --- bulk comps import (CSV + RESO) feeds the sales-comparison approach ----
+    csv_text = ("address,price,price_psf,cap_rate,sale_date\n"
+                "55 Loft Ave,18600000,310,5.3,2026-03-01\n"
+                "9 River Rd,17400000,290,5.5,2026-04-01\n")
+    imp = c.post(f"/projects/{pid}/comparables/import", json={"csv": csv_text}).json()
+    assert imp["imported"] == 2, imp
+    # RESO field names map too (UnparsedAddress / ClosePrice / ClosePricePerSquareFoot)
+    reso_rows = [{"UnparsedAddress": "7 Tower Pl", "ClosePrice": 19_000_000,
+                  "ClosePricePerSquareFoot": 305, "CapRate": 5.6}]
+    imp2 = c.post(f"/projects/{pid}/comparables/import", json={"reso": reso_rows}).json()
+    assert imp2["imported"] == 1, imp2
+    # a row with no address is skipped
+    skip = c.post(f"/projects/{pid}/comparables/import",
+                  json={"csv": "address,price\n,12345\nReal Place,9000000\n"}).json()
+    assert skip["imported"] == 1, skip
+    ap2 = c.get(f"/projects/{pid}/appraisal").json()
+    assert ap2["sales_comparison"]["comp_count"] == 6, ap2["sales_comparison"]  # 2 seed + 2 csv + 1 reso + 1
+
     # --- RESO export seam (bridge to WPRealWise / MLS) ------------------------
     reso = c.get(f"/projects/{pid}/listings/{lid}/reso").json()["reso"]
     assert reso["StandardStatus"] and reso.get("ListPrice") and reso.get("VirtualTourURLUnbranded"), reso
@@ -137,4 +155,5 @@ with TestClient(app) as c:
 print("MARKETING OK - listing auto-fills from proforma (NOI/cap/price); tri-approach appraisal "
       "(cost+income+sales) reconciles + override persists; RESO export shaped; WPRealWise syndication "
       "bridge gates off -> 422, pushes RESO+ListingKey+Bearer when configured; valuation + fact-sheet + "
-      "flyer PDFs render; signed public link passes, forged/absent -> 403")
+      "flyer PDFs render; comps CSV+RESO import (addressless rows skipped) grows sales-comp set to 6; "
+      "signed public link passes, forged/absent -> 403")
