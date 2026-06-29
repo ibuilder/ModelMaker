@@ -50,8 +50,26 @@ async def convert(file: UploadFile = File(...)):
                 raise HTTPException(502, "APS translation produced no fragments output.")
             return Response(frag.read_bytes(), media_type="application/octet-stream",
                             headers={"Content-Disposition": 'attachment; filename="model.frag"'})
+    if ext == "e57":
+        from .. import e57
+        try:
+            xyz = e57.convert_to_xyz(await file.read())
+        except RuntimeError as exc:  # pye57 not installed
+            raise HTTPException(503, str(exc))
+        except Exception as exc:  # noqa: BLE001 — bad/corrupt E57
+            raise HTTPException(422, f"could not read E57: {exc}")
+        base = (file.filename or "scan.e57").rsplit(".", 1)[0]
+        return Response(xyz, media_type="text/plain",
+                        headers={"Content-Disposition": f'attachment; filename="{base}.xyz"'})
     if ext in ("dwg", "nwc"):
         raise HTTPException(501, f".{ext} is a closed Autodesk format with no open-source "
                                  f"converter. It requires the paid Autodesk APS / ODA SDK bridge. "
                                  f"IFC and .frag load offline; glTF/OBJ/STL import is on the roadmap.")
     raise HTTPException(415, f"unsupported format .{ext or '?'}")
+
+
+@router.get("/convert/e57/status")
+def e57_status():
+    """Whether server-side E57 → .xyz point-cloud conversion is available (needs optional `pye57`)."""
+    from .. import e57
+    return e57.status()

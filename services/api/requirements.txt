@@ -27,3 +27,7 @@ redis>=5.0
 
 # optional AI assists (Draft RFI) — only used when ANTHROPIC_API_KEY is set; lazy-imported
 anthropic>=0.69
+
+# optional E57 point-cloud import — heavy/native (libe57format); only needed to convert .e57 scans
+# server-side to .xyz. Lazy-imported; GET /convert/e57/status reports availability. Uncomment to enable.
+# pye57>=0.4

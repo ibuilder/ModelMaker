@@ -63,7 +63,26 @@ for (const kind of ["ifc", "frag", "convert", "ref"] as const) {
   document.getElementById(`${kind}-input`)?.addEventListener("change", (e) => {
     const inp = e.target as HTMLInputElement;
     const file = inp.files?.[0]; inp.value = "";
-    if (file) void ensureViewer().then((v) => v.openFile(kind, file));
+    if (!file) return;
+    // .e57 has no in-browser parser: convert server-side to .xyz, then load as a point-cloud overlay
+    if (kind === "ref" && file.name.toLowerCase().endsWith(".e57")) {
+      void (async () => {
+        try {
+          const { toast } = await import("./ui/feedback");
+          const st = await api.e57Status();
+          if (!st.available) { toast(st.message, "info"); return; }
+          toast("Converting E57 scan…", "info");
+          const xyz = await api.convertE57(file);
+          const xyzFile = new File([xyz], file.name.replace(/\.e57$/i, ".xyz"), { type: "text/plain" });
+          const v = await ensureViewer(); await v.openFile("ref", xyzFile);
+        } catch (err) {
+          const { toast } = await import("./ui/feedback");
+          toast(`E57 import failed: ${(err as Error).message}`, "error");
+        }
+      })();
+      return;
+    }
+    void ensureViewer().then((v) => v.openFile(kind, file));
   });
 }
 

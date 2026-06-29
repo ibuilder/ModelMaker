@@ -22,7 +22,7 @@ export interface RefResult {
   info: string;                   // short human note (point/vertex count, decimation)
 }
 
-export const REF_EXTENSIONS = ["obj", "stl", "ply", "gltf", "glb", "pcd", "xyz", "las", "laz",
+export const REF_EXTENSIONS = ["obj", "stl", "ply", "gltf", "glb", "pcd", "xyz", "las", "laz", "e57",
                                "geojson", "json", "tif", "tiff"] as const;
 
 function meshFromGeometry(geo: THREE.BufferGeometry, name: string): THREE.Object3D {

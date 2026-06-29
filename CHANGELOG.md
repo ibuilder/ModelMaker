@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.5 — E57 point-cloud import (server-side, optional pye57)
+- New `e57.py` + `POST /convert` (`.e57`) / `GET /convert/e57/status`: converts E57 laser-scan files
+  to a decimated `.xyz` (x y z [r g b], capped at 2M points) **server-side**, since there is no viable
+  in-browser E57 parser. Optional, dependency-flagged on `pye57` (heavy/native, not a default dep) — the
+  status/gate is testable without it and the convert returns an actionable 503 until `pip install pye57`.
+- The viewer's **Open mesh / point cloud / GIS…** now accepts `.e57`: it routes the file through the
+  converter and loads the resulting point cloud as a reference overlay (federation list, align, remove).
+  Clients `e57Status`, `convertE57`. Backend 63/63.
+
 ## v0.2.4 — Live e-signature bridge (DocuSeal, self-hosted OSS)
 - The feature-flagged 3rd-party e-signature bridge (`esign_bridge.py`) now **implements DocuSeal
   end-to-end** over its REST API (stdlib `urllib`, no SDK): create a template from the rendered PDF →

@@ -700,6 +700,17 @@ export class ApiClient {
     return this.json<{ signed: boolean; fingerprint: string; kind: string }>(
       `/projects/${pid}/contracts/${key}/${rid}/digital-sign`, { method: "POST", body: "{}" });
   }
+  /** Whether server-side E57 → .xyz point-cloud conversion is available (needs optional pye57). */
+  e57Status() {
+    return this.json<{ available: boolean; max_points: number; message: string }>(`/convert/e57/status`);
+  }
+  /** Convert an uploaded .e57 scan to a decimated .xyz point cloud (server-side). Returns the blob. */
+  async convertE57(file: File): Promise<Blob> {
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(this.url(`/convert`), { method: "POST", headers: this.authHeaders(), body: fd });
+    if (!res.ok) throw new Error((await res.text()) || `convert failed (${res.status})`);
+    return res.blob();
+  }
   /** Digital-signature capability — built-in PAdES + the optional 3rd-party bridge (DocuSeal etc.). */
   esignStatus() {
     return this.json<{ pades: { available: boolean; kind: string };
