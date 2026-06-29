@@ -4,6 +4,12 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.96 — T&M → change-event tie
+- eTickets gain a **change_event** link; `tm.by_change_event` rolls up field T&M by the change event
+  it belongs to (`GET /tm-by-change-event`), with linked vs unassigned totals — closing the chain
+  field T&M → change event → CO → SOV → AIA billing (G702/G703 already in `cost.py`). The T&M Log
+  report gains a "T&M by change event" table. Backend 62/62.
+
 ## v0.1.95 — RFI/submittal distribution lists
 - RFIs & submittals gain a **Distribution (CC)** field; `distribution.py` resolves it (names or emails,
   comma/semicolon/newline-separated) against the **Contact directory** into recipients + emails.

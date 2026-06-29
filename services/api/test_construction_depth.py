@@ -40,6 +40,16 @@ with TestClient(app) as c:
     assert tms["grand_total"] == 10000, tms
     assert tms["billed_total"] + tms["unbilled_total"] == 10000, tms
 
+    # --- T&M → change-event tie ----------------------------------------------
+    ce = mk(c, pid, "change_event", {"subject": "Unforeseen rock"})
+    e3 = mk(c, pid, "eticket", {"subject": "Extra excavation", "work_date": "2026-06-14", "labor_total": 3000,
+                                "material_total": 0, "equipment_total": 2000, "change_event": ce})
+    bce = c.get(f"/projects/{pid}/tm-by-change-event").json()
+    linked = next(g for g in bce["groups"] if g["change_event_id"] == ce)
+    assert linked["total"] == 5000 and linked["ticket_count"] == 1, linked
+    assert bce["linked_total"] == 5000, bce
+    assert bce["unassigned_total"] == 10000, bce      # the first two tickets aren't linked
+
     # --- Submittal register ---------------------------------------------------
     mk(c, pid, "submittal", {"title": "Rebar shop dwgs", "spec_section": "03 20 00", "type": "Shop Drawing",
                              "responsible_contractor": "ACME", "date_received": "2026-06-01",

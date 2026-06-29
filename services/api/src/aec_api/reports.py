@@ -399,6 +399,11 @@ def _tm_log(db: Session, pid: str, name: str) -> Report:
     if s["by_status"]:
         r.chart("bar", "T&M by status", list(s["by_status"].keys()),
                 [{"name": "Total", "values": [round(v) for v in s["by_status"].values()]}])
+    bce = tm.by_change_event(db, pid)
+    if bce["groups"]:
+        r.table("T&M by change event", ["Change event", "Subject", "Tickets", "Total"],
+                [[g.get("ref") or "—", g.get("subject") or "", g["ticket_count"], _money(g["total"])]
+                 for g in bce["groups"]])
     return r
 
 

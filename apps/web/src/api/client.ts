@@ -571,6 +571,11 @@ export class ApiClient {
       equipment_total: number; grand_total: number; unbilled_total: number; rows: Record<string, unknown>[] }>(
       `/projects/${pid}/tm-summary`);
   }
+  /** T&M (eTicket) cost rolled up by linked change event. */
+  tmByChangeEvent(pid: string) {
+    return this.json<{ groups: Record<string, unknown>[]; linked_total: number; unassigned_total: number }>(
+      `/projects/${pid}/tm-by-change-event`);
+  }
   /** Spec-section submittal register — turnaround, ball-in-court, overdue. */
   submittalRegister(pid: string) {
     return this.json<{ submittal_count: number; open_count: number; overdue_count: number;

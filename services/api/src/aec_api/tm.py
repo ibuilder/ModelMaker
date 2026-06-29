@@ -44,3 +44,29 @@ def tm_summary(db, pid: str) -> dict[str, Any]:
     from . import modules as me
     ets = me.list_records(db, "eticket", pid, limit=100000) if "eticket" in me.TABLES else []
     return summarize(ets)
+
+
+def by_change_event(db, pid: str) -> dict[str, Any]:
+    """Roll up eTicket T&M by the change event each ticket is linked to — ties field T&M to the
+    change-management → cost chain. eTickets with no link land in an 'unassigned' bucket."""
+    from . import modules as me
+    ets = me.list_records(db, "eticket", pid, limit=100000) if "eticket" in me.TABLES else []
+    ce = {r["id"]: r for r in (me.list_records(db, "change_event", pid, limit=100000)
+                               if "change_event" in me.TABLES else [])}
+    groups: dict[str, dict] = {}
+    for e in ets:
+        d = e.get("data") or e
+        total = _num(d.get("labor_total")) + _num(d.get("material_total")) + _num(d.get("equipment_total"))
+        cid = d.get("change_event")
+        rec = ce.get(cid)
+        gkey = cid if (cid and rec) else "__unassigned__"
+        g = groups.setdefault(gkey, {
+            "change_event_id": cid if rec else None,
+            "ref": rec.get("ref") if rec else None,
+            "subject": ((rec.get("data") or {}).get("subject") if rec else "Unassigned"),
+            "ticket_count": 0, "total": 0.0})
+        g["ticket_count"] += 1
+        g["total"] = round(g["total"] + total, 2)
+    rows = sorted(groups.values(), key=lambda r: (r["ref"] is None, r["ref"] or ""))
+    return {"groups": rows, "linked_total": round(sum(g["total"] for g in rows if g["change_event_id"]), 2),
+            "unassigned_total": round(sum(g["total"] for g in rows if not g["change_event_id"]), 2)}

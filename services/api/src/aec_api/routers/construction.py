@@ -24,6 +24,12 @@ def tm_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require
     return tm_engine.tm_summary(db, pid)
 
 
+@router.get("/projects/{pid}/tm-by-change-event")
+def tm_by_change_event(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """T&M (eTicket) cost rolled up by the change event each ticket is linked to."""
+    return tm_engine.by_change_event(db, pid)
+
+
 @router.get("/projects/{pid}/submittals/register")
 def submittal_register(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """Spec-section submittal register — turnaround, ball-in-court, overdue flags."""

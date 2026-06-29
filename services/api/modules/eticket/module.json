@@ -2,24 +2,79 @@
   "key": "eticket",
   "name": "eTickets (T&M)",
   "section": "Change Management",
-  "icon": "⏱",
+  "icon": "\u23f1",
   "ref_prefix": "TM",
   "title_field": "subject",
   "pinnable": true,
   "fields": [
-    {"name": "subject", "label": "Subject", "type": "text", "required": true},
-    {"name": "work_date", "label": "Date of Work", "type": "date", "required": true},
-    {"name": "labor_total", "label": "Labor $", "type": "number"},
-    {"name": "material_total", "label": "Material $", "type": "number"},
-    {"name": "equipment_total", "label": "Equipment $", "type": "number"}
+    {
+      "name": "subject",
+      "label": "Subject",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "work_date",
+      "label": "Date of Work",
+      "type": "date",
+      "required": true
+    },
+    {
+      "name": "labor_total",
+      "label": "Labor $",
+      "type": "number"
+    },
+    {
+      "name": "material_total",
+      "label": "Material $",
+      "type": "number"
+    },
+    {
+      "name": "equipment_total",
+      "label": "Equipment $",
+      "type": "number"
+    },
+    {
+      "name": "change_event",
+      "label": "Change event",
+      "type": "reference",
+      "module": "change_event"
+    }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "super_signed", "gc_signed", "billed"],
+    "states": [
+      "draft",
+      "super_signed",
+      "gc_signed",
+      "billed"
+    ],
     "transitions": [
-      {"from": "draft", "to": "super_signed", "action": "super_sign", "party": ["Subcontractor", "GC"]},
-      {"from": "super_signed", "to": "gc_signed", "action": "gc_sign", "party": ["GC"]},
-      {"from": "gc_signed", "to": "billed", "action": "bill", "party": ["GC"]}
+      {
+        "from": "draft",
+        "to": "super_signed",
+        "action": "super_sign",
+        "party": [
+          "Subcontractor",
+          "GC"
+        ]
+      },
+      {
+        "from": "super_signed",
+        "to": "gc_signed",
+        "action": "gc_sign",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "gc_signed",
+        "to": "billed",
+        "action": "bill",
+        "party": [
+          "GC"
+        ]
+      }
     ]
   }
 }
