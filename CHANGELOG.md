@@ -4,6 +4,14 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.7 — Field-capture depth (GPS geotag, offline-queue review, PWA shortcut)
+- Field capture now **geotags** records: a "📍 Tag GPS location" one-shot fix stores `gps_lat`/`gps_lon`/
+  `gps_accuracy_m` on the captured record (online + queued offline).
+- New **offline-queue review** sheet: list pending captures (photo/note + geotag), **Sync now**, or
+  discard individual items — reachable from the capture sheet (shown when the queue is non-empty).
+- **PWA app shortcut** "Field capture" (manifest `shortcuts`) + a `?capture=1` deep link that opens the
+  capture sheet on load — long-press the installed icon to snap a jobsite photo in one tap.
+
 ## v0.2.6 — Opt-in self-hosted basemap tiles (GIS)
 - New `gis.loadBasemap` + **Open → "Add basemap (self-hosted tiles)…"**: lays a Web-Mercator XYZ raster
   tile grid on the ground as a georeferenced reference overlay (focus lat/lon + zoom; tiles placed at

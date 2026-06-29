@@ -41,6 +41,10 @@ return {
         icons: [
           { src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
         ],
+        shortcuts: [
+          { name: "Field capture", short_name: "Capture", description: "Snap a photo → punch / observation / progress",
+            url: "/?capture=1", icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml" }] },
+        ],
       },
       workbox: {
         // precache only the lean app shell; the heavy viewer libs (three/@thatopen/worker),

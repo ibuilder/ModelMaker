@@ -956,7 +956,11 @@ async function startup() {
   help.onclick = () => { reopenChecklist(); showWelcome(onboardCtx()); };
   toolbar.insertBefore(help, statusEl);
   // field capture (mobile-first quick capture with offline queue) — needs the backend
-  if (!demo) new FieldCapture(api, () => projectId).mount();
+  if (!demo) {
+    const fc = new FieldCapture(api, () => projectId); fc.mount();
+    // PWA app-shortcut / deep link: ?capture=1 jumps straight to the field-capture sheet
+    if (new URLSearchParams(location.search).get("capture")) setTimeout(() => fc.open(), 400);
+  }
   // gamified getting-started checklist (feature discovery + activation)
   mountChecklist();
   // first run: welcome the user (skippable). Anchors must exist first, so defer a tick.
