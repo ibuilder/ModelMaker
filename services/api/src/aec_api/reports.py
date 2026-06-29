@@ -40,6 +40,8 @@ REPORTS: dict[str, tuple[str, str]] = {
     "rfi_register": ("RFI Register", "Logs"),
     "field_log": ("Field-Log Rollup", "Field"),
     "safety_dashboard": ("Safety Dashboard (OSHA)", "Safety"),
+    "closeout": ("Closeout Dashboard", "Closeout"),
+    "project_health": ("Project Health (Executive)", "Executive"),
 }
 
 
@@ -530,6 +532,55 @@ def _safety(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _closeout(db: Session, pid: str, name: str) -> Report:
+    from . import closeout
+    s = closeout.closeout_summary(db, pid)
+    pu, cx, ct, wr, om = s["punchlist"], s["commissioning"], s["certificates"], s["warranties"], s["om_manuals"]
+    r = Report("Closeout Dashboard", name)
+    r.kpi("Punch items", pu["punch_count"])
+    r.kpi("Punch complete", f"{pu['complete_pct']}%" if pu["complete_pct"] is not None else "—")
+    r.kpi("Punch overdue", pu["overdue_count"])
+    r.kpi("Open punch cost", _money(pu["open_cost"]))
+    r.kpi("Cx pass rate", f"{cx['pass_rate']}%" if cx["pass_rate"] is not None else "—")
+    r.kpi("Warranties expiring", wr["expiring_soon"])
+    r.kpi("O&M accepted", f"{om['accepted_pct']}%" if om["accepted_pct"] is not None else "—")
+    if pu["ball_in_court"]:
+        r.chart("bar", "Punchlist ball-in-court", list(pu["ball_in_court"].keys()),
+                [{"name": "Count", "values": list(pu["ball_in_court"].values())}])
+    r.table("Punchlist", ["Ref", "Description", "Ball in court", "Trade", "Priority", "Due", "Cost"],
+            [[x.get("ref", ""), x.get("description", ""), x.get("ball_in_court", ""), x.get("trade", ""),
+              x.get("priority", ""), ("OVERDUE " if x["overdue"] else "") + str(x.get("due_date") or ""),
+              _money(x["cost"])] for x in pu["rows"]] or [["(no punch items)"] + [""] * 6])
+    r.table("Commissioning", ["Metric", "Value"],
+            [["Tests", cx["cx_count"]], ["Pass", cx["passed"]], ["Fail", cx["failed"]],
+             ["Conditional", cx["conditional"]], ["Accepted", cx["accepted"]]])
+    r.table("Warranties", ["Metric", "Value"],
+            [["Total", wr["warranty_count"]], ["Active", wr["active"]],
+             ["Expiring (90d)", wr["expiring_soon"]], ["Expired", wr["expired"]]])
+    return r
+
+
+def _project_health(db: Session, pid: str, name: str) -> Report:
+    from . import projecthealth
+    h = projecthealth.project_health(db, pid)
+    r = Report("Project Health (Executive)", name)
+    r.kpi("Health score", f"{h['health_score']}/100" if h["health_score"] is not None else "—")
+    r.kpi("Overall", h["overall_status"].upper())
+    r.kpi("Open items", h["open_items_total"])
+    r.kpi("Overdue items", h["overdue_items_total"])
+    if h["domains"]:
+        r.chart("bar", "Domain health", [d["label"] for d in h["domains"]],
+                [{"name": "Score", "values": [{"green": 100, "amber": 60, "red": 20}.get(d["status"], 0)
+                                              for d in h["domains"]]}])
+    r.table("Domains", ["Domain", "Status", "Summary", "Open", "Overdue"],
+            [[d["label"], d["status"].upper(), d["headline"], d["open_count"], d["overdue_count"]]
+             for d in h["domains"]])
+    r.table("Attention items (ranked)", ["Status", "Domain", "Issue"],
+            [[a["status"].upper(), a["domain"], a["issue"]] for a in h["attention_items"]]
+            or [["—", "—", "No red/amber items — all clear"]])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -551,6 +602,10 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _field_log(db, pid, name)
     if report == "safety_dashboard":
         return _safety(db, pid, name)
+    if report == "closeout":
+        return _closeout(db, pid, name)
+    if report == "project_health":
+        return _project_health(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "executive":

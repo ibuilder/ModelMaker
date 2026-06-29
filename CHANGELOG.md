@@ -4,6 +4,19 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.1 — Closeout dashboard + project-health executive rollup
+- New `closeout.py` engine + `GET /projects/{pid}/closeout/summary`: **punchlist completion &
+  ball-in-court** (open=Subcontractor, ready=GC-verify, verified; % complete, overdue, open-cost,
+  by trade/priority), **commissioning pass rate** (by result & test type), **completion certificates**,
+  **warranty expirations** (active / expiring-90d / expired), and **O&M-manual turnover** (% accepted).
+- New `projecthealth.py` engine + `GET /projects/{pid}/health`: an **executive rollup** that stitches
+  the seven analytics domains (RFIs, submittals, quality, safety, T&M, field reporting, closeout) into
+  per-domain green/amber/red status, an overall 0–100 health score, open/overdue totals, and a ranked
+  list of attention items.
+- Two new Report-Center reports — **Closeout Dashboard** and **Project Health (Executive)** (PDF/Excel) —
+  plus "Project health" (top of tools) and "Closeout dashboard" launchers; clients `projectHealth`,
+  `closeoutSummary`. Verified live over HTTP against the preview DB (endpoints + all 6 new PDFs). Backend 62/62.
+
 ## v0.2.0 — Safety dashboard (OSHA TRIR / DART) + construction analytics suite complete
 - New `safety.py` engine + `GET /projects/{pid}/safety/summary`: **OSHA incident rates** — TRIR,
   DART, LTIFR, and severity rate on the 200,000-hour base, computed from the incident module's

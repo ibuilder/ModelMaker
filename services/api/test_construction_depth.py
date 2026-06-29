@@ -151,10 +151,38 @@ with TestClient(app) as c:
     est = c.get(f"/projects/{pid}/safety/summary").json()
     assert est["hours_estimated"] is True and est["incidents"]["hours_worked"] == 256, est["incidents"]
 
+    # --- Closeout dashboard ---------------------------------------------------
+    p1 = mk(c, pid, "punchlist", {"description": "Touch-up paint", "trade": "Painting", "priority": "Low",
+                                  "due_date": "2030-01-01", "cost": 250})
+    mk(c, pid, "punchlist", {"description": "Door won't latch", "trade": "Doors", "priority": "High",
+                             "due_date": "2020-01-01", "cost": 400})  # overdue, stays open (Sub's court)
+    trans(c, pid, "punchlist", p1, "ready_to_inspect")  # open -> ready (GC verify court; full verify needs attachment)
+    mk(c, pid, "commissioning", {"system": "AHU-1", "test_type": "Functional", "result": "Pass"})
+    mk(c, pid, "commissioning", {"system": "AHU-2", "test_type": "Functional", "result": "Fail"})
+    mk(c, pid, "warranty", {"name": "Roof membrane", "warranty_type": "Manufacturer", "expires": "2020-06-01"})  # expired
+    co = c.get(f"/projects/{pid}/closeout/summary").json()
+    assert co["punchlist"]["punch_count"] == 2, co["punchlist"]
+    assert co["punchlist"]["overdue_count"] == 1, co["punchlist"]
+    assert co["punchlist"]["open_cost"] == 650, co["punchlist"]   # both still open
+    assert co["punchlist"]["ball_in_court"].get("GC (verify)") == 1, co["punchlist"]
+    assert co["punchlist"]["ball_in_court"].get("Responsible / Sub") == 1, co["punchlist"]
+    assert co["commissioning"]["pass_rate"] == 50.0, co["commissioning"]
+    assert co["warranties"]["expired"] == 1, co["warranties"]
+
+    # --- Project-health executive rollup --------------------------------------
+    h = c.get(f"/projects/{pid}/health").json()
+    assert h["overall_status"] == "red", h           # overdue RFIs/NCRs/punch + recordable incidents
+    assert 0 <= h["health_score"] <= 100, h
+    keys = {d["key"] for d in h["domains"]}
+    assert {"rfi", "submittals", "quality", "safety", "tm", "field", "closeout"} <= keys, keys
+    assert any(a["status"] == "red" for a in h["attention_items"]), h["attention_items"]
+
     # --- reports render -------------------------------------------------------
     cat = {x["id"] for x in c.get("/reports").json()["reports"]}
-    assert {"tm_log", "submittal_register", "quality", "rfi_register", "field_log", "safety_dashboard"} <= cat, cat
-    for rid in ("tm_log", "submittal_register", "quality", "rfi_register", "field_log", "safety_dashboard"):
+    assert {"tm_log", "submittal_register", "quality", "rfi_register", "field_log", "safety_dashboard",
+            "closeout", "project_health"} <= cat, cat
+    for rid in ("tm_log", "submittal_register", "quality", "rfi_register", "field_log", "safety_dashboard",
+                "closeout", "project_health"):
         pdf = c.get(f"/projects/{pid}/reports/{rid}.pdf")
         assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF" and len(pdf.content) > 1200, (rid, pdf.status_code)
 
@@ -163,4 +191,6 @@ print("CONSTRUCTION-DEPTH OK - T&M rollup $10k (labor/material/equip split, bill
       "1 NCR overdue (Repair), deficiency ball-in-court GC vs Sub; RFI register: 2 RFIs, 1 overdue, "
       "ball-in-court Consultant vs GC; field-log: 3 reports, 32 manpower, peak 20, 1.5 weather lost-days; "
       "safety: 3 incidents, 2 recordable, TRIR 4.0/DART 2.0 @100k hrs (est 256h from manpower); "
-      "tm_log + submittal_register + quality + rfi_register + field_log + safety_dashboard PDFs render")
+      "closeout: 2 punch (1 overdue, ball-in-court GC vs Sub), Cx pass 50%, 1 expired warranty; project-health: RED rollup over "
+      "7 domains; tm_log + submittal_register + quality + rfi_register + field_log + safety_dashboard + "
+      "closeout + project_health PDFs render")

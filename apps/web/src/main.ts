@@ -138,6 +138,20 @@ async function openReportCenter() {
       + rows.map((r) => "<tr>" + r.map((c) => `<td>${escapeHtml(String(c))}</td>`).join("") + "</tr>").join("")
       + "</table>";
   };
+  tool("🩺 Project health (executive rollup)", () => showResult("Project health", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const h = await api.projectHealth(pid);
+      const dot = (s: string) => s === "red" ? "🔴" : s === "amber" ? "🟡" : s === "green" ? "🟢" : "⚪";
+      body.innerHTML = `<div style="font-size:22px;font-weight:700">${dot(h.overall_status)} ${h.health_score ?? "—"}/100 · ${h.overall_status.toUpperCase()}</div>`
+        + `<div class="meta">${h.open_items_total} open items · ${h.overdue_items_total} overdue across domains</div>`;
+      table(body, ["Domain", "Status", "Summary", "Open", "Overdue"],
+        h.domains.map((d) => [`${dot(d.status)} ${d.label}`, d.status.toUpperCase(), d.headline, d.open_count, d.overdue_count]));
+      if (h.attention_items.length) {
+        body.innerHTML += `<div class="section-title" style="margin-top:12px">Attention items</div>`;
+        table(body, ["Status", "Domain", "Issue"], h.attention_items.map((a) => [`${dot(a.status)} ${a.status.toUpperCase()}`, a.domain, a.issue]));
+      } }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("🤖 Project assistant — ask about RFIs, budget, schedule…", () => showResult("Project assistant", (body) => {
     const inp = document.createElement("input"); inp.type = "text"; inp.placeholder = "e.g. how many open RFIs? what's the SPI?"; inp.style.cssText = "width:100%;padding:8px;box-sizing:border-box";
     const ans = document.createElement("div"); ans.style.cssText = "margin-top:10px;white-space:pre-wrap;line-height:1.5";
@@ -186,6 +200,14 @@ async function openReportCenter() {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const s = await api.submittalRegister(pid); body.innerHTML = `<div class="meta">${s.submittal_count} submittals · ${s.open_count} open · ${s.overdue_count} overdue · avg turnaround ${s.avg_turnaround_days ?? "—"} d</div>`;
       table(body, ["Ref", "Spec", "Title", "Turn (d)", "Status"], s.rows.map((r: any) => [r.ref ?? "", r.spec_section ?? "", r.title ?? "", r.turnaround_days ?? "", (r.overdue ? "OVERDUE " : "") + r.status])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
+  tool("🏁 Closeout dashboard", () => showResult("Closeout dashboard", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const s = await api.closeoutSummary(pid); const p = s.punchlist, cx = s.commissioning, w = s.warranties, om = s.om_manuals;
+      body.innerHTML = `<div class="meta">Punch <b>${p.complete_pct ?? "—"}% complete</b> (${p.open_count} open, ${p.overdue_count} overdue, ${money(p.open_cost)} open cost) · `
+        + `Cx pass ${cx.pass_rate ?? "—"}% (${cx.cx_count} tests) · warranties ${w.active} active / ${w.expiring_soon} expiring / ${w.expired} expired · O&M ${om.accepted_pct ?? "—"}% accepted</div>`;
+      table(body, ["Punch item", "Ball in court", "Trade", "Due", "Cost"], p.rows.map((r: any) => [r.description ?? "", r.ball_in_court ?? "", r.trade ?? "", (r.overdue ? "OVERDUE " : "") + (r.due_date ?? ""), money(r.cost)])); }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
   tool("⚑ Safety dashboard (OSHA)", () => showResult("Safety dashboard (OSHA)", async (body) => {

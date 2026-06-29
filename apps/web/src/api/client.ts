@@ -582,6 +582,30 @@ export class ApiClient {
       avg_turnaround_days: number | null; by_section: Record<string, number>; rows: Record<string, unknown>[] }>(
       `/projects/${pid}/submittals/register`);
   }
+  /** Executive project-health rollup — per-domain status, overall score, ranked attention items. */
+  projectHealth(pid: string) {
+    return this.json<{
+      health_score: number | null; overall_status: string;
+      open_items_total: number; overdue_items_total: number;
+      domains: { key: string; label: string; status: string; headline: string;
+        open_count: number; overdue_count: number }[];
+      attention_items: { domain: string; status: string; issue: string }[];
+    }>(`/projects/${pid}/health`);
+  }
+  /** Closeout analytics — punchlist completion/ball-in-court, commissioning, warranties, O&M. */
+  closeoutSummary(pid: string) {
+    return this.json<{
+      punchlist: { punch_count: number; verified_count: number; open_count: number;
+        overdue_count: number; complete_pct: number | null; open_cost: number;
+        ball_in_court: Record<string, number>; by_trade: Record<string, number>;
+        rows: Record<string, unknown>[] };
+      commissioning: { cx_count: number; passed: number; failed: number; conditional: number;
+        accepted: number; pass_rate: number | null };
+      certificates: { cert_count: number; by_type: Record<string, number> };
+      warranties: { warranty_count: number; active: number; expired: number; expiring_soon: number };
+      om_manuals: { om_count: number; accepted: number; accepted_pct: number | null };
+    }>(`/projects/${pid}/closeout/summary`);
+  }
   /** Safety analytics — OSHA TRIR/DART/LTIFR, observation mix, toolbox coverage, violations. */
   safetySummary(pid: string, hours?: number) {
     const qs = hours != null ? `?hours=${hours}` : "";

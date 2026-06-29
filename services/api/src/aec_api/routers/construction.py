@@ -4,8 +4,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from .. import (dailylog as dailylog_engine, distribution as dist_engine, quality as quality_engine,
-                rfi as rfi_engine, safety as safety_engine, submittals as sub_engine, tm as tm_engine)
+from .. import (closeout as closeout_engine, dailylog as dailylog_engine, distribution as dist_engine,
+                projecthealth as health_engine, quality as quality_engine, rfi as rfi_engine,
+                safety as safety_engine, submittals as sub_engine, tm as tm_engine)
 from ..db import get_db
 from ..rbac import require_role
 
@@ -29,6 +30,18 @@ def tm_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require
 def tm_by_change_event(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """T&M (eTicket) cost rolled up by the change event each ticket is linked to."""
     return tm_engine.by_change_event(db, pid)
+
+
+@router.get("/projects/{pid}/health")
+def project_health(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Executive project-health rollup — per-domain status, overall score, ranked attention items."""
+    return health_engine.project_health(db, pid)
+
+
+@router.get("/projects/{pid}/closeout/summary")
+def closeout_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Closeout analytics — punchlist completion/ball-in-court, commissioning, certificates, warranties, O&M."""
+    return closeout_engine.closeout_summary(db, pid)
 
 
 @router.get("/projects/{pid}/safety/summary")
