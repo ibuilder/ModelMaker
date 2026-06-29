@@ -348,10 +348,11 @@ export class ProformaUI {
     impCard.innerHTML = `<div class="section-title">Import comparables</div>`
       + `<div class="meta">Paste CSV (headers like address, price, price_psf, cap_rate, sqft, sale_date) — RESO field names also work — to add comps to the sales-comparison approach.</div>`;
     const ta = document.createElement("textarea"); ta.placeholder = "address,price,price_psf,cap_rate,sale_date\n123 Main St,5200000,310,5.4,2026-02-01";
+    ta.setAttribute("aria-label", "Comparables CSV");
     ta.style.cssText = "width:100%;min-height:70px;margin-top:6px;font-family:monospace;font-size:12px";
     const ib = document.createElement("div"); ib.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:6px";
     const imp = document.createElement("button"); imp.className = "file-btn"; imp.textContent = "Import CSV";
-    const file = document.createElement("input"); file.type = "file"; file.accept = ".csv,text/csv"; file.style.fontSize = "12px";
+    const file = document.createElement("input"); file.type = "file"; file.accept = ".csv,text/csv"; file.setAttribute("aria-label", "Upload comparables CSV"); file.style.fontSize = "12px";
     file.onchange = async () => { if (file.files?.[0]) ta.value = await file.files[0].text(); };
     imp.onclick = async () => {
       const csv = ta.value.trim(); if (!csv) return;
@@ -516,7 +517,7 @@ export class ProformaUI {
         + rows + `<tr class="fin-total"><td>Total</td><td class="num">${money(ct.total_commitment)}</td><td></td>`
         + `<td class="num">${money(ct.total_unreturned)}</td><td></td></tr></table>`;
       const tools = document.createElement("div"); tools.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px";
-      const amt = document.createElement("input"); amt.type = "number"; amt.placeholder = "Amount"; amt.style.cssText = "width:120px;padding:4px";
+      const amt = document.createElement("input"); amt.type = "number"; amt.placeholder = "Amount"; amt.setAttribute("aria-label", "Capital call / distribution amount"); amt.style.cssText = "width:120px;padding:4px";
       const out = document.createElement("div"); out.className = "meta"; out.style.marginTop = "6px";
       const run = (kind: "call" | "distribution", persist: boolean) => async () => {
         const n = parseFloat(amt.value); if (isNaN(n)) return;
@@ -556,8 +557,8 @@ export class ProformaUI {
     card.innerHTML = `<div class="section-title">Distribution waterfall (scenario)</div>`
       + `<div class="meta">Model a one-time distribution / exit through pref → return of capital → promote.</div>`;
     const ctl = document.createElement("div"); ctl.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px";
-    const amt = document.createElement("input"); amt.type = "number"; amt.placeholder = "Exit / distribution $"; amt.style.cssText = "width:160px;padding:4px";
-    const yrs = document.createElement("input"); yrs.type = "number"; yrs.value = "5"; yrs.title = "Years held (contribution → exit)"; yrs.style.cssText = "width:70px;padding:4px";
+    const amt = document.createElement("input"); amt.type = "number"; amt.placeholder = "Exit / distribution $"; amt.setAttribute("aria-label", "Exit or distribution amount"); amt.style.cssText = "width:160px;padding:4px";
+    const yrs = document.createElement("input"); yrs.type = "number"; yrs.value = "5"; yrs.title = "Years held (contribution → exit)"; yrs.setAttribute("aria-label", "Years held"); yrs.style.cssText = "width:70px;padding:4px";
     const go = document.createElement("button"); go.className = "file-btn"; go.textContent = "Run waterfall";
     const out = document.createElement("div"); out.className = "meta"; out.style.marginTop = "6px";
     go.onclick = async () => {
@@ -569,6 +570,7 @@ export class ProformaUI {
       go.disabled = true;
       try {
         const w = await this.api.waterfallScenario(pid, { exit_amount: n, contribution_date: c0, exit_date: exit });
+        if (w.note) { out.innerHTML = `<span class="meta">${escapeHtml(w.note)}</span>`; return; }
         const pct = (v: number | null) => v == null ? "—" : `${(v * 100).toFixed(1)}%`;
         out.innerHTML = `<b>LP ${money(w.lp_distributions)}</b> (IRR ${pct(w.lp_irr)}, ${w.lp_equity_multiple}x) · `
           + `<b>GP ${money(w.gp_distributions)}</b> (${w.gp_equity_multiple}x) · pref ${pct(w.pref_rate)} ${escapeHtml(w.style)}<br>`

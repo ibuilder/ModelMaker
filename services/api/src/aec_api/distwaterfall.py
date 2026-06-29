@@ -69,6 +69,15 @@ def scenario(db, pid: str, body: dict | None = None) -> dict[str, Any]:
     gp = [r for r in rows if _is_gp(r["investor_class"])]
     lp_commit = sum(r["commitment"] for r in lp)
     gp_commit = sum(r["commitment"] for r in gp)
+    # no cap table -> nothing to allocate; return a clean zeroed scenario rather than a phantom split
+    if lp_commit + gp_commit <= 0:
+        return {
+            "total_distributable": 0.0, "lp_contrib": 0.0, "gp_contrib": 0.0,
+            "lp_distributions": 0.0, "gp_distributions": 0.0, "lp_irr": None, "gp_irr": None,
+            "lp_equity_multiple": 0, "gp_equity_multiple": 0, "lp_unreturned": 0.0,
+            "pref_rate": _DEFAULT_PREF, "style": "american", "periods": [], "per_investor": [],
+            "note": "No investors with a commitment in the cap table — add investors to model distributions.",
+        }
     # contributed basis (fall back to commitment if nothing has been called yet)
     lp_contrib = sum(r["contributed"] for r in lp) or lp_commit
     gp_contrib = sum(r["contributed"] for r in gp) or gp_commit

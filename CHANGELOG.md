@@ -4,6 +4,15 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.2.13 — Polish & harden: empty-project robustness + a11y
+- New `test_empty_project.py` (64 suites): every analytics / RE surface (14 endpoints + 13 PDF/XLSX
+  reports) must return 200 with a sane zeroed structure on a brand-new project — guards the "no data
+  yet" path against 500s and blank crashes.
+- **Hardened** the equity-waterfall scenario: with no investors in the cap table it now returns a clean
+  zeroed result + an explanatory note instead of phantom LP/GP splits; the UI surfaces the note.
+- Accessibility: `aria-label`s on the new Finance inputs (capital-call amount, waterfall exit/years,
+  comparables CSV textarea + file upload).
+
 ## v0.2.12 — Comparables import automation (CSV / RESO) — completes RE/capital depth
 - New `comps.py` + `POST /projects/{pid}/comparables/import`: bulk-load comparables from **CSV**
   (`{csv}`) or a **RESO array** (`{reso|rows}`) into the `comparable` module, feeding the

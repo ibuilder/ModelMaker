@@ -558,7 +558,7 @@ export class ApiClient {
     style?: string; clawback?: boolean } = {}) {
     return this.json<{ total_distributable: number; lp_distributions: number; gp_distributions: number;
       lp_irr: number | null; gp_irr: number | null; lp_equity_multiple: number; gp_equity_multiple: number;
-      lp_unreturned: number; pref_rate: number; style: string;
+      lp_unreturned: number; pref_rate: number; style: string; note?: string;
       periods: Record<string, unknown>[]; per_investor: Record<string, unknown>[] }>(
       `/projects/${pid}/waterfall`, { method: "POST", body: JSON.stringify(body) });
   }
