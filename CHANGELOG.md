@@ -4,6 +4,28 @@ All notable changes to the AEC BIM Platform. Releases are signed, auto-updating 
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.1.89 — operate, capital, payroll, drawing-set, assistant & ITB
+Six gaps closed from a competitive + open-source scan (OpenConstructionERP, Procore/ACC, RE
+asset-mgmt / syndication tools). See [docs/competitive-plan.md](docs/competitive-plan.md).
+- **Operating asset mgmt (rent roll):** a `lease` module (Operations) + `rentroll.py` — occupancy,
+  WALT, lease-expiration schedule, in-place income; `GET /rent-roll` + a Rent Roll report. The
+  appraisal income approach can value off the actual roll: `GET /appraisal?rentroll=1`.
+- **Investor / LP capital:** an `investor` module (Capital) + `capital.py` — cap table by commitment,
+  pro-rata **capital-call** & **distribution** allocation; `GET /cap-table`, `POST /capital-call`,
+  `POST /distribution` + a Cap-Table report. Data-room reuses the document module + attachments.
+- **Certified payroll (WH-347):** `payroll.py` aggregates timesheets × labor rates into a weekly
+  Davis-Bacon certified-payroll PDF (straight/OT split, prevailing-wage flags); `GET /payroll`,
+  `GET /payroll/wh347.pdf`.
+- **Drawing-set register:** `drawingset.py` derives the controlled current set from `drawing`
+  records (latest revision per sheet = current, earlier = superseded) + sheet index + discipline
+  rollup; `GET /drawing-set`.
+- **Project assistant:** `assistant.py` extends "ask" from the BIM index to the whole project
+  (module tallies, schedule, budget, risk, rent roll); `POST /assistant` (+ `/assistant/snapshot`),
+  AI-optional (returns the snapshot without a key).
+- **ITB tracking:** `itb.py` rolls up bid packages vs submissions (invited / responded / bonded /
+  low bid / coverage gaps); `GET /bidding/itb` + `POST /bidding/packages/{id}/invite`.
+- Tests: `test_operate_capital`, `test_payroll_drawings`, `test_assistant_itb` (backend 60/60).
+
 ## v0.1.88 — model intelligence, field verification & embeddability
 Three features adapted from a scan of **Argyle** (AR field verification) and **Flinker** (OpenBIM in
 M365) — built to ModelMaker's open, self-hosted, $0 identity (no AR hardware, no MS-365 lock-in).

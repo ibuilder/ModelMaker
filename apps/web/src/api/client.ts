@@ -525,6 +525,40 @@ export class ApiClient {
       `/projects/${pid}/distribution`, { method: "POST", body: JSON.stringify({ amount }) });
   }
 
+  // --- assistant · certified payroll · drawing set · ITB --------------------
+  /** Ask about the whole project (modules/schedule/budget/risk); grounded snapshot, AI-optional. */
+  askProject(pid: string, question: string) {
+    return this.json<{ answer?: string; snapshot?: unknown; source: string }>(
+      `/projects/${pid}/assistant`, { method: "POST", body: JSON.stringify({ question }) });
+  }
+  /** Weekly certified-payroll (WH-347) summary. */
+  payroll(pid: string, weekEnding?: string) {
+    const q = weekEnding ? `?week_ending=${weekEnding}` : "";
+    return this.json<{ week_ending: string; worker_count: number; total_hours: number;
+      total_gross: number; rows: Record<string, unknown>[] }>(`/projects/${pid}/payroll${q}`);
+  }
+  /** URL of the WH-347 certified-payroll PDF for a week. */
+  wh347Url(pid: string, weekEnding?: string) {
+    return this.url(`/projects/${pid}/payroll/wh347.pdf${weekEnding ? `?week_ending=${weekEnding}` : ""}`);
+  }
+  /** Controlled drawing-set register (current set, superseded, sheet index). */
+  drawingSet(pid: string) {
+    return this.json<{ sheet_count: number; current_count: number; superseded_count: number;
+      by_discipline: Record<string, number>; sheet_index: Record<string, unknown>[] }>(
+      `/projects/${pid}/drawing-set`);
+  }
+  /** ITB tracking — invited vs responded vs bonded per package + coverage gaps. */
+  itb(pid: string) {
+    return this.json<{ package_count: number; total_invited: number; total_responses: number;
+      packages_without_bids: number; rows: Record<string, unknown>[] }>(`/projects/${pid}/bidding/itb`);
+  }
+  /** Invite companies to bid on a package (records the invitee list). */
+  inviteBidders(pid: string, packageId: string, companies: string[]) {
+    return this.json<{ bidders_invited: number; invited_companies: string[] }>(
+      `/projects/${pid}/bidding/packages/${packageId}/invite`,
+      { method: "POST", body: JSON.stringify({ companies }) });
+  }
+
   // --- contract documents (generate / scope library / sign) -----------------
   /** URL of a generated contract document — doc = agreement | prime | co | exhibit. */
   contractDocUrl(pid: string, key: string, rid: string, doc: string, clauses?: string, attach = false) {

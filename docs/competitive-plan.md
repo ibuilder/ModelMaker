@@ -89,3 +89,18 @@ Argyle is a category we lacked (field verification). Built to our open, $0, no-A
 **Deliberately skipped:** AR-headset overlay (Magic Leap/iPad — hardware-heavy; a phased WebXR phone
 overlay is a future option) and MS-365-native packaging (Power BI visual / SharePoint tabs — cuts
 against the framework-agnostic, self-hosted posture; the `?embed=1` iframe covers the Teams-tab case).
+
+## Competitor + library scan (v0.1.89)
+
+A web/GitHub scan vs OpenConstructionERP (AGPL, 111 modules), Procore/Autodesk ACC, Fieldwire/
+Buildertrend, and RE asset-mgmt/syndication tools (Yardi, Agora, SyndicationPro, InvestNext).
+Finding: ModelMaker is broader than most; the genuine gaps were adjacent *phases* and depth, now built:
+- **Operate/hold (G1)** — `lease` module + rent roll (occupancy/WALT/expirations → appraisal income).
+- **Capital/investors (G2)** — `investor` cap table + pro-rata capital calls/distributions; data-room = document module.
+- **Certified payroll (G3)** — WH-347 from timesheets × labor rates.
+- **Drawing-set register (G5)** — controlled current vs superseded revisions from `drawing` records.
+- **Project assistant (G4)** — "ask" extended from the BIM index to the whole project.
+- **ITB tracking (G6)** — bid-package invited/responded/bonded coverage + invite endpoint.
+
+**Reconfirmed right-to-skip:** embedded 55k-item cost DB and OCR/YOLO photo takeoff (OpenConstructionERP),
+AR-headset overlay, MS-365-native packaging, Cesium globe, worker-camp module.

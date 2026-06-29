@@ -12,12 +12,20 @@ from ..db import get_db
 from ..rbac import require_role
 from ..deps import source_ifc_path as _source_ifc
 from ..models import Project
+from .. import drawingset
 
 _DATA_SRC = Path(__file__).resolve().parents[4] / "data" / "src"
 if str(_DATA_SRC) not in sys.path:
     sys.path.insert(0, str(_DATA_SRC))
 
 router = APIRouter()
+
+
+@router.get("/projects/{pid}/drawing-set")
+def get_drawing_set(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Controlled drawing-set register from the `drawing` records: current set (latest revision per
+    sheet), superseded revisions, sheet index + discipline rollup."""
+    return drawingset.drawing_set(db, pid)
 
 
 def _svg(svg: str) -> Response:

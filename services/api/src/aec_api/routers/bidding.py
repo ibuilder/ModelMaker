@@ -2,14 +2,33 @@
 their bid_package and compute low/high/avg/spread + flag the low bidder."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy.orm import Session
 
-from .. import modules as me
+from .. import itb as itb_engine, modules as me
 from ..db import get_db
 from ..rbac import require_role
 
 router = APIRouter()
+
+
+@router.get("/projects/{pid}/bidding/itb")
+def itb_summary(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """ITB tracking — invited vs responded vs bonded per bid package + coverage gaps."""
+    return itb_engine.itb(db, pid)
+
+
+@router.post("/projects/{pid}/bidding/packages/{rid}/invite")
+def invite_bidders(pid: str, rid: str, companies: list[str] = Body(..., embed=True),
+                   db: Session = Depends(get_db), user: str = Depends(require_role("editor"))):
+    """Invite companies to bid on a package — records the invitee list + invited count on the
+    bid_package record (outbound ITB)."""
+    rec = me.get_record(db, "bid_package", pid, rid)
+    existing = (rec.get("data") or {}).get("invited_companies") or []
+    merged = sorted(set(existing) | {c.strip() for c in companies if c.strip()})
+    me.update_record(db, "bid_package", pid, rid,
+                     {"invited_companies": merged, "bidders_invited": len(merged)}, user, None)
+    return {"package": rid, "invited_companies": merged, "bidders_invited": len(merged)}
 
 
 def _amt(rec: dict) -> float | None:
