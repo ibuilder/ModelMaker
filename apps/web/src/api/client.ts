@@ -713,6 +713,20 @@ export class ApiClient {
       by_priority: Record<string, number>; rows: Record<string, unknown>[] }>(
       `/projects/${pid}/rfi/register`);
   }
+  /** Preconstruction estimate continuity — per-milestone totals + $/SF, drift, gap vs budget/GMP. */
+  estimateContinuity(pid: string, budget?: number) {
+    const qs = budget != null ? `?budget=${budget}` : "";
+    return this.json<{ set_count: number; latest_total: number; latest_milestone: string | null;
+      latest_psf: number | null; total_drift: number; total_drift_pct: number | null;
+      budget: number | null; variance_to_budget: number | null; over_budget: boolean;
+      milestones: string[]; rows: Record<string, unknown>[] }>(
+      `/projects/${pid}/precon/estimate-continuity${qs}`);
+  }
+  /** One-click: price the current model and save it as an estimate set at the given milestone. */
+  preconSnapshot(pid: string, milestone: string) {
+    return this.json<{ created: string; ref: string; total: number; milestone: string }>(
+      `/projects/${pid}/precon/snapshot?milestone=${encodeURIComponent(milestone)}`, { method: "POST" });
+  }
   /** Quality dashboard — inspection pass-rate KPIs, NCR loop, deficiency ball-in-court. */
   qualitySummary(pid: string) {
     return this.json<{

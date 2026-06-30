@@ -251,6 +251,15 @@ async function openReportCenter() {
       } }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
+  tool("Σ Estimate continuity (preconstruction)", () => showResult("Estimate continuity", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const s = await api.estimateContinuity(pid);
+      const drift = s.total_drift_pct != null ? ` (${s.total_drift_pct > 0 ? "+" : ""}${s.total_drift_pct}%)` : "";
+      const varr = s.variance_to_budget == null ? "" : ` · <b>${s.over_budget ? "OVER" : "under"} budget ${money(Math.abs(s.variance_to_budget))}</b>`;
+      body.innerHTML = `<div class="meta">${s.set_count} estimate sets · latest ${money(s.latest_total)} (${s.latest_milestone ?? "—"}${s.latest_psf ? `, ${money(s.latest_psf)}/SF` : ""}) · drift ${money(s.total_drift)}${drift} · budget ${s.budget != null ? money(s.budget) : "—"}${varr}</div>`;
+      table(body, ["Milestone", "Total", "$/SF", "Δ vs prev", "Basis"], s.rows.map((r: any) => [r.milestone ?? "", money(r.total), r.psf != null ? money(r.psf) : "—", r.delta_total != null ? money(r.delta_total) : "—", r.basis ?? ""])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("💲 Change-order log", () => showResult("Change-order log", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const s = await api.coLog(pid); body.innerHTML = `<div class="meta">${s.co_count} COs · total ${money(s.total_value)} · pending ${money(s.pending_value)} · approved ${money(s.approved_value)} · <b>executed ${money(s.executed_value)}</b> · ${s.total_schedule_days} sched days · CE ROM exposure ${money(s.change_event_rom_exposure)}</div>`;

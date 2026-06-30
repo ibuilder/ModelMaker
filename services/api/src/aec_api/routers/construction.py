@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from .. import (actions as actions_engine, changeorders as co_engine, closeout as closeout_engine,
-                dailylog as dailylog_engine, distribution as dist_engine, projecthealth as health_engine,
-                quality as quality_engine, rfi as rfi_engine, safety as safety_engine,
-                submittals as sub_engine, tm as tm_engine)
+                dailylog as dailylog_engine, distribution as dist_engine, precon as precon_engine,
+                projecthealth as health_engine, quality as quality_engine, rfi as rfi_engine,
+                safety as safety_engine, submittals as sub_engine, tm as tm_engine)
 from ..db import get_db
 from ..rbac import require_role
 
@@ -43,6 +43,33 @@ def co_log(pid: str, db: Session = Depends(get_db), _: str = Depends(require_rol
 def action_tracker(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
     """Meeting & action-item tracker — open/overdue by assignee & priority, completion, meeting log."""
     return actions_engine.action_tracker(db, pid)
+
+
+@router.get("/projects/{pid}/precon/estimate-continuity")
+def precon_estimate_continuity(pid: str, budget: float | None = None, db: Session = Depends(get_db),
+                               _: str = Depends(require_role("viewer"))):
+    """Preconstruction estimate continuity — per-milestone totals + $/SF, milestone-to-milestone cost
+    drift, and the gap vs the project budget/GMP (pass ?budget= to override the GMP baseline)."""
+    return precon_engine.estimate_continuity(db, pid, budget)
+
+
+@router.post("/projects/{pid}/precon/snapshot", status_code=201)
+def precon_snapshot(pid: str, milestone: str = "SD", db: Session = Depends(get_db),
+                    actor: str = Depends(require_role("editor"))):
+    """One-click: price the current model (IFC takeoff × unit rates) and save it as an estimate set
+    tagged with the given design milestone. 409 if the project has no source IFC yet."""
+    from . import modules as me
+    from .cost import estimate_from_model
+    est = estimate_from_model(pid, db, actor)          # reuses the model estimator (409 if no IFC)
+    total = est.get("total") or est.get("grand_total") or 0.0
+    gsf = est.get("gfa_sf") or est.get("gsf") or 0.0
+    data = {"title": f"{milestone} estimate (from model)", "milestone": milestone,
+            "total": round(float(total), 2), "gsf": round(float(gsf), 1) if gsf else None,
+            "basis": "ROM", "source": "Model takeoff"}
+    rec = me.create_record(db, "estimate_set", pid, {k: v for k, v in data.items() if v is not None},
+                           actor, None)
+    return {"created": rec.get("id"), "ref": rec.get("ref"), "total": data["total"],
+            "milestone": milestone}
 
 
 @router.get("/projects/{pid}/health")

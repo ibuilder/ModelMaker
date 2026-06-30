@@ -4,6 +4,16 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.5 — Preconstruction estimate continuity (Concntric-style design-phase cost tracking)
+- New `estimate_set` module (snapshot tagged by design **milestone** — Concept/SD/DD/CD/IFC/GMP/Award —
+  with total, gross SF, basis, source) + `precon.py` engine + `GET /projects/{pid}/precon/estimate-continuity`:
+  per-milestone **$/SF**, **milestone-to-milestone cost drift**, first→latest drift, and the **gap vs the
+  project budget/GMP** (over/under). A one-click `POST /precon/snapshot?milestone=` prices the current
+  model (IFC takeoff) and saves it as an estimate set.
+- An **Estimate Continuity** report (PDF/Excel) + Report Center tool launcher; client `estimateContinuity`
+  + `preconSnapshot`. Closes the design-phase cost-tracking gap vs Concntric, built on Massing's existing
+  estimate/budget primitives. Backend 68/68.
+
 ## v0.3.4 — Optional licence enforcement (off by default)
 - Licence entitlements can now be **enforced**, but it's **opt-in and OFF by default** — the app stays
   fully open and a licence is optional (no registration) until the operator sets `MASSING_LICENSE_ENFORCE=1`

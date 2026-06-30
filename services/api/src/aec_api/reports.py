@@ -46,6 +46,7 @@ REPORTS: dict[str, tuple[str, str]] = {
     "project_health": ("Project Health (Executive)", "Executive"),
     "co_log": ("Change-Order Log", "Cost"),
     "action_tracker": ("Meeting Action-Item Tracker", "Logs"),
+    "estimate_continuity": ("Estimate Continuity (Preconstruction)", "Preconstruction"),
 }
 
 
@@ -685,6 +686,32 @@ def _action_tracker(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _estimate_continuity(db: Session, pid: str, name: str) -> Report:
+    from . import precon
+    s = precon.estimate_continuity(db, pid)
+    r = Report("Estimate Continuity (Preconstruction)", name)
+    r.kpi("Estimate sets", s["set_count"])
+    r.kpi("Latest", f"{_money(s['latest_total'])} ({s['latest_milestone'] or '—'})")
+    if s["latest_psf"]:
+        r.kpi("$/SF", _money(s["latest_psf"]))
+    r.kpi("Drift (first→latest)", f"{_money(s['total_drift'])}"
+          + (f" ({s['total_drift_pct']:+.1f}%)" if s["total_drift_pct"] is not None else ""))
+    r.kpi("Budget / GMP", _money(s["budget"]) if s["budget"] is not None else "—")
+    if s["variance_to_budget"] is not None:
+        r.kpi("Variance to budget", ("OVER " if s["over_budget"] else "under ") + _money(abs(s["variance_to_budget"])))
+    if any(x["total"] for x in s["rows"]):
+        r.chart("line", "Estimate by design milestone", [x["milestone"] for x in s["rows"]],
+                [{"name": "Total", "values": [round(x["total"]) for x in s["rows"]]}])
+    r.table("Milestone estimates", ["Milestone", "Title", "Total", "$/SF", "Δ vs prev", "Δ%", "Basis", "Date"],
+            [[x["milestone"], x.get("title", ""), _money(x["total"]),
+              _money(x["psf"]) if x["psf"] is not None else "—",
+              _money(x["delta_total"]) if x["delta_total"] is not None else "—",
+              f"{x['delta_pct']:+.1f}%" if x.get("delta_pct") is not None else "—",
+              x.get("basis") or "", x.get("estimate_date") or ""]
+             for x in s["rows"]] or [["(no estimate sets — create them under Preconstruction ▸ Estimate Sets)"] + [""] * 7])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -716,6 +743,8 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _co_log(db, pid, name)
     if report == "action_tracker":
         return _action_tracker(db, pid, name)
+    if report == "estimate_continuity":
+        return _estimate_continuity(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "marketing_flyer":

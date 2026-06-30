@@ -1,0 +1,66 @@
+{
+  "key": "estimate_set",
+  "name": "Estimate Sets",
+  "section": "Preconstruction",
+  "icon": "Σ",
+  "ref_prefix": "EST",
+  "title_field": "title",
+  "pinnable": false,
+  "fields": [
+    {
+      "name": "title",
+      "label": "Estimate",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "milestone",
+      "label": "Design Milestone",
+      "type": "select",
+      "required": true,
+      "options": ["Concept", "SD", "DD", "CD", "IFC", "GMP", "Award"]
+    },
+    {
+      "name": "total",
+      "label": "Total Estimate",
+      "type": "currency",
+      "required": true
+    },
+    {
+      "name": "gsf",
+      "label": "Gross SF",
+      "type": "number"
+    },
+    {
+      "name": "estimate_date",
+      "label": "Estimate Date",
+      "type": "date"
+    },
+    {
+      "name": "basis",
+      "label": "Basis",
+      "type": "select",
+      "options": ["ROM", "Budget", "Firm"]
+    },
+    {
+      "name": "source",
+      "label": "Source",
+      "type": "select",
+      "options": ["Model takeoff", "Manual", "Imported"]
+    },
+    {
+      "name": "notes",
+      "label": "Notes / assumptions",
+      "type": "textarea"
+    }
+  ],
+  "workflow": {
+    "initial": "draft",
+    "states": ["draft", "issued", "superseded"],
+    "transitions": [
+      {"from": "draft", "to": "issued", "action": "issue", "party": ["GC"]},
+      {"from": "issued", "to": "superseded", "action": "supersede", "party": ["GC"]}
+    ]
+  },
+  "list_columns": ["milestone", "total", "basis", "estimate_date"]
+}
