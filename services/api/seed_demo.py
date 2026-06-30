@@ -139,6 +139,12 @@ for title, styp in [("Concrete mix designs", "Product Data"),
                     ("Architectural finish samples", "Sample")]:
     new("submittal", {"title": title, "type": styp, "spec_section": "03 30 00"}, "sub")
 
+# --- zoning & site -> feasibility / zoning-envelope study --------------------
+new("zoning", {"site": "Demo Tower parcel", "jurisdiction": "DT-3 Downtown", "use_type": "Mixed-Use",
+               "site_area_sf": 20_000, "far": 6.0, "height_limit_ft": 240, "floor_to_floor_ft": 12,
+               "lot_coverage_pct": 80, "efficiency_pct": 85, "avg_unit_sf": 850,
+               "parking_ratio": 0.5, "open_space_pct": 10})
+
 # --- QA / inspection chain ---------------------------------------------------
 insp = new("inspection", {"subject": "Level 2 deck pour", "location": "Grid C-E", "result": "Fail", "date": "2026-06-14"}, "qa")
 new("ncr", {"subject": "Honeycomb at column", "description": "Voids on north face", "severity": "Major", "inspection": insp}, "sub")

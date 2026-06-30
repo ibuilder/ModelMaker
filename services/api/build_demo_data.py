@@ -110,6 +110,12 @@ with TestClient(app) as c:
     # log a couple of submittals against 03 30 00 so the log shows partial coverage (and 07 92 00 as a gap)
     mk(c, pid, "submittal", {"subject": "Concrete mix design - product data", "type": "Product Data", "spec_section": "03 30 00", "discipline": "Structural"}, "sub")
     mk(c, pid, "submittal", {"subject": "Architectural finish samples", "type": "Sample", "spec_section": "03 30 00", "discipline": "Architectural"}, "sub")
+
+    # --- zoning & site -> the feasibility / zoning-envelope study ---
+    mk(c, pid, "zoning", {"site": "Demo Tower parcel", "jurisdiction": "DT-3 Downtown", "use_type": "Mixed-Use",
+                          "site_area_sf": 20_000, "far": 6.0, "height_limit_ft": 240, "floor_to_floor_ft": 12,
+                          "lot_coverage_pct": 80, "efficiency_pct": 85, "avg_unit_sf": 850,
+                          "parking_ratio": 0.5, "open_space_pct": 10})
     bp = mk(c, pid, "bid_package", {"name": "Concrete package", "trade": "Concrete", "budget": 5_000_000})
     for bidder, amt in [("ACME Concrete", 4_780_000), ("Bedrock Co", 4_950_000), ("Pour Bros", 5_120_000)]:
         mk(c, pid, "bid_submission", {"bidder": bidder, "package": bp, "amount": amt})
@@ -136,7 +142,7 @@ with TestClient(app) as c:
                f"{P}/dev-budget", f"{P}/dev-budget/cost-lines", f"{P}/dev-budget/gmp-reconciliation", f"{P}/loan-draws",
                f"{P}/construction-draws", f"{P}/subcontractor-billing", f"{P}/proforma/model-metrics", f"{P}/property",
                f"{P}/sources-uses", f"{P}/specialty", f"{P}/ai/risk-summary", f"{P}/lean/ppc", f"{P}/properties/meta",
-               f"{P}/specs/submittal-log"]
+               f"{P}/specs/submittal-log", f"{P}/feasibility"]
     for s in singles:
         grab(c, s)
     for kind in ("gantt", "lob"):

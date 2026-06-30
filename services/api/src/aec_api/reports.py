@@ -51,6 +51,7 @@ REPORTS: dict[str, tuple[str, str]] = {
     "assumptions_register": ("Assumptions & Clarifications", "Preconstruction"),
     "precon_alignment": ("Preconstruction Alignment", "Preconstruction"),
     "spec_submittal_log": ("Spec-Driven Submittal Log", "Preconstruction"),
+    "site_feasibility": ("Site Feasibility / Zoning Envelope", "Preconstruction"),
 }
 
 
@@ -783,6 +784,38 @@ def _spec_submittal_log(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _site_feasibility(db: Session, pid: str, name: str) -> Report:
+    from . import feasibility as feas
+    f = feas.feasibility(db, pid)
+    r = Report("Site Feasibility / Zoning Envelope", name)
+    if f.get("error"):
+        r.table("Feasibility", ["Status"], [[f"{f['error']} — add a Zoning & Site record under Preconstruction."]])
+        return r
+    def sf(v):
+        return f"{v:,.0f} SF" if isinstance(v, (int, float)) else "—"
+    r.kpi("Site area", f"{f['site_area_sf']:,.0f} SF ({f['site_area_acres']:g} ac)")
+    r.kpi("Allowed GFA", sf(f.get("allowed_gfa_sf")))
+    r.kpi("Binding constraint", f.get("binding_constraint") or "—")
+    r.kpi("Max floors", f.get("max_floors") if f.get("max_floors") is not None else "—")
+    r.kpi("Unit yield", f.get("unit_yield") if f.get("unit_yield") is not None else "—")
+    r.kpi("Parking required", f.get("parking_required") if f.get("parking_required") is not None else "—")
+    if f.get("constraints"):
+        r.table("Envelope constraints (the minimum binds)", ["Constraint", "Limit GFA", "Basis"],
+                [[c["constraint"], sf(c["limit_gfa_sf"]), c["basis"]] for c in f["constraints"]])
+    m = f.get("model")
+    if m:
+        r.table("Model reconciliation", ["Actual GFA", "FAR used", "% of allowed", "Headroom", "Status"],
+                [[sf(m["actual_gfa_sf"]), m["far_used"], f"{m['pct_of_allowed']}%",
+                  sf(m["headroom_gfa_sf"]), m["status"]]])
+    summary = [["Net buildable (efficiency-adjusted)", sf(f.get("net_buildable_sf"))],
+               ["Buildable footprint", sf(f.get("buildable_footprint_sf"))],
+               ["Required open space", sf(f.get("open_space_required_sf"))]]
+    r.table("Program summary", ["Metric", "Value"], summary)
+    if f.get("warnings"):
+        r.table("Notes", ["Assumption / gap"], [[w] for w in f["warnings"]])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -824,6 +857,8 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _precon_alignment(db, pid, name)
     if report == "spec_submittal_log":
         return _spec_submittal_log(db, pid, name)
+    if report == "site_feasibility":
+        return _site_feasibility(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "marketing_flyer":

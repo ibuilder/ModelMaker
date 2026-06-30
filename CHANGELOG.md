@@ -4,6 +4,25 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.8 — Site feasibility / zoning envelope (Giraffe-style) + live-demo fix
+- **Fixed the broken live demo**: `massing.build/app/` was 404'ing — GitHub Pages had been switched to
+  the legacy branch source (`/docs`), which serves the landing page but not the viewer and conflicts
+  with the `pages.yml` Actions deploy. Restored Pages to the "GitHub Actions" source so `/app/`
+  deploys again; regenerated the demo snapshot.
+- **New `zoning` module + `feasibility.py` engine + `GET /projects/{pid}/feasibility`**: a site
+  feasibility / zoning-envelope study (the "Massing" feasibility tool, inspired by Giraffe). From site
+  area + zoning controls (FAR, height, floor-to-floor, lot coverage, setbacks, open space, parking,
+  unit size) it computes the **maximum buildable GFA as the binding minimum of the FAR cap vs. the
+  physical envelope** (footprint × floors), then net buildable area, **unit yield**, parking demand and
+  required open space — and **reconciles allowed GFA against the model's actual GFA** (FAR used,
+  % of allowed, headroom, over/under) when a source IFC is present.
+- New **Site Feasibility / Zoning Envelope** report (Report Center) + a "▟ Site feasibility" tool
+  launcher + `api.feasibility()` client method. Demo seeds a zoning record so it's demonstrable.
+- Reviewed giraffe.build, synaps.app, addd.io and arsray146/ifc-bcf-viewer; most of their AEC
+  capabilities are already covered (clash/BCF, IFC takeoff, dashboards, ask-the-model, reports). Site
+  feasibility was the clearest on-brand gap; shipped first.
+- Backend 70/70; web typecheck + Pages build green; demo verified live.
+
 ## v0.3.7 — Specifications → submittals: spec register, spec-driven submittal log, AI extraction
 - New `spec_section` module — the project manual / specification register (CSI MasterFormat section
   number + title, division, the Part 1 "Submittals" article text, Part 2 products, responsible party;

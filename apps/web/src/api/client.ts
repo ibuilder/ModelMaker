@@ -726,6 +726,19 @@ export class ApiClient {
       source: string; message?: string; created_submittals?: number }>(
       `/projects/${pid}/specs/extract-submittals`, { method: "POST", body: JSON.stringify({ text, create }) });
   }
+  /** Site feasibility / zoning envelope — max buildable GFA, unit yield, parking, vs. model GFA. */
+  feasibility(pid: string, gfa?: number) {
+    const qs = gfa != null ? `?gfa=${gfa}` : "";
+    return this.json<{ error?: string; site?: string; jurisdiction?: string; use_type?: string;
+      site_area_sf?: number; site_area_acres?: number; buildable_footprint_sf?: number | null;
+      max_floors?: number | null; far_gfa_sf?: number | null; envelope_gfa_sf?: number | null;
+      allowed_gfa_sf?: number | null; binding_constraint?: string | null; net_buildable_sf?: number | null;
+      unit_yield?: number | null; parking_required?: number | null; open_space_required_sf?: number | null;
+      constraints?: { constraint: string; limit_gfa_sf: number; basis: string }[];
+      model?: { actual_gfa_sf: number; far_used: number; pct_of_allowed: number;
+        headroom_gfa_sf: number; status: string } | null; warnings?: string[]; ref?: string }>(
+      `/projects/${pid}/feasibility${qs}`);
+  }
   /** Preconstruction estimate continuity — per-milestone totals + $/SF, drift, gap vs budget/GMP. */
   estimateContinuity(pid: string, budget?: number) {
     const qs = budget != null ? `?budget=${budget}` : "";

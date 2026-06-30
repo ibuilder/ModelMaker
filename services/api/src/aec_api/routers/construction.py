@@ -80,6 +80,26 @@ def specs_extract_submittals(pid: str, body: dict = Body(...), db: Session = Dep
     return res
 
 
+@router.get("/projects/{pid}/feasibility")
+def site_feasibility(pid: str, gfa: float | None = None, zoning_id: str | None = None,
+                     db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Site feasibility / zoning envelope — max buildable GFA (binding min of FAR vs. the physical
+    envelope), unit yield, parking demand + required open space, reconciled against the model's
+    actual GFA. Pass ?gfa= to override the actual GFA, else it's read from the source IFC if present."""
+    from .. import feasibility as feas_engine
+    actual = gfa
+    if actual is None:
+        try:                                            # best-effort model GFA (no IFC -> skip)
+            from ..deps import source_ifc_path
+            from aec_data import spaces as sp           # type: ignore
+            from aec_data.ifc_loader import open_model  # type: ignore
+            model = open_model(source_ifc_path(db, pid))
+            actual = round(sum(r["net_area"] for r in sp.space_schedule(model) if r.get("net_area")) * 10.7639, 1) or None
+        except Exception:
+            actual = None
+    return feas_engine.feasibility(db, pid, actual_gfa_sf=actual, zoning_id=zoning_id)
+
+
 @router.get("/projects/{pid}/precon/estimate-continuity")
 def precon_estimate_continuity(pid: str, budget: float | None = None, db: Session = Depends(get_db),
                                _: str = Depends(require_role("viewer"))):

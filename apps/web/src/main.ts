@@ -251,6 +251,18 @@ async function openReportCenter() {
       } }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
+  tool("▟ Site feasibility (zoning envelope)", () => showResult("Site feasibility / zoning envelope", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const f = await api.feasibility(pid);
+      if (f.error) { body.innerHTML = `<div class="meta">${escapeHtml(f.error)} — add a <b>Zoning &amp; Site</b> record under Preconstruction.</div>`; return; }
+      const sf = (v: number | null | undefined) => (typeof v === "number" ? `${Math.round(v).toLocaleString()} SF` : "—");
+      const m = f.model;
+      body.innerHTML = `<div class="meta">${escapeHtml(f.site ?? "Site")} · ${(f.site_area_sf ?? 0).toLocaleString()} SF (${f.site_area_acres ?? "—"} ac) · <b>allowed ${sf(f.allowed_gfa_sf)}</b> (binds on ${f.binding_constraint ?? "—"}) · ${f.max_floors ?? "—"} floors · yield ${f.unit_yield ?? "—"} units · parking ${f.parking_required ?? "—"}${m ? ` · model uses ${m.pct_of_allowed}% of allowed (${m.status})` : ""}</div>`;
+      table(body, ["Constraint", "Limit GFA", "Basis"], (f.constraints ?? []).map((c) => [c.constraint, sf(c.limit_gfa_sf), c.basis]));
+      if (m) table(body, ["Actual GFA", "FAR used", "% of allowed", "Headroom", "Status"], [[sf(m.actual_gfa_sf), String(m.far_used), `${m.pct_of_allowed}%`, sf(m.headroom_gfa_sf), m.status]]);
+      if (f.warnings?.length) body.insertAdjacentHTML("beforeend", `<div class="meta" style="margin-top:8px">${f.warnings.map((w) => "• " + escapeHtml(w)).join("<br>")}</div>`); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("§ Spec submittal log (from specs)", () => showResult("Spec-driven submittal log", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const s = await api.specSubmittalLog(pid);
