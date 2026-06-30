@@ -107,7 +107,9 @@ rfis = []
 for subj, disc, ci in [("Beam clash at grid C4", "Structural", "Yes"),
                        ("Door schedule mismatch L3", "Architectural", "Possible"),
                        ("VAV duct routing conflict", "MEP", "None")]:
-    r = new("rfi", {"subject": subj, "question": "Please advise.", "discipline": disc, "cost_impact": ci}, "consultant")
+    # the first RFI gets answered below; the workflow gates 'respond' on the `answer` field.
+    extra = {"answer": "Revise the connection per SK-12; added steel covered by COR 001."} if not rfis else {}
+    r = new("rfi", {"subject": subj, "question": "Please advise.", "discipline": disc, "cost_impact": ci, **extra}, "consultant")
     rfis.append(r)
 act("rfi", rfis[0], "submit"); act("rfi", rfis[0], "respond")     # -> answered
 act("rfi", rfis[1], "submit")                                     # -> open
