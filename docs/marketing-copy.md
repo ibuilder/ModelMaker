@@ -27,6 +27,7 @@ run the job, and hand it over — open, self-hosted, and free to run on one mach
 - **Developer finance** — line-item budgets, Sources & Uses, specialty (energy + vertical farm), investment memo + pitch deck.
 - **Underwriting that's honest** — risk-adjusted revenue + guardrails that flag returns outside market bands.
 - **GC portal** — RFIs, change orders, pay apps, CPM + takt + 4D, lean PPC, safety, closeout — config-driven.
+- **Spec book → submittal register** — paste your specifications, get a typed submittal log (shop drawings, product data, samples…) with missing-submittal coverage. AI when you have a key, a built-in parser when you don't.
 - **Off-plan listing kit** — a BIM-native Listing Fact Sheet + a signed public link/QR, auto-filled from the model & proforma.
 - **Tri-approach appraisal** — cost + income + sales-comparison reconciled into a Valuation report, RESO-aligned for MLS.
 - **Grounded in the literature** — Willis (form follows finance), Salvadori (structure), the Empire State takt assembly line.

@@ -18,7 +18,7 @@
 **What it is** — three pillars on one IFC-keyed model, switched by a Model / Construction / Finance bar:
 
 - 🧊 **BIM platform** — stream + author IFC in the browser (That Open Fragments), QA, IDS, BCF, 2D drawings + **PDF takeoff** (calibrated measure / area / count); **layer & align multiple models** (Navisworks-style) with **federated cross-discipline clash**; also opens **meshes & point clouds** (OBJ/STL/PLY/glTF · PCD/XYZ/**LAS/LAZ**) and **GIS / topography** (**GeoJSON** vectors · **GeoTIFF** DEM terrain) as georeferenced reference overlays, with **QR sharing**
-- 🏗 **GC portal** — config-driven modules: RFIs, submittals, change orders, pay apps (G702/G703), CPM schedule, safety/TRIR, closeout (COBie); **contract & change-order documents** (AIA-style generate · Exhibit A scope · redline · per-party + **PAdES digital** e-sign); **Report Center** (executive / cost / EVM / logs → PDF + Excel)
+- 🏗 **GC portal** — config-driven modules: RFIs, submittals, change orders, pay apps (G702/G703), CPM schedule, safety/TRIR, closeout (COBie); **specification register → spec-driven submittal log** (AI/rules extraction of typed submittals from the spec book, with missing-submittal coverage); **contract & change-order documents** (AIA-style generate · Exhibit A scope · redline · per-party + **PAdES digital** e-sign); **Report Center** (executive / cost / EVM / logs → PDF + Excel)
 - 💵 **Development proforma** — sources & uses, S-curve draws, XIRR/NPV, JV waterfall — seeded straight from the model
 
 ![Generate a building from a zoning envelope, then underwrite the deal](docs/img/generate-build.gif)
@@ -167,7 +167,19 @@ Deliverables** — with a sticky live-solved returns bar.
 
 ## Recent platform work
 
-- **Construction analytics suite · RE/capital depth · production hardening (latest, v0.2.14)** — a
+- **Specifications → submittals · preconstruction depth (latest, v0.3.7)** — the CSI
+  spec-to-submittal workflow, end to end. A **specification register** (project manual) module
+  (MasterFormat section, division, the Part 1 *Submittals* article, products, responsible party),
+  a **spec-driven submittal log** that derives the *required* submittals per section — typed
+  (Shop Drawing / Product Data / Sample / Mock-up / Certificate / Test Report / Calculations /
+  O&M / Warranty) — and reconciles them against what's actually been logged to surface **missing
+  submittals** per section with a coverage %, and **AI/rules submittal extraction**: paste a spec
+  (or its Submittals article) → a typed submittal list (Claude when a key is set, a deterministic
+  built-in parser offline), one click to log them and build the register straight from the spec book.
+  New **Spec-Driven Submittal Log** report (PDF/Excel). Builds on the **preconstruction-depth** work
+  (v0.3.0–v0.3.6): estimate-continuity across design milestones, decision log, assumptions register,
+  value-engineering cycle, and a calibrate-style alignment dashboard.
+- **Construction analytics suite · RE/capital depth · production hardening (v0.2.14)** — a
   read-side analytics layer over every core field log — **quality** (inspection pass-rate / first-pass
   yield, NCR disposition→close loop, deficiency ball-in-court), **RFI register** (ball-in-court /
   overdue / turnaround / cost-schedule impact), **submittal register**, **T&M** (with the
