@@ -47,6 +47,9 @@ REPORTS: dict[str, tuple[str, str]] = {
     "co_log": ("Change-Order Log", "Cost"),
     "action_tracker": ("Meeting Action-Item Tracker", "Logs"),
     "estimate_continuity": ("Estimate Continuity (Preconstruction)", "Preconstruction"),
+    "decision_log": ("Decision Log", "Preconstruction"),
+    "assumptions_register": ("Assumptions & Clarifications", "Preconstruction"),
+    "precon_alignment": ("Preconstruction Alignment", "Preconstruction"),
 }
 
 
@@ -712,6 +715,53 @@ def _estimate_continuity(db: Session, pid: str, name: str) -> Report:
     return r
 
 
+def _decision_log(db: Session, pid: str, name: str) -> Report:
+    from . import precon
+    s = precon.decision_log(db, pid)
+    r = Report("Decision Log", name)
+    r.kpi("Decisions", s["decision_count"])
+    r.kpi("Open", s["open_count"])
+    r.kpi("Disputed", s["disputed_count"])
+    r.kpi("Open cost exposure", _money(s["open_cost_exposure"]))
+    r.kpi("Open schedule exposure", f"{s['open_schedule_exposure_days']} d")
+    r.table("Decisions", ["Ref", "Decision", "Category", "Alignment", "State", "Cost", "Sched (d)", "Decide by"],
+            [[x.get("ref", ""), x.get("subject", ""), x.get("category", ""), x.get("alignment", ""),
+              x.get("state", ""), _money(x["cost_impact"]), x.get("schedule_impact_days", ""),
+              x.get("due_date") or ""] for x in s["rows"]] or [["(no decisions logged)"] + [""] * 7])
+    return r
+
+
+def _assumptions_register(db: Session, pid: str, name: str) -> Report:
+    from . import precon
+    s = precon.assumptions(db, pid)
+    r = Report("Assumptions & Clarifications", name)
+    r.kpi("Assumptions", s["assumption_count"])
+    r.kpi("Open", s["open_count"])
+    r.kpi("Confirmed", s["confirmed_count"])
+    r.kpi("Open allowance exposure", _money(s["open_cost_exposure"]))
+    r.table("Register", ["Ref", "Assumption", "Category", "State", "Cost / allowance", "Owner"],
+            [[x.get("ref", ""), x.get("subject", ""), x.get("category", ""), x.get("state", ""),
+              _money(x["cost_impact"]), x.get("owner") or ""]
+             for x in s["rows"]] or [["(no assumptions logged)"] + [""] * 5])
+    return r
+
+
+def _precon_alignment(db: Session, pid: str, name: str) -> Report:
+    from . import precon
+    s = precon.alignment(db, pid)
+    r = Report("Preconstruction Alignment", name)
+    r.kpi("Alignment score", f"{s['alignment_score']}/100" if s["alignment_score"] is not None else "—")
+    r.kpi("Status", str(s["overall_status"]).upper())
+    r.kpi("Latest estimate", f"{_money(s['latest_total'])} ({s['latest_milestone'] or '—'})")
+    if s["variance_to_budget"] is not None:
+        r.kpi("Vs budget", ("OVER " if s["variance_to_budget"] > 0 else "under ") + _money(abs(s["variance_to_budget"])))
+    r.kpi("VE accepted / pipeline", f"{_money(s['ve_accepted'])} / {_money(s['ve_pipeline'])}")
+    r.kpi("Open decisions / assumptions", f"{s['open_decisions']} / {s['open_assumptions']}")
+    r.table("Alignment by domain", ["Domain", "Status", "Detail"],
+            [[d["label"], d["status"].upper(), d["headline"]] for d in s["domains"]])
+    return r
+
+
 def build(db: Session, pid: str, report: str) -> Report:
     p = db.get(Project, pid)
     name = (p.name if p else pid)
@@ -745,6 +795,12 @@ def build(db: Session, pid: str, report: str) -> Report:
         return _action_tracker(db, pid, name)
     if report == "estimate_continuity":
         return _estimate_continuity(db, pid, name)
+    if report == "decision_log":
+        return _decision_log(db, pid, name)
+    if report == "assumptions_register":
+        return _assumptions_register(db, pid, name)
+    if report == "precon_alignment":
+        return _precon_alignment(db, pid, name)
     if report == "listing_factsheet":
         return _listing_factsheet(db, pid, name)
     if report == "marketing_flyer":

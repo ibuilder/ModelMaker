@@ -17,6 +17,10 @@ def mk(c, pid, key, data):
     return c.post(f"/projects/{pid}/modules/{key}", json={"data": data}).json()["id"]
 
 
+def trans(c, pid, key, rid, action):
+    return c.post(f"/projects/{pid}/modules/{key}/{rid}/transition", json={"action": action})
+
+
 with TestClient(app) as c:
     pid = c.post("/projects", json={"name": "Precon"}).json()["id"]
 
@@ -50,11 +54,53 @@ with TestClient(app) as c:
     xls = c.get(f"/projects/{pid}/reports/estimate_continuity.xlsx")
     assert xls.status_code == 200 and len(xls.content) > 100, xls.status_code
 
+    # --- Phase 2: decision log + assumptions register ------------------------
+    d1 = mk(c, pid, "decision", {"subject": "Curtainwall system", "category": "Systems",
+                                 "cost_impact": 100000, "schedule_impact_days": 10, "alignment": "Disputed"})
+    d2 = mk(c, pid, "decision", {"subject": "Slab on grade thickness", "category": "Design",
+                                 "cost_impact": 20000, "alignment": "Aligned"})
+    trans(c, pid, "decision", d2, "decide")        # d2 decided; d1 stays open + disputed
+    dl = c.get(f"/projects/{pid}/precon/decisions").json()
+    assert dl["decision_count"] == 2 and dl["open_count"] == 1, dl
+    assert dl["disputed_count"] == 1, dl
+    assert dl["open_cost_exposure"] == 100000 and dl["open_schedule_exposure_days"] == 10, dl
+
+    mk(c, pid, "assumption", {"subject": "Unsuitable soils allowance", "category": "Allowance", "cost_impact": 50000})
+    a2 = mk(c, pid, "assumption", {"subject": "Owner-furnished FF&E excluded", "category": "Exclusion"})
+    trans(c, pid, "assumption", a2, "confirm")
+    asm = c.get(f"/projects/{pid}/precon/assumptions").json()
+    assert asm["assumption_count"] == 2 and asm["open_count"] == 1 and asm["confirmed_count"] == 1, asm
+    assert asm["open_cost_exposure"] == 50000, asm
+
+    # --- Phase 3: VE cycle + alignment ---------------------------------------
+    v1 = mk(c, pid, "value_engineering", {"subject": "Switch to PT slabs", "savings": 200000})
+    trans(c, pid, "value_engineering", v1, "accept")
+    v2 = mk(c, pid, "value_engineering", {"subject": "Value-spec finishes", "savings": 100000})
+    trans(c, pid, "value_engineering", v2, "accept")
+    mk(c, pid, "value_engineering", {"subject": "Defer site furnishings", "savings": 400000})  # stays proposed
+    ve = c.get(f"/projects/{pid}/precon/ve?target=500000").json()
+    assert ve["accepted_savings"] == 300000 and ve["proposed_savings"] == 400000, ve
+    assert ve["gap_after_accepted"] == 200000 and ve["target_met"] is False, ve   # 500k gap - 300k accepted
+
+    al = c.get(f"/projects/{pid}/precon/alignment").json()
+    assert al["overall_status"] == "red", al        # disputed decision -> red
+    assert al["open_decisions"] == 1 and al["open_assumptions"] == 1, al
+    assert al["ve_accepted"] == 300000 and al["ve_pipeline"] == 700000, al
+    assert al["variance_to_budget"] is None, al      # no GMP budget seeded in this minimal project
+    assert isinstance(al["alignment_score"], int) and 0 <= al["alignment_score"] <= 100, al
+    assert any(d["key"] == "decisions" and d["status"] == "red" for d in al["domains"]), al
+    # the three precon reports render
+    for rid in ("decision_log", "assumptions_register", "precon_alignment"):
+        assert rid in {x["id"] for x in c.get("/reports").json()["reports"]}, rid
+        rp = c.get(f"/projects/{pid}/reports/{rid}.pdf")
+        assert rp.status_code == 200 and rp.content[:4] == b"%PDF", (rid, rp.status_code)
+
     # empty project -> clean zeroed structure (no crash)
     pid2 = c.post("/projects", json={"name": "Empty precon"}).json()["id"]
     e = c.get(f"/projects/{pid2}/precon/estimate-continuity").json()
     assert e["set_count"] == 0 and e["latest_total"] == 0.0 and e["variance_to_budget"] is None, e
 
-print("PRECON OK - estimate sets ordered Concept->SD->DD; $/SF (250 at DD); milestone drift (SD->DD "
-      "+1.5M) + first->latest +2.5M/25%; variance vs $12M budget = +500k OVER; report renders PDF+xlsx; "
+print("PRECON OK - estimate continuity (Concept->SD->DD, $/SF 250, drift +2.5M/25%, +500k OVER $12M); "
+      "decision log (1 open/disputed, $100k+10d exposure); assumptions (1 open, $50k allowance); VE cycle "
+      "($300k accepted vs $500k gap -> $200k remaining); alignment RED w/ score; 4 precon reports render; "
       "empty project zeroed")

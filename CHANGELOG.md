@@ -4,6 +4,19 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.6 — Preconstruction depth: decision log, assumptions, VE cycle + alignment dashboard
+- New `decision` (cross-stakeholder decision log: rationale, alternatives, cost/schedule impact,
+  Aligned/Pending/Disputed) and `assumption` (assumptions & clarifications register with allowance
+  exposure) modules. `precon.py` rollups + `GET /precon/decisions` and `/precon/assumptions`:
+  open counts, disputed, open cost & schedule exposure, by category.
+- **VE cycle** analytics on the existing `value_engineering` module — `GET /precon/ve?target=`:
+  proposed/accepted/rejected savings + gap-to-close against an over-budget target.
+- **Calibrate-style alignment dashboard** — `GET /precon/alignment`: per-domain RAG (estimate vs budget,
+  VE coverage of the gap, decisions, assumptions) + an alignment score. New reports: Decision Log,
+  Assumptions & Clarifications, Preconstruction Alignment; tool launchers + client methods.
+- Completes the preconstruction-depth parity vs Concntric (estimate continuity + decisions + assumptions
+  + VE + alignment). Backend 68/68; typecheck + build green.
+
 ## v0.3.5 — Preconstruction estimate continuity (Concntric-style design-phase cost tracking)
 - New `estimate_set` module (snapshot tagged by design **milestone** — Concept/SD/DD/CD/IFC/GMP/Award —
   with total, gross SF, basis, source) + `precon.py` engine + `GET /projects/{pid}/precon/estimate-continuity`:

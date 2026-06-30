@@ -251,6 +251,21 @@ async function openReportCenter() {
       } }
     catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
   }));
+  tool("🎯 Preconstruction alignment", () => showResult("Preconstruction alignment", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const a = await api.preconAlignment(pid);
+      const varr = a.variance_to_budget == null ? "" : ` · ${a.variance_to_budget > 0 ? "OVER" : "under"} budget ${money(Math.abs(a.variance_to_budget))}`;
+      body.innerHTML = `<div class="meta"><b>Alignment ${a.alignment_score ?? "—"}/100 · ${String(a.overall_status).toUpperCase()}</b> · latest ${money(a.latest_total)} (${a.latest_milestone ?? "—"})${varr} · VE accepted ${money(a.ve_accepted)} · ${a.open_decisions} open decisions · ${a.open_assumptions} open assumptions</div>`;
+      table(body, ["Domain", "Status", "Detail"], a.domains.map((d: any) => [d.label, String(d.status).toUpperCase(), d.headline])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
+  tool("✔ Decision log", () => showResult("Decision log", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const s = await api.decisionLog(pid);
+      body.innerHTML = `<div class="meta">${s.decision_count} decisions · ${s.open_count} open · ${s.disputed_count} disputed · cost exposure ${money(s.open_cost_exposure)} · ${s.open_schedule_exposure_days} sched days</div>`;
+      table(body, ["Decision", "Category", "Alignment", "State", "Cost"], s.rows.map((r: any) => [r.subject ?? "", r.category ?? "", r.alignment ?? "", r.state ?? "", money(r.cost_impact)])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("Σ Estimate continuity (preconstruction)", () => showResult("Estimate continuity", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const s = await api.estimateContinuity(pid);

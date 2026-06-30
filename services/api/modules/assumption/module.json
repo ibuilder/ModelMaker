@@ -1,0 +1,28 @@
+{
+  "key": "assumption",
+  "name": "Assumptions & Clarifications",
+  "section": "Preconstruction",
+  "icon": "?",
+  "ref_prefix": "ASM",
+  "title_field": "subject",
+  "pinnable": true,
+  "fields": [
+    {"name": "subject", "label": "Assumption / Clarification", "type": "text", "required": true},
+    {"name": "basis", "label": "Basis / detail", "type": "textarea"},
+    {"name": "category", "label": "Category", "type": "select",
+     "options": ["Scope", "Design", "Site", "Schedule", "Allowance", "Exclusion", "Other"]},
+    {"name": "cost_impact", "label": "Cost Impact / Allowance", "type": "currency"},
+    {"name": "owner", "label": "Owner", "type": "text"},
+    {"name": "estimate_set", "label": "Estimate set", "type": "reference", "module": "estimate_set"}
+  ],
+  "workflow": {
+    "initial": "open",
+    "states": ["open", "confirmed", "voided"],
+    "transitions": [
+      {"from": "open", "to": "confirmed", "action": "confirm", "party": ["GC", "OwnersRep", "Architect"]},
+      {"from": "open", "to": "voided", "action": "void", "party": ["GC"]},
+      {"from": "confirmed", "to": "open", "action": "reopen", "party": ["GC"]}
+    ]
+  },
+  "list_columns": ["category", "cost_impact", "owner"]
+}

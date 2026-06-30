@@ -85,3 +85,176 @@ def estimate_continuity(db, pid: str, budget: float | None = None) -> dict[str, 
         "over_budget": (variance is not None and variance > 0),
         "rows": rows,
     }
+
+
+DECISION_OPEN = ("open",)
+ASSUMPTION_OPEN = ("open",)
+
+
+def decision_log(db, pid: str) -> dict[str, Any]:
+    """Preconstruction decision log — by status, stakeholder alignment, and open cost/schedule exposure."""
+    from . import modules as me
+    recs = me.list_records(db, "decision", pid, limit=100000) if "decision" in me.TABLES else []
+    by_status, by_alignment, by_category = {}, {}, {}
+    open_count = 0
+    cost_exposure = sched_exposure = 0.0
+    rows = []
+    for r in recs:
+        d = _d(r)
+        st = r.get("workflow_state") or "open"
+        by_status[st] = by_status.get(st, 0) + 1
+        align = (d.get("alignment") or "Pending").strip() or "Pending"
+        by_alignment[align] = by_alignment.get(align, 0) + 1
+        cat = (d.get("category") or "(uncategorized)").strip() or "(uncategorized)"
+        by_category[cat] = by_category.get(cat, 0) + 1
+        is_open = st in DECISION_OPEN
+        if is_open:
+            open_count += 1
+            cost_exposure += _num(d.get("cost_impact"))
+            sched_exposure += _num(d.get("schedule_impact_days"))
+        rows.append({
+            "ref": r.get("ref"), "subject": d.get("subject"), "category": cat, "state": st,
+            "alignment": align, "cost_impact": _num(d.get("cost_impact")),
+            "schedule_impact_days": _num(d.get("schedule_impact_days")),
+            "decided_by": d.get("decided_by"), "due_date": d.get("due_date"),
+        })
+    return {
+        "decision_count": len(rows), "open_count": open_count,
+        "decided_count": by_status.get("decided", 0),
+        "disputed_count": by_alignment.get("Disputed", 0),
+        "open_cost_exposure": round(cost_exposure, 2),
+        "open_schedule_exposure_days": round(sched_exposure, 1),
+        "by_status": by_status, "by_alignment": by_alignment, "by_category": dict(sorted(by_category.items())),
+        "rows": sorted(rows, key=lambda r: (r["state"] != "open", r.get("due_date") or "")),
+    }
+
+
+def assumptions(db, pid: str) -> dict[str, Any]:
+    """Assumptions & clarifications register — by status/category + open cost exposure (allowances)."""
+    from . import modules as me
+    recs = me.list_records(db, "assumption", pid, limit=100000) if "assumption" in me.TABLES else []
+    by_status, by_category = {}, {}
+    open_cost = 0.0
+    rows = []
+    for r in recs:
+        d = _d(r)
+        st = r.get("workflow_state") or "open"
+        by_status[st] = by_status.get(st, 0) + 1
+        cat = (d.get("category") or "(uncategorized)").strip() or "(uncategorized)"
+        by_category[cat] = by_category.get(cat, 0) + 1
+        ci = _num(d.get("cost_impact"))
+        if st in ASSUMPTION_OPEN:
+            open_cost += ci
+        rows.append({"ref": r.get("ref"), "subject": d.get("subject"), "category": cat,
+                     "state": st, "cost_impact": ci, "owner": d.get("owner")})
+    return {
+        "assumption_count": len(rows),
+        "open_count": sum(v for k, v in by_status.items() if k in ASSUMPTION_OPEN),
+        "confirmed_count": by_status.get("confirmed", 0), "voided_count": by_status.get("voided", 0),
+        "open_cost_exposure": round(open_cost, 2),
+        "by_status": by_status, "by_category": dict(sorted(by_category.items())),
+        "rows": sorted(rows, key=lambda r: (r["state"] != "open", -r["cost_impact"])),
+    }
+
+
+def ve_log(db, pid: str, target: float | None = None) -> dict[str, Any]:
+    """Value-engineering cycle — proposed vs accepted vs rejected savings, by status, and (if a target
+    gap is given) how much of it the accepted ideas close."""
+    from . import modules as me
+    recs = me.list_records(db, "value_engineering", pid, limit=100000) if "value_engineering" in me.TABLES else []
+    by_status = {}
+    proposed = accepted = rejected = 0.0
+    rows = []
+    for r in recs:
+        d = _d(r)
+        st = (r.get("workflow_state") or d.get("status") or "proposed").strip().lower()
+        by_status[st] = by_status.get(st, 0) + 1
+        sv = _num(d.get("savings"))
+        if st == "accepted":
+            accepted += sv
+        elif st == "rejected":
+            rejected += sv
+        else:
+            proposed += sv
+        rows.append({"ref": r.get("ref"), "subject": d.get("subject"), "status": st,
+                     "savings": round(sv, 2)})
+    out = {
+        "ve_count": len(rows), "by_status": by_status,
+        "proposed_savings": round(proposed, 2), "accepted_savings": round(accepted, 2),
+        "rejected_savings": round(rejected, 2),
+        "pipeline_savings": round(proposed + accepted, 2),     # still-available + already-accepted
+        "rows": sorted(rows, key=lambda r: -r["savings"]),
+    }
+    if target is not None:
+        gap = _num(target)
+        out["target"] = round(gap, 2)
+        out["gap_after_accepted"] = round(gap - accepted, 2)   # remaining gap once accepted VE is applied
+        out["target_met"] = accepted >= gap
+    return out
+
+
+_RAG = {"green": 100, "amber": 60, "red": 20}
+
+
+def alignment(db, pid: str) -> dict[str, Any]:
+    """Calibrate-style preconstruction alignment: is the latest estimate tracking to budget, are
+    decisions/assumptions resolved, and can open VE close any over-budget gap? RAG + score."""
+    cont = estimate_continuity(db, pid)
+    dec = decision_log(db, pid)
+    asm = assumptions(db, pid)
+    over = cont["variance_to_budget"] if cont["variance_to_budget"] is not None else 0.0
+    ve = ve_log(db, pid, target=over if over > 0 else None)
+    domains = []
+
+    def add(key, label, status, headline):
+        domains.append({"key": key, "label": label, "status": status, "headline": headline})
+
+    # budget tracking
+    if cont["budget"] and cont["variance_to_budget"] is not None:
+        v = cont["variance_to_budget"]
+        b_status = "green" if v <= 0 else ("amber" if v <= 0.05 * cont["budget"] else "red")
+        add("budget", "Estimate vs budget",
+            "green" if v <= 0 else b_status,
+            f"latest {cont['latest_milestone'] or '—'} {('over' if v > 0 else 'under')} by "
+            f"{_fmt_money(abs(v))} vs {_fmt_money(cont['budget'])}")
+    else:
+        add("budget", "Estimate vs budget", "amber" if cont["set_count"] == 0 else "green",
+            f"{cont['set_count']} estimate set(s); no budget baseline" if not cont["budget"] else "tracking")
+    # VE coverage of any over-budget gap
+    if over > 0:
+        add("ve", "VE vs gap",
+            "green" if ve.get("target_met") else ("amber" if ve["accepted_savings"] > 0 else "red"),
+            f"{_fmt_money(ve['accepted_savings'])} accepted / {_fmt_money(ve['pipeline_savings'])} pipeline "
+            f"vs {_fmt_money(over)} gap")
+    else:
+        add("ve", "Value engineering", "green",
+            f"{_fmt_money(ve['accepted_savings'])} accepted, {_fmt_money(ve['proposed_savings'])} proposed")
+    # decisions
+    add("decisions", "Decisions",
+        "red" if dec["disputed_count"] else ("amber" if dec["open_count"] else "green"),
+        f"{dec['open_count']} open ({dec['disputed_count']} disputed), "
+        f"{_fmt_money(dec['open_cost_exposure'])} cost exposure")
+    # assumptions
+    add("assumptions", "Assumptions",
+        "amber" if asm["open_count"] else "green",
+        f"{asm['open_count']} open, {_fmt_money(asm['open_cost_exposure'])} allowance exposure")
+
+    scored = [_RAG[d["status"]] for d in domains]
+    score = round(sum(scored) / len(scored)) if scored else None
+    overall = "red" if any(d["status"] == "red" for d in domains) else (
+        "amber" if any(d["status"] == "amber" for d in domains) else "green")
+    return {
+        "alignment_score": score, "overall_status": overall,
+        "latest_milestone": cont["latest_milestone"], "latest_total": cont["latest_total"],
+        "budget": cont["budget"], "variance_to_budget": cont["variance_to_budget"],
+        "ve_accepted": ve["accepted_savings"], "ve_pipeline": ve["pipeline_savings"],
+        "open_decisions": dec["open_count"], "open_assumptions": asm["open_count"],
+        "domains": domains,
+    }
+
+
+def _fmt_money(v: Any) -> str:
+    try:
+        return f"${float(v):,.0f}"
+    except (TypeError, ValueError):
+        return str(v)

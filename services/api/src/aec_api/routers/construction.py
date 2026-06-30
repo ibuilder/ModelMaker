@@ -53,6 +53,32 @@ def precon_estimate_continuity(pid: str, budget: float | None = None, db: Sessio
     return precon_engine.estimate_continuity(db, pid, budget)
 
 
+@router.get("/projects/{pid}/precon/decisions")
+def precon_decisions(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Preconstruction decision log — by status/alignment + open cost & schedule exposure."""
+    return precon_engine.decision_log(db, pid)
+
+
+@router.get("/projects/{pid}/precon/assumptions")
+def precon_assumptions(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Assumptions & clarifications register — by status/category + open allowance exposure."""
+    return precon_engine.assumptions(db, pid)
+
+
+@router.get("/projects/{pid}/precon/ve")
+def precon_ve(pid: str, target: float | None = None, db: Session = Depends(get_db),
+              _: str = Depends(require_role("viewer"))):
+    """Value-engineering cycle — proposed/accepted/rejected savings; pass ?target= for gap-to-close."""
+    return precon_engine.ve_log(db, pid, target)
+
+
+@router.get("/projects/{pid}/precon/alignment")
+def precon_alignment(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Calibrate-style preconstruction alignment — estimate-vs-budget, VE coverage of any gap,
+    open decisions/assumptions — as per-domain RAG + an alignment score."""
+    return precon_engine.alignment(db, pid)
+
+
 @router.post("/projects/{pid}/precon/snapshot", status_code=201)
 def precon_snapshot(pid: str, milestone: str = "SD", db: Session = Depends(get_db),
                     actor: str = Depends(require_role("editor"))):
