@@ -467,15 +467,22 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
   toolDivider();   // ── measure / visibility ──┊── collaboration ──
 
   // ---- live presence + shared viewpoints ----------------------------------
-  type Peer = { user: string; seconds_ago: number; viewpoint: { position: THREE.Vector3Like; target: THREE.Vector3Like } | null };
+  type Peer = { user: string; seconds_ago: number; viewpoint: { position: THREE.Vector3Like; target: THREE.Vector3Like; projection?: string; fov?: number } | null };
   let peers: Peer[] = [];
   function captureViewpoint() {
     const p = new THREE.Vector3(), t = new THREE.Vector3();
     viewer.world.camera.controls.getPosition(p); viewer.world.camera.controls.getTarget(t);
-    return { position: { x: p.x, y: p.y, z: p.z }, target: { x: t.x, y: t.y, z: t.z } };
+    // carry the projection + FOV so a section/elevation (orthographic) view restores faithfully and
+    // round-trips through BCF (a viewpoint that only stored position/target lost the actual view).
+    const proj = String(viewer.world.camera.projection.current || "Perspective");
+    const cam = viewer.world.camera.three as THREE.PerspectiveCamera;
+    return { position: { x: p.x, y: p.y, z: p.z }, target: { x: t.x, y: t.y, z: t.z },
+             projection: proj, fov: typeof cam.fov === "number" ? cam.fov : undefined };
   }
   function jumpToViewpoint(vp: Peer["viewpoint"]) {
     if (!vp) return;
+    if (vp.projection && String(viewer.world.camera.projection.current) !== vp.projection)
+      void viewer.world.camera.projection.set(vp.projection as "Perspective" | "Orthographic");
     void viewer.world.camera.controls.setLookAt(
       vp.position.x, vp.position.y, vp.position.z, vp.target.x, vp.target.y, vp.target.z, true);
   }

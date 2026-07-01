@@ -77,6 +77,49 @@ with TestClient(app) as c:
     assert p["anchor"] and abs(p["anchor"]["x"] - 1.0) < 1e-6, p
     assert p["status"] == "open", p
 
+    # --- viewpoint fidelity: full camera (persp + ortho) + per-element coloring ----
+    from aec_api.models import Viewpoint                          # noqa: E402
+    import xml.etree.ElementTree as ET                            # noqa: E402
+
+    # perspective: position + target -> direction is derived + normalized; fov + up survive
+    vp = Viewpoint(guid="vp-p", components=[GUID],
+                   camera={"type": "perspective", "position": {"x": 0, "y": 0, "z": 0},
+                           "target": {"x": 0, "y": 0, "z": -5}, "fov": 45, "up": {"x": 0, "y": 1, "z": 0}},
+                   visibility={"default_visibility": True, "coloring": [{"color": "FF0000", "guids": [GUID]}]})
+    root = ET.fromstring(bcf_io._viewpoint_xml(vp))
+    cam = bcf_io._parse_camera(root)
+    assert cam["type"] == "perspective" and cam["fov"] == 45.0, cam
+    assert abs(cam["direction"]["z"] + 1.0) < 1e-6, cam           # (0,0,-5) normalized -> (0,0,-1)
+    assert cam["up"] == {"x": 0.0, "y": 1.0, "z": 0.0}, cam
+    coloring = bcf_io._parse_coloring(root)
+    assert coloring == [{"color": "FF0000", "guids": [GUID]}], coloring   # per-element colour survives
+
+    # orthographic (section/elevation): type + ViewToWorldScale survive
+    vpo = Viewpoint(guid="vp-o", camera={"type": "orthographic", "position": {"x": 1, "y": 2, "z": 3},
+                                         "direction": {"x": 0, "y": 0, "z": -1}, "view_to_world_scale": 42.0})
+    camo = bcf_io._parse_camera(ET.fromstring(bcf_io._viewpoint_xml(vpo)))
+    assert camo["type"] == "orthographic" and camo["view_to_world_scale"] == 42.0, camo
+    assert camo["position"] == {"x": 1.0, "y": 2.0, "z": 3.0}, camo
+
+    # end-to-end: a crafted external BCF with an OrthogonalCamera imports (proves the real import path)
+    vbytes = (b'<?xml version="1.0"?><VisualizationInfo><OrthogonalCamera>'
+              b'<CameraViewPoint><X>7</X><Y>8</Y><Z>9</Z></CameraViewPoint>'
+              b'<CameraDirection><X>0</X><Y>0</Y><Z>-1</Z></CameraDirection>'
+              b'<CameraUpVector><X>0</X><Y>1</Y><Z>0</Z></CameraUpVector>'
+              b'<ViewToWorldScale>10</ViewToWorldScale></OrthogonalCamera></VisualizationInfo>')
+    mbytes = (b'<?xml version="1.0"?><Markup><Topic Guid="ortho-1" TopicType="clash" TopicStatus="open">'
+              b'<Title>Section view clash</Title></Topic></Markup>')
+    obuf = io.BytesIO()
+    with zipfile.ZipFile(obuf, "w") as z:
+        z.writestr("bcf.version", b'<?xml version="1.0"?><Version VersionId="2.1"/>')
+        z.writestr("ortho-1/markup.bcf", mbytes)
+        z.writestr("ortho-1/ortho-1.bcfv", vbytes)
+    dst2 = c.post("/projects", json={"name": "BCF Ortho"}).json()["id"]
+    io2 = c.post(f"/projects/{dst2}/bcf/import", files={"file": ("o.bcfzip", obuf.getvalue(), "application/zip")})
+    assert io2.status_code == 200 and io2.json()["imported"] == 1, io2.text[:200]
+    ot = c.get(f"/projects/{dst2}/topics").json()[0]
+    assert ot["anchor"]["x"] == 7.0 and ot["anchor"]["z"] == 9.0, ot   # ortho camera position -> anchor
+
     # empty project still exports a valid (topic-less) bcfzip — no crash
     empty = c.post("/projects", json={"name": "Empty"}).json()["id"]
     e = c.get(f"/projects/{empty}/bcf/export")

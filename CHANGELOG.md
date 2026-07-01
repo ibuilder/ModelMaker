@@ -4,6 +4,21 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.11 — BCF viewpoint fidelity: orthographic cameras + per-element coloring
+- BCF viewpoints now round-trip the **full camera**, not just the view point: camera direction
+  (derived from position→target when absent), up-vector, and field-of-view for perspective — plus
+  **OrthogonalCamera** (view point + direction + up + view-to-world-scale) so section/elevation
+  viewpoints from Solibri / ACC / BIMcollab survive the round-trip instead of collapsing to a bare
+  point. Shared helpers (`_camera_xml`/`_parse_camera`) used across every export/import path.
+- **Per-element coloring** in viewpoints (`<Coloring><Color><Component/>`) now exports and imports —
+  the "the clashing beam is red" emphasis state carries through BCF. Imported viewpoints (incl.
+  orthographic + coloured) are re-materialised as `Viewpoint` rows, not just the pin anchor.
+- Viewer `captureViewpoint()` now records the projection (perspective/orthographic) + FOV, and
+  `jumpToViewpoint()` restores the projection — shared/presence and saved views recreate the actual
+  camera. Closes the fidelity gap flagged in the arsray146/ifc-bcf-viewer review.
+- Backend 71/71 (BCF test extended with perspective + orthographic + coloring round-trips and an
+  end-to-end orthographic-camera import); web typecheck + 49 tests green.
+
 ## v0.3.10 — Feasibility scenario comparison (test schemes side by side)
 - **New `GET /projects/{pid}/feasibility/compare`** + `feasibility.compare()`: rank every zoning
   scheme (one `zoning` record = one scheme, e.g. "Scheme A · FAR 6" vs "Scheme B · FAR 8") by

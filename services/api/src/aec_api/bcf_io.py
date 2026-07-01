@@ -61,34 +61,100 @@ def _markup_xml(topic: Topic) -> bytes:
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
-def _viewpoint_xml(v: Viewpoint) -> bytes:
-    root = ET.Element("VisualizationInfo", {"Guid": v.guid})
-    if v.components:
-        comps = ET.SubElement(root, "Components")
-        sel = ET.SubElement(comps, "Selection")
-        for guid in v.components:
-            ET.SubElement(sel, "Component", {"IfcGuid": guid})
-    if v.visibility:
-        comps = root.find("Components") or ET.SubElement(root, "Components")
-        vis = ET.SubElement(comps, "Visibility",
-                            {"DefaultVisibility": str(v.visibility.get("default_visibility", True)).lower()})
-        exc = ET.SubElement(vis, "Exceptions")
-        for guid in v.visibility.get("exceptions", []):
-            ET.SubElement(exc, "Component", {"IfcGuid": guid})
-    if v.camera:
-        cam = v.camera
-        pcam = ET.SubElement(root, "PerspectiveCamera")
-        pos = cam.get("position", {})
-        ET.SubElement(pcam, "CameraViewPoint")
-        _xyz(pcam.find("CameraViewPoint"), pos)
-        ET.SubElement(pcam, "FieldOfView").text = str(cam.get("fov", 60))
-    return ET.tostring(root, encoding="utf-8", xml_declaration=True)
-
-
 def _xyz(parent: ET.Element, d: dict) -> None:
     ET.SubElement(parent, "X").text = str(d.get("x", 0))
     ET.SubElement(parent, "Y").text = str(d.get("y", 0))
     ET.SubElement(parent, "Z").text = str(d.get("z", 0))
+
+
+def _direction(cam: dict) -> dict:
+    """Camera direction: explicit `direction`, else derived from position -> target (normalized)."""
+    if cam.get("direction"):
+        return cam["direction"]
+    p, t = cam.get("position") or {}, cam.get("target")
+    if not t:
+        return {"x": 0, "y": 0, "z": -1}
+    dx, dy, dz = t.get("x", 0) - p.get("x", 0), t.get("y", 0) - p.get("y", 0), t.get("z", 0) - p.get("z", 0)
+    n = (dx * dx + dy * dy + dz * dz) ** 0.5 or 1.0
+    return {"x": dx / n, "y": dy / n, "z": dz / n}
+
+
+def _camera_xml(root: ET.Element, cam: dict) -> None:
+    """Emit a full BCF 2.1 camera — PerspectiveCamera or OrthogonalCamera per `cam['type']` — with
+    view point, direction, up vector, and field-of-view / view-to-world-scale (prior versions dropped
+    everything but the view point, so restoring a viewpoint lost the actual view and all ortho/section
+    cameras)."""
+    is_ortho = str(cam.get("type", "perspective")).lower().startswith("ortho")
+    el = ET.SubElement(root, "OrthogonalCamera" if is_ortho else "PerspectiveCamera")
+    ET.SubElement(el, "CameraViewPoint"); _xyz(el.find("CameraViewPoint"), cam.get("position", {}))
+    ET.SubElement(el, "CameraDirection"); _xyz(el.find("CameraDirection"), _direction(cam))
+    ET.SubElement(el, "CameraUpVector"); _xyz(el.find("CameraUpVector"), cam.get("up", {"x": 0, "y": 0, "z": 1}))
+    if is_ortho:
+        ET.SubElement(el, "ViewToWorldScale").text = str(cam.get("view_to_world_scale", cam.get("scale", 1.0)))
+    else:
+        ET.SubElement(el, "FieldOfView").text = str(cam.get("fov", 60))
+
+
+def _coloring_xml(comps_el: ET.Element, coloring: list) -> None:
+    """Emit per-element Coloring: [{color:'FF0000', guids:[...]}] -> <Coloring><Color><Component/>…"""
+    col = ET.SubElement(comps_el, "Coloring")
+    for c in coloring:
+        ce = ET.SubElement(col, "Color", {"Color": str(c.get("color", "FFFFFF"))})
+        for g in c.get("guids", []):
+            ET.SubElement(ce, "Component", {"IfcGuid": g})
+
+
+def _viewpoint_xml(v: Viewpoint) -> bytes:
+    root = ET.Element("VisualizationInfo", {"Guid": v.guid})
+    coloring = (v.visibility or {}).get("coloring") if v.visibility else None
+    if v.components or v.visibility or coloring:
+        comps = ET.SubElement(root, "Components")
+        if v.components:
+            sel = ET.SubElement(comps, "Selection")
+            for guid in v.components:
+                ET.SubElement(sel, "Component", {"IfcGuid": guid})
+        if coloring:
+            _coloring_xml(comps, coloring)
+        if v.visibility:
+            vis = ET.SubElement(comps, "Visibility",
+                                {"DefaultVisibility": str(v.visibility.get("default_visibility", True)).lower()})
+            exc = ET.SubElement(vis, "Exceptions")
+            for guid in v.visibility.get("exceptions", []):
+                ET.SubElement(exc, "Component", {"IfcGuid": guid})
+    if v.camera:
+        _camera_xml(root, v.camera)
+    return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+
+def _parse_camera(vroot: ET.Element) -> dict | None:
+    """Read a PerspectiveCamera or OrthogonalCamera into {type, position, direction, up, fov|scale}."""
+    for tag, kind in (("PerspectiveCamera", "perspective"), ("OrthogonalCamera", "orthographic")):
+        cel = vroot.find(tag)
+        if cel is None:
+            continue
+        def pt(name: str) -> dict | None:
+            e = cel.find(name)
+            return {ax.lower(): float(e.findtext(ax) or 0) for ax in ("X", "Y", "Z")} if e is not None else None
+        cam: dict[str, Any] = {"type": kind, "position": pt("CameraViewPoint") or {"x": 0, "y": 0, "z": 0}}
+        if pt("CameraDirection"):
+            cam["direction"] = pt("CameraDirection")
+        if pt("CameraUpVector"):
+            cam["up"] = pt("CameraUpVector")
+        if kind == "orthographic":
+            cam["view_to_world_scale"] = float(cel.findtext("ViewToWorldScale") or 1.0)
+        else:
+            cam["fov"] = float(cel.findtext("FieldOfView") or 60)
+        return cam
+    return None
+
+
+def _parse_coloring(vroot: ET.Element) -> list:
+    out = []
+    for color in vroot.findall(".//Coloring/Color"):
+        guids = [c.get("IfcGuid") for c in color.findall("Component") if c.get("IfcGuid")]
+        if guids:
+            out.append({"color": color.get("Color", "FFFFFF"), "guids": guids})
+    return out
 
 
 def export_bcfzip(db: Session, project_id: str) -> bytes:
@@ -117,10 +183,7 @@ def _record_viewpoint_xml(guid: str, components: list[str], anchor: dict | None)
         for g in components:
             ET.SubElement(sel, "Component", {"IfcGuid": g})
     if anchor:
-        pcam = ET.SubElement(root, "PerspectiveCamera")
-        ET.SubElement(pcam, "CameraViewPoint")
-        _xyz(pcam.find("CameraViewPoint"), anchor)
-        ET.SubElement(pcam, "FieldOfView").text = "60"
+        _camera_xml(root, {"type": "perspective", "position": anchor})
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
@@ -181,9 +244,9 @@ def parse_records_bcfzip(data: bytes) -> list[dict]:
                     g = comp.get("IfcGuid")
                     if g:
                         comps.append(g)
-                cvp = vroot.find("PerspectiveCamera/CameraViewPoint")
-                if cvp is not None:
-                    anchor = {ax.lower(): float(cvp.findtext(ax) or 0) for ax in ("X", "Y", "Z")}
+                cam = _parse_camera(vroot)
+                if cam is not None:
+                    anchor = cam.get("position")
             out.append({"data": {k: v for k, v in rec.items() if v is not None},
                         "anchor": anchor, "element_guids": comps,
                         "status": te.get("TopicStatus")})
@@ -205,15 +268,18 @@ def import_bcfzip(db: Session, project_id: str, data: bytes) -> int:
             folder = name.rsplit("/", 1)[0] if "/" in name else ""
             comps: list[str] = []
             anchor = None
+            cam = None
+            coloring: list = []
             for vp in [n for n in names if n.endswith(".bcfv") and (not folder or n.startswith(folder + "/"))]:
                 vroot = ET.fromstring(z.read(vp))
                 for comp in vroot.findall(".//Selection/Component"):
                     g = comp.get("IfcGuid")
                     if g:
                         comps.append(g)
-                cvp = vroot.find("PerspectiveCamera/CameraViewPoint")
-                if cvp is not None:
-                    anchor = {ax.lower(): float(cvp.findtext(ax) or 0) for ax in ("X", "Y", "Z")}
+                cam = _parse_camera(vroot) or cam
+                coloring = _parse_coloring(vroot) or coloring
+                if cam is not None:
+                    anchor = cam.get("position")
             topic = Topic(
                 project_id=project_id,
                 guid=te.get("Guid"),
@@ -233,6 +299,12 @@ def import_bcfzip(db: Session, project_id: str, data: bytes) -> int:
                     author=ce.findtext("Author"),
                     text=ce.findtext("Comment") or "",
                 ))
+            # preserve the full camera (incl. orthographic) + per-element coloring as a Viewpoint,
+            # so a section/coloured viewpoint from Solibri/ACC survives the round-trip (not just the pin).
+            if cam is not None or coloring:
+                topic.viewpoints.append(Viewpoint(
+                    camera=cam, components=comps or None,
+                    visibility={"coloring": coloring} if coloring else None))
             db.add(topic)
             count += 1
     return count
