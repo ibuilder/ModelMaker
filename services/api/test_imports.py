@@ -56,6 +56,11 @@ with TestClient(app) as c:                                    # startup register
     assert len(recs) == 2, len(recs)
     assert {(r.get("data") or {}).get("code") for r in recs} == {"03-3000", "05-1200"}, recs
 
+    # server-side search (SQL filter, not a Python post-scan): matches a `data` field value + ref/title
+    assert len(c.get(f"/projects/{pid}/modules/cost_code?q=steel").json()) == 1        # data.description
+    assert len(c.get(f"/projects/{pid}/modules/cost_code?q=03-3000").json()) == 1      # data.code
+    assert len(c.get(f"/projects/{pid}/modules/cost_code?q=zzz-nomatch").json()) == 0
+
     # a row missing the required 'code' is reported, not created; good rows still import
     bad = b"Code,Description\n,Orphan desc\n09-2900,Gypsum\n"
     res2 = c.post(f"/projects/{pid}/modules/cost_code/import",

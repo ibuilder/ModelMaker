@@ -1438,6 +1438,20 @@ export class PortalUI {
         const addOpt = document.createElement("option"); addOpt.value = "__new__";
         addOpt.textContent = `＋ Add new ${tgt?.name ?? f.module}…`; sel.appendChild(addOpt);
         if (cur(f.name) != null) sel.value = String(cur(f.name));
+        // searchable picker: for long lists, a type-to-filter box hides non-matching options
+        if ((refOpts.get(f.name) ?? []).length > 8) {
+          const fx = document.createElement("input"); fx.type = "search";
+          fx.placeholder = `filter ${tgt?.name ?? "records"}…`; fx.className = "portal-filter";
+          fx.style.cssText = "display:block;margin-bottom:4px;width:100%";
+          fx.oninput = () => {
+            const q = fx.value.trim().toLowerCase();
+            for (const o of [...sel.options]) {
+              if (o.value === "" || o.value === "__new__") continue;
+              o.hidden = !!q && !(o.textContent ?? "").toLowerCase().includes(q);
+            }
+          };
+          wrap.appendChild(fx);
+        }
         sel.addEventListener("change", async () => {
           if (sel.value !== "__new__") return;
           // the field to set on the new record: the module's title_field, else its first required
@@ -1475,9 +1489,30 @@ export class PortalUI {
       this.root.appendChild(pinLabel);
     }
 
+    // field-level validation: outline offending inputs + focus the first (no more silent 422s)
+    const labelOf = (n: string) => m.fields.find((f) => f.name === n)?.label ?? n;
+    const markInvalid = (names: string[]) => {
+      for (const f of m.fields) { const el = inputs[f.name]; if (el) el.style.borderColor = ""; }
+      for (const n of names) { const el = inputs[n]; if (el) el.style.borderColor = "var(--err, #d9534f)"; }
+      const first = names.map((n) => inputs[n]).find(Boolean); if (first) first.focus();
+    };
+    const isEmpty = (f: ModuleDef["fields"][number]): boolean => {
+      const el = inputs[f.name]; if (!el) return false;
+      if (f.type === "signature") return !sigs[f.name]?.();
+      if (f.type === "multiselect") return [...(el as HTMLSelectElement).selectedOptions].length === 0;
+      return !String((el as HTMLInputElement).value || "").trim();
+    };
     const save = document.createElement("button");
     save.className = "file-btn"; save.textContent = editing ? "Save" : "Create"; save.style.marginTop = "8px";
     save.onclick = async () => {
+      // client-side required check before hitting the server
+      const missing = m.fields.filter((f) => f.required && f.type !== "rollup" && isEmpty(f)).map((f) => f.name);
+      if (missing.length) {
+        markInvalid(missing);
+        this.host.setStatus(`Please fill required field(s): ${missing.map(labelOf).join(", ")}`);
+        return;
+      }
+      markInvalid([]);
       const data: Record<string, unknown> = {};
       for (const f of m.fields) {
         if (f.type === "rollup") continue;
@@ -1503,7 +1538,12 @@ export class PortalUI {
           if (body.anchor) this.host.onPinsChanged();
           this.openRecord(m, rec.id);
         }
-      } catch (e) { this.host.setStatus(`error: ${(e as Error).message}`); }
+      } catch (e) {
+        const msg = (e as Error).message;
+        const mm = /missing required field\(s\):\s*([^"}]+)/i.exec(msg);   // server-side required rules
+        if (mm) { const names = mm[1].split(",").map((s) => s.trim()).filter(Boolean); markInvalid(names); }
+        this.host.setStatus(`error: ${msg}`);
+      }
     };
     this.root.appendChild(save);
   }

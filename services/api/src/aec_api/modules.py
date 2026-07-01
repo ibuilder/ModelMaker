@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import HTTPException
-from sqlalchemy import (JSON, Column, DateTime, Index, String, Table, func, insert, or_, select,
+from sqlalchemy import (JSON, Column, DateTime, Index, String, Table, cast, func, insert, or_, select,
                         update)
 from sqlalchemy.orm import Session
 
@@ -214,13 +214,18 @@ def list_records(db: Session, key: str, project_id: str, state: str | None = Non
     stmt = select(t).where(t.c.project_id == project_id)
     if state:
         stmt = stmt.where(t.c.workflow_state == state)
-    stmt = stmt.order_by(t.c.created_at).limit(limit).offset(offset)
-    rows = [dict(r._mapping) for r in db.execute(stmt)]
     if q:
-        ql = q.lower()
-        rows = [r for r in rows if ql in json.dumps(r.get("data") or {}).lower()
-                or ql in (r.get("ref") or "").lower() or ql in (r.get("title") or "").lower()]
-    return rows
+        # filter in SQL (before LIMIT) so search scales + returns the right rows, not just matches
+        # within the first page. `data` cast to text is portable (SQLite stores JSON as text;
+        # Postgres casts JSON->text) — a substring match over ref / title / the whole field map.
+        like = f"%{q.lower()}%"
+        stmt = stmt.where(or_(
+            func.lower(func.coalesce(t.c.ref, "")).like(like),
+            func.lower(func.coalesce(t.c.title, "")).like(like),
+            func.lower(cast(t.c.data, String)).like(like),
+        ))
+    stmt = stmt.order_by(t.c.created_at).limit(limit).offset(offset)
+    return [dict(r._mapping) for r in db.execute(stmt)]
 
 
 def state_counts(db: Session, key: str, project_id: str) -> dict[str, int]:

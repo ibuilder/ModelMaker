@@ -4,6 +4,22 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.14 — Data-entry UX upgrade Phases 2–4: form validation, searchable pickers, faster search
+- **Form validation (buy-in + clean data)**: create/edit forms now enforce **required fields
+  client-side** — offending inputs get outlined, the first is focused, and submit is blocked with a
+  clear "Please fill required field(s): …" message instead of a silent server 422. If the server does
+  reject (`missing required field(s): …`), the exact fields are parsed out and highlighted; the form
+  keeps all entered values.
+- **Searchable reference picker (ties everything together at scale)**: a reference field with more
+  than 8 options gets a type-to-filter box, so picking e.g. a cost code stays fast when a project has
+  hundreds — the "＋ Add new" inline-create still works.
+- **Server-side search (easy to access, scalable — no Elasticsearch)**: the module list/search `q`
+  filter now runs in **SQL** (`ref`/`title`/`data`-as-text `LIKE`, applied before `LIMIT`) instead of
+  loading a page of rows and scanning JSON in Python — so a search returns the right matches across the
+  whole module, not just those on the first page, and scales. Portable across SQLite (dev) and
+  Postgres (prod); the JSONB/`tsvector` + GIN upgrade is a clean future step on the same query.
+- Backend 72/72 (search assertions added to `test_imports`); web typecheck + 49 tests + Pages build green.
+
 ## v0.3.13 — Generic Excel / CSV import for any module (Phase 1 of the data-entry UX upgrade)
 - **The #1 data-entry / adoption lever**: every module now has an **⤓ Import** button that bulk-loads
   records from an Excel (.xlsx) or CSV file. New `imports.py` + endpoints
