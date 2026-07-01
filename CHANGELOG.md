@@ -4,6 +4,12 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.16 — Bulk-action pickers replace raw prompts (data-entry polish)
+- The list bulk-action bar no longer uses `prompt()` for **Assign** / **Transition**: Transition is
+  now a dropdown of the module's valid workflow actions + Apply, and Assign is an inline input + Apply
+  (Delete stays behind a confirm). Faster, less error-prone bulk edits on a selection — the last
+  rough edge from the CRUD/UX audit. Web typecheck + 49 tests green.
+
 ## v0.3.15 — Paginated module lists (large registers stay snappy)
 - Module list views now **page** the records (100/page) with **‹ Prev / Next ›** controls and a
   position indicator, instead of fetching and rendering every record at once. A register with

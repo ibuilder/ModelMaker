@@ -1133,26 +1133,34 @@ export class PortalUI {
     const bulkBar = document.createElement("div"); bulkBar.className = "bulk-bar"; bulkBar.hidden = true;
     const bulkCount = document.createElement("span"); bulkCount.className = "meta";
     const syncBulk = () => { bulkBar.hidden = selected.size === 0; bulkCount.textContent = `${selected.size} selected`; };
-    // each action returns the number of records it acted on, or null if the user cancelled —
-    // so we only toast + reload on a real change (no spurious reload on a cancelled prompt).
-    const mkBulk = (label: string, verb: string, fn: () => Promise<number | null>) => {
-      const b = document.createElement("button"); b.className = "tool-btn"; b.textContent = label;
-      b.onclick = () => void fn().then((n) => {
-        if (n == null) return;
+    // apply a bulk action to the selection, then toast + reload (no more raw prompt() pickers)
+    const runBulk = async (action: "assign" | "transition" | "delete", verb: string, value?: string) => {
+      const n = selected.size; if (!n) return;
+      try {
+        await this.host.api.bulkAction(pid, m.key, [...selected], action, value);
         toast(`${verb} ${n} ${m.name.toLowerCase()} record${n === 1 ? "" : "s"}`, "info");
         this.openModule(m, filter);
-      }).catch((e) => this.host.setStatus(`bulk action failed: ${(e as Error).message}`));
-      return b;
+      } catch (e) { this.host.setStatus(`bulk action failed: ${(e as Error).message}`); }
     };
-    bulkBar.append(bulkCount,
-      mkBulk("Assign…", "Assigned", async () => { const who = prompt("Assign selected to:"); if (who === null) return null; const n = selected.size; await this.host.api.bulkAction(pid, m.key, [...selected], "assign", who.trim()); return n; }),
-      mkBulk("Transition…", "Transitioned", async () => {
-        const actions = [...new Set((m.workflow.transitions ?? []).map((t) => t.action))];
-        const act = prompt(`Workflow action to apply${actions.length ? ` — one of: ${actions.join(", ")}` : ""}:`);
-        if (!act) return null; const n = selected.size;
-        await this.host.api.bulkAction(pid, m.key, [...selected], "transition", act.trim()); return n;
-      }),
-      mkBulk("Delete", "Deleted", async () => { if (!confirm(`Delete ${selected.size} record(s)?`)) return null; const n = selected.size; await this.host.api.bulkAction(pid, m.key, [...selected], "delete"); return n; }));
+    bulkBar.append(bulkCount);
+    // Transition: a dropdown of valid workflow actions + Apply
+    const txActions = [...new Set((m.workflow.transitions ?? []).map((t) => t.action))];
+    if (txActions.length) {
+      const txSel = document.createElement("select"); txSel.className = "sb-sel";
+      const d = document.createElement("option"); d.value = ""; d.textContent = "Transition…"; txSel.appendChild(d);
+      for (const a of txActions) { const o = document.createElement("option"); o.value = o.textContent = a; txSel.appendChild(o); }
+      const txBtn = document.createElement("button"); txBtn.className = "tool-btn"; txBtn.textContent = "Apply";
+      txBtn.onclick = () => { if (txSel.value) void runBulk("transition", "Transitioned", txSel.value); };
+      bulkBar.append(txSel, txBtn);
+    }
+    // Assign: an input + Assign
+    const asgIn = document.createElement("input"); asgIn.type = "text"; asgIn.placeholder = "assign to…"; asgIn.className = "portal-filter"; asgIn.style.maxWidth = "140px";
+    const asgBtn = document.createElement("button"); asgBtn.className = "tool-btn"; asgBtn.textContent = "Assign";
+    asgBtn.onclick = () => void runBulk("assign", "Assigned", asgIn.value.trim());
+    // Delete (kept behind a confirm)
+    const delBtn = document.createElement("button"); delBtn.className = "tool-btn"; delBtn.textContent = "Delete";
+    delBtn.onclick = () => { if (confirm(`Delete ${selected.size} record(s)? This cannot be undone.`)) void runBulk("delete", "Deleted"); };
+    bulkBar.append(asgIn, asgBtn, delBtn);
     this.root.appendChild(bulkBar);
 
     const rowCbs: HTMLInputElement[] = [];
