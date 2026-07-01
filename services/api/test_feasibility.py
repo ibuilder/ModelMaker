@@ -64,6 +64,18 @@ with TestClient(app) as c:
     fg = c.get(f"/projects/{pid}/feasibility?gfa=45000").json()
     assert fg["model"]["pct_of_allowed"] == 75.0 and fg["model"]["status"] == "under", fg["model"]
 
+    # --- scenario comparison: add a second, higher-FAR scheme; it should rank first --------
+    c.post(f"/projects/{pid}/modules/zoning", json={"data": {
+        "site": "Tower parcel — Scheme B", "use_type": "Mixed-Use",
+        "site_area_sf": 20_000, "far": 8.0, "height_limit_ft": 240, "floor_to_floor_ft": 12,
+        "lot_coverage_pct": 80, "efficiency_pct": 85, "avg_unit_sf": 850, "parking_ratio": 1.0}})
+    cmp = c.get(f"/projects/{pid}/feasibility/compare").json()
+    assert cmp["count"] == 2, cmp
+    top = cmp["scenarios"][0]
+    assert top["site"] == "Tower parcel — Scheme B" and top["delta_units"] == 0, top   # best => zero delta
+    assert top["unit_yield"] >= cmp["scenarios"][1]["unit_yield"], cmp                 # sorted desc
+    assert cmp["scenarios"][1]["delta_units"] < 0, cmp["scenarios"][1]                 # the lesser scheme
+
     # report renders
     assert "site_feasibility" in {x["id"] for x in c.get("/reports").json()["reports"]}
     pdf = c.get(f"/projects/{pid}/reports/site_feasibility.pdf")

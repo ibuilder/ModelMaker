@@ -139,6 +139,39 @@ def compute(zoning: dict, actual_gfa_sf: float | None = None) -> dict[str, Any]:
     }
 
 
+def compare(db, pid: str, actual_gfa_sf: float | None = None) -> dict[str, Any]:
+    """Scenario comparison — run the envelope math for every `zoning` record (each is a scheme) and
+    rank them so a developer can test FAR / height / coverage trade-offs side by side, Giraffe-style.
+    Ranked by unit yield, then allowed GFA. Deltas are vs. the top scheme."""
+    from . import modules as me
+    if "zoning" not in me.TABLES:
+        return {"error": "zoning module not installed", "scenarios": []}
+    recs = me.list_records(db, "zoning", pid, limit=100000)
+    if not recs:
+        return {"scenarios": [], "count": 0, "warnings": ["Add Zoning & Site records (one per scheme) to compare."]}
+    scen = []
+    for rec in recs:
+        f = compute(rec, actual_gfa_sf=actual_gfa_sf)
+        if f.get("error"):
+            continue
+        scen.append({
+            "ref": rec.get("ref"), "zoning_id": rec.get("id"),
+            "site": f.get("site"), "use_type": f.get("use_type"),
+            "far": (f.get("inputs") or {}).get("far"),
+            "max_floors": f.get("max_floors"),
+            "allowed_gfa_sf": f.get("allowed_gfa_sf"), "binding_constraint": f.get("binding_constraint"),
+            "net_buildable_sf": f.get("net_buildable_sf"), "unit_yield": f.get("unit_yield"),
+            "parking_required": f.get("parking_required"),
+        })
+    scen.sort(key=lambda s: ((s["unit_yield"] or 0), (s["allowed_gfa_sf"] or 0)), reverse=True)
+    best = scen[0] if scen else None
+    for s in scen:                                          # deltas vs. the top scheme
+        if best:
+            s["delta_units"] = (s["unit_yield"] or 0) - (best["unit_yield"] or 0)
+            s["delta_gfa_sf"] = round((s["allowed_gfa_sf"] or 0) - (best["allowed_gfa_sf"] or 0), 1)
+    return {"scenarios": scen, "count": len(scen), "best_ref": best["ref"] if best else None}
+
+
 def feasibility(db, pid: str, actual_gfa_sf: float | None = None, zoning_id: str | None = None) -> dict[str, Any]:
     """Resolve the project's zoning record (the given id, else the most recently modified approved/
     draft one) and run the envelope math, reconciled against the model GFA when available."""

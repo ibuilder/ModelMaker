@@ -276,6 +276,18 @@ async function openReportCenter() {
     };
     bar.append(inp); body.append(bar, out);
   }));
+  tool("▟ Compare feasibility scenarios", () => showResult("Compare feasibility scenarios", async (body) => {
+    body.innerHTML = `<div class="meta">Loading…</div>`;
+    try { const c = await api.feasibilityCompare(pid);
+      if (!c.count) { body.innerHTML = `<div class="meta">Add two or more <b>Zoning &amp; Site</b> records (one per scheme) to compare.</div>`; return; }
+      const sf = (v: number | null | undefined) => (typeof v === "number" ? `${Math.round(v).toLocaleString()} SF` : "—");
+      body.innerHTML = `<div class="meta"><b>${c.count} scheme(s)</b> ranked by buildable yield · best: ${escapeHtml(c.best_ref ?? "—")}</div>`;
+      table(body, ["Scheme", "Site", "FAR", "Floors", "Allowed GFA", "Binds on", "Units", "Parking", "Δ units"],
+        c.scenarios.map((s) => [s.ref ?? "", s.site ?? "", s.far ?? "—", s.max_floors ?? "—", sf(s.allowed_gfa_sf),
+          s.binding_constraint ?? "—", s.unit_yield ?? "—", s.parking_required ?? "—",
+          (s.delta_units ?? 0) === 0 ? "—" : String(s.delta_units)])); }
+    catch (e) { body.innerHTML = `<div class="meta">${escapeHtml((e as Error).message)}</div>`; }
+  }));
   tool("§ Spec submittal log (from specs)", () => showResult("Spec-driven submittal log", async (body) => {
     body.innerHTML = `<div class="meta">Loading…</div>`;
     try { const s = await api.specSubmittalLog(pid);

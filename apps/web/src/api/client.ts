@@ -739,6 +739,15 @@ export class ApiClient {
         headroom_gfa_sf: number; status: string } | null; warnings?: string[]; ref?: string }>(
       `/projects/${pid}/feasibility${qs}`);
   }
+  /** Compare zoning schemes (one zoning record = one scheme) ranked by buildable yield. */
+  feasibilityCompare(pid: string) {
+    return this.json<{ count: number; best_ref?: string | null; warnings?: string[];
+      scenarios: { ref?: string; site?: string; use_type?: string; far?: number | null;
+        max_floors?: number | null; allowed_gfa_sf?: number | null; binding_constraint?: string | null;
+        net_buildable_sf?: number | null; unit_yield?: number | null; parking_required?: number | null;
+        delta_units?: number; delta_gfa_sf?: number }[] }>(
+      `/projects/${pid}/feasibility/compare`);
+  }
   /** Preconstruction estimate continuity — per-milestone totals + $/SF, drift, gap vs budget/GMP. */
   estimateContinuity(pid: string, budget?: number) {
     const qs = budget != null ? `?budget=${budget}` : "";

@@ -100,6 +100,14 @@ def site_feasibility(pid: str, gfa: float | None = None, zoning_id: str | None =
     return feas_engine.feasibility(db, pid, actual_gfa_sf=actual, zoning_id=zoning_id)
 
 
+@router.get("/projects/{pid}/feasibility/compare")
+def feasibility_compare(pid: str, db: Session = Depends(get_db), _: str = Depends(require_role("viewer"))):
+    """Scenario comparison — rank every zoning scheme by buildable yield (units, then GFA), with
+    deltas vs. the top scheme. One zoning record = one scheme (e.g. 'Scheme A FAR 6' vs 'B FAR 8')."""
+    from .. import feasibility as feas_engine
+    return feas_engine.compare(db, pid)
+
+
 @router.get("/projects/{pid}/precon/estimate-continuity")
 def precon_estimate_continuity(pid: str, budget: float | None = None, db: Session = Depends(get_db),
                                _: str = Depends(require_role("viewer"))):

@@ -4,6 +4,15 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.10 — Feasibility scenario comparison (test schemes side by side)
+- **New `GET /projects/{pid}/feasibility/compare`** + `feasibility.compare()`: rank every zoning
+  scheme (one `zoning` record = one scheme, e.g. "Scheme A · FAR 6" vs "Scheme B · FAR 8") by
+  buildable yield — units then GFA — with the binding constraint and Δ-units / Δ-GFA vs. the top
+  scheme. The Giraffe-style "test 20 scenarios in the time others analyze one," on the feasibility
+  engine shipped in v0.3.8.
+- `api.feasibilityCompare()` client + a "▟ Compare feasibility scenarios" tool launcher.
+- Backend 71/71; web typecheck + 49 tests green.
+
 ## v0.3.9 — Import Solibri / Navisworks clash reports (XLSX → coordination issues)
 - **New `clash_import.py` + `POST /projects/{pid}/coordination/import-xlsx`**: drop in a Solibri or
   Navisworks (or any tabular) clash/coordination report `.xlsx` and each row becomes a tracked
