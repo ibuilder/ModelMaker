@@ -4,6 +4,18 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.12 — UI/UX + security pass over the competitor-review features
+- Consolidated review of the four features added from the giraffe/synaps/addd/ifc-bcf-viewer study
+  (site feasibility, feasibility scenario compare, clash-report import, BCF viewpoint fidelity).
+- **Security**: hardened the clash-report XLSX import against oversized sheets — caps imported issues
+  at 5,000 rows and scanned rows at 200,000 (surfacing a `truncated` flag), on top of the existing
+  request body-size limit; `read_only` streaming keeps memory bounded. Audited RBAC on every new
+  endpoint (feasibility / compare → viewer; clash import → editor + audit log) and confirmed the BCF
+  XML parse path uses stdlib ElementTree (no external-entity expansion → not XXE-exploitable).
+- **UI/UX**: verified all three new Report-Center tool launchers render and function live against a
+  real backend (feasibility envelope, scenario ranking with deltas, clash-report file import), with
+  graceful empty states and no console errors.
+
 ## v0.3.11 — BCF viewpoint fidelity: orthographic cameras + per-element coloring
 - BCF viewpoints now round-trip the **full camera**, not just the view point: camera direction
   (derived from position→target when absent), up-vector, and field-of-view for perspective — plus

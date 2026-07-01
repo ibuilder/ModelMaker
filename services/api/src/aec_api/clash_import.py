@@ -29,6 +29,8 @@ _SEVERITY_MAP = {
     "low": "Low", "minor": "Low", "info": "Low", "trivial": "Low",
 }
 _GUID_RE = re.compile(r"[0-9A-Za-z_$]{22}")          # IFC base64 GlobalId
+_MAX_ROWS = 5000                                     # cap imported issues (DoS guard on a huge sheet)
+_MAX_SCAN = 200_000                                  # hard cap on rows scanned before giving up
 
 
 def _norm(s: Any) -> str:
@@ -48,7 +50,11 @@ def parse_clash_xlsx(data: bytes) -> dict[str, Any]:
     from openpyxl import load_workbook
     wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     ws = wb.active
-    grid = [[c for c in row] for row in ws.iter_rows(values_only=True)]
+    grid = []
+    for row in ws.iter_rows(values_only=True):       # read_only streams rows -> bounded memory
+        grid.append(list(row))
+        if len(grid) >= _MAX_SCAN:
+            break
     wb.close()
     if not grid:
         return {"rows": [], "columns": {}, "sheet": ws.title, "header_row": None}
@@ -89,7 +95,11 @@ def parse_clash_xlsx(data: bytes) -> dict[str, Any]:
         return {"rows": [], "columns": {}, "sheet": ws.title, "header_row": None}
 
     rows: list[dict[str, Any]] = []
+    truncated = False
     for raw in grid[header_idx + 1:]:
+        if len(rows) >= _MAX_ROWS:
+            truncated = True
+            break
         rec: dict[str, Any] = {}
         guids: list[str] = []
         for i, field in mapping.items():
@@ -118,7 +128,8 @@ def parse_clash_xlsx(data: bytes) -> dict[str, Any]:
         if guids:
             rec["_guids"] = sorted(set(guids))
         rows.append(rec)
-    return {"rows": rows, "columns": {v: k for k, v in mapping.items()}, "sheet": ws.title, "header_row": header_idx}
+    return {"rows": rows, "columns": {v: k for k, v in mapping.items()}, "sheet": ws.title,
+            "header_row": header_idx, "truncated": truncated}
 
 
 def import_clash_xlsx(db, pid: str, data: bytes, actor: str) -> dict[str, Any]:
@@ -136,4 +147,5 @@ def import_clash_xlsx(db, pid: str, data: bytes, actor: str) -> dict[str, Any]:
         me.create_record(db, "coordination_issue", pid, body, actor, "GC")
         created += 1
     return {"imported": created, "detected_columns": list(parsed["columns"].keys()),
-            "sheet": parsed["sheet"], "rows_parsed": len(parsed["rows"])}
+            "sheet": parsed["sheet"], "rows_parsed": len(parsed["rows"]),
+            "truncated": parsed.get("truncated", False)}
