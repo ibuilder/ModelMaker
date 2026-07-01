@@ -4,6 +4,23 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.13 — Generic Excel / CSV import for any module (Phase 1 of the data-entry UX upgrade)
+- **The #1 data-entry / adoption lever**: every module now has an **⤓ Import** button that bulk-loads
+  records from an Excel (.xlsx) or CSV file. New `imports.py` + endpoints
+  (`/modules/{key}/import/preview`, `/modules/{key}/import`, `/modules/{key}/import-template.csv`).
+- **Two-step, mapping-driven UX**: pick a file → the server sniffs the header row and **auto-maps
+  columns to fields** by name/label → a mapping screen lets you adjust each column (or skip), warns
+  about unmapped required fields, and shows a sample → import. Type coercion (currency `$1,250` →
+  1250.5, dates → ISO, multi-select split); rollup/computed fields excluded. A **blank template**
+  download seeds the right headers.
+- **Robust + safe**: required-field validation per row (a bad row is reported, never aborts the
+  batch), 10k-row import cap, editor-gated + audit-logged. Answers "how do I create a new cost code" —
+  the ＋ New form, the inline "＋ Add new" on a reference field, or now a spreadsheet import.
+- Verified live: 3 cost codes imported from a CSV via the mapping UI, no console errors. Backend
+  72/72 (new `test_imports`); web typecheck + 49 tests green.
+- Decision (researched): **no Elasticsearch** — a self-hosted/offline app on Postgres should use
+  built-in full-text search; a portable search upgrade lands in a follow-up phase.
+
 ## v0.3.12 — UI/UX + security pass over the competitor-review features
 - Consolidated review of the four features added from the giraffe/synaps/addd/ifc-bcf-viewer study
   (site feasibility, feasibility scenario compare, clash-report import, BCF viewpoint fidelity).

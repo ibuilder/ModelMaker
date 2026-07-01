@@ -1148,6 +1148,29 @@ export class ApiClient {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}`, {
       method: "POST", body: JSON.stringify(body) });
   }
+  /** Download URL for a module's header-only import template (CSV). */
+  importTemplateUrl(pid: string, key: string) {
+    return this.url(`/projects/${pid}/modules/${key}/import-template.csv`);
+  }
+  /** Step 1 of a generic Excel/CSV import: parse + auto-map columns to fields + coerce a sample. */
+  async importPreview(pid: string, key: string, file: File) {
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(this.url(`/projects/${pid}/modules/${key}/import/preview`), {
+      method: "POST", body: fd, headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Import preview -> ${res.status}`);
+    return res.json() as Promise<{ headers: string[]; row_count: number; unmapped_required: string[];
+      suggested_mapping: Record<string, string>; sample: Record<string, unknown>[];
+      fields: { name: string; label: string; type: string; required: boolean }[] }>;
+  }
+  /** Step 2: import the sheet with a column->field mapping. */
+  async importModuleRecords(pid: string, key: string, file: File, mapping: Record<string, string>) {
+    const fd = new FormData(); fd.append("file", file); fd.append("mapping", JSON.stringify(mapping));
+    const res = await fetch(this.url(`/projects/${pid}/modules/${key}/import`), {
+      method: "POST", body: fd, headers: this.authHeaders() });
+    if (!res.ok) throw new Error(`Import -> ${res.status}`);
+    return res.json() as Promise<{ imported: number; error_count: number;
+      errors: { row: number; error: string }[]; truncated: boolean }>;
+  }
   transitionRecord(pid: string, key: string, rid: string, action: string, note?: string) {
     return this.json<ModuleRecord>(`/projects/${pid}/modules/${key}/${rid}/transition`, {
       method: "POST", body: JSON.stringify({ action, note }) });

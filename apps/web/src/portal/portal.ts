@@ -1056,7 +1056,13 @@ export class PortalUI {
         catch (e) { this.host.setStatus(`couldn't save: ${(e as Error).message}`); }
       }
     };
-    actions.append(newBtn, boardBtn, csvBtn, tplBtn, fbox, stateSel, viewSel, saveView);
+    // generic Excel/CSV import (any module): pick a file -> map columns -> preview -> import
+    const impBtn = document.createElement("button"); impBtn.className = "tool-btn"; impBtn.dataset.cap = "review";
+    impBtn.textContent = "⤓ Import"; impBtn.title = "Import records from an Excel (.xlsx) or CSV file with column mapping";
+    const impFile = document.createElement("input"); impFile.type = "file"; impFile.accept = ".xlsx,.xlsm,.csv"; impFile.style.display = "none";
+    impFile.onchange = () => { const f = impFile.files?.[0]; if (f) void this.renderImport(m, f); impFile.value = ""; };
+    impBtn.onclick = () => impFile.click();
+    actions.append(newBtn, boardBtn, csvBtn, impBtn, impFile, tplBtn, fbox, stateSel, viewSel, saveView);
     // the Schedule module is the relational home for the same activities behind Gantt / LOB / CPM /
     // the 3D 4D scrub — surface those views here so linear + gantt live with the GC schedule.
     if (m.key === "schedule_activity") {
@@ -1285,6 +1291,79 @@ export class PortalUI {
       };
     };
     return td;
+  }
+
+  // --- generic Excel/CSV import: map columns -> fields, preview, import -------
+  private async renderImport(m: ModuleDef, file: File) {
+    const pid = this.host.projectId()!;
+    this.root.innerHTML = "";
+    this.root.appendChild(this.bar(`Import ${m.name}`, () => this.openModule(m)));
+    const wrap = document.createElement("div"); wrap.className = "portal-form"; this.root.appendChild(wrap);
+    const status = document.createElement("div"); status.className = "meta"; status.textContent = `Reading ${file.name}…`;
+    wrap.appendChild(status);
+    let pv: Awaited<ReturnType<typeof this.host.api.importPreview>>;
+    try { pv = await this.host.api.importPreview(pid, m.key, file); }
+    catch (e) { status.textContent = `Couldn't read the file: ${(e as Error).message}`; return; }
+
+    status.textContent = `${pv.row_count} row(s) found in ${file.name}. Map each spreadsheet column to a field, then import.`;
+    const tmpl = document.createElement("a"); tmpl.href = this.host.api.importTemplateUrl(pid, m.key);
+    tmpl.textContent = "↓ download a blank template"; tmpl.style.cssText = "font-size:12px;margin-left:8px"; tmpl.target = "_blank";
+    status.appendChild(tmpl);
+
+    // mapping table: one row per source column -> a field <select>
+    const selects: { header: string; sel: HTMLSelectElement }[] = [];
+    const tbl = document.createElement("table"); tbl.className = "portal-table"; tbl.style.marginTop = "8px";
+    const thead = document.createElement("tr");
+    for (const h of ["Spreadsheet column", "→ Field", "Sample"]) { const th = document.createElement("th"); th.textContent = h; thead.appendChild(th); }
+    tbl.appendChild(thead);
+    for (const h of pv.headers) {
+      const tr = document.createElement("tr");
+      const c1 = document.createElement("td"); c1.textContent = h; c1.style.fontFamily = "monospace";
+      const c2 = document.createElement("td");
+      const sel = document.createElement("select"); sel.className = "sb-sel";
+      const skip = document.createElement("option"); skip.value = ""; skip.textContent = "— skip —"; sel.appendChild(skip);
+      for (const f of pv.fields) {
+        const o = document.createElement("option"); o.value = f.name; o.textContent = f.label + (f.required ? " *" : ""); sel.appendChild(o);
+      }
+      sel.value = pv.suggested_mapping[h] ?? "";
+      selects.push({ header: h, sel }); c2.appendChild(sel);
+      const c3 = document.createElement("td"); c3.style.color = "var(--muted)";
+      const fld = pv.suggested_mapping[h];
+      c3.textContent = fld && pv.sample[0] ? String(pv.sample[0][fld] ?? "") : "";
+      tr.append(c1, c2, c3); tbl.appendChild(tr);
+    }
+    wrap.appendChild(tbl);
+
+    const req = pv.fields.filter((f) => f.required).map((f) => f.name);
+    const warn = document.createElement("div"); warn.className = "meta"; warn.style.color = "var(--warn, #c60)"; wrap.appendChild(warn);
+    const importBtn = document.createElement("button"); importBtn.className = "tool-btn"; importBtn.textContent = `Import ${pv.row_count} row(s)`;
+    importBtn.style.marginTop = "8px";
+    const out = document.createElement("div"); out.className = "meta"; out.style.marginTop = "8px";
+    const checkReq = () => {
+      const mapped = new Set(selects.map((s) => s.sel.value).filter(Boolean));
+      const missing = req.filter((r) => !mapped.has(r));
+      warn.textContent = missing.length ? `⚠ Required field(s) not mapped: ${missing.map((n) => pv.fields.find((f) => f.name === n)?.label ?? n).join(", ")}` : "";
+      importBtn.disabled = missing.length > 0;
+    };
+    for (const s of selects) s.sel.onchange = checkReq;
+    checkReq();
+    importBtn.onclick = async () => {
+      const mapping: Record<string, string> = {};
+      for (const s of selects) if (s.sel.value) mapping[s.header] = s.sel.value;
+      importBtn.disabled = true; out.textContent = "Importing…";
+      try {
+        const r = await this.host.api.importModuleRecords(pid, m.key, file, mapping);
+        out.innerHTML = "";
+        const ok = document.createElement("div");
+        ok.textContent = `✓ Imported ${r.imported} record(s)${r.error_count ? ` · ${r.error_count} row(s) skipped` : ""}${r.truncated ? " · file truncated at the row cap" : ""}.`;
+        out.appendChild(ok);
+        for (const er of r.errors.slice(0, 10)) { const e = document.createElement("div"); e.style.color = "var(--warn,#c60)"; e.textContent = `Row ${er.row}: ${er.error}`; out.appendChild(e); }
+        const done = document.createElement("button"); done.className = "tool-btn"; done.style.marginTop = "6px"; done.textContent = "← Back to the list";
+        done.onclick = () => this.openModule(m); out.appendChild(done);
+        this.host.setStatus(`imported ${r.imported} ${m.name} record(s)`);
+      } catch (e) { out.textContent = `Import failed: ${(e as Error).message}`; importBtn.disabled = false; }
+    };
+    wrap.append(importBtn, out);
   }
 
   // --- create / edit form (fields from module.json) --------------------------
