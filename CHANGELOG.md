@@ -4,6 +4,22 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.17 — Saved-search alerts + Postgres full-text search
+- **Saved-search alerts**: every saved view now tracks a `last_seen_at`, and the portal home shows a
+  **🔔 Saved searches with new matches** band — each saved view with its **new-since-you-last-opened**
+  count (a never-opened view counts all matches as new). Click a chip to open that filtered list; it
+  clears the count. New `GET /projects/{pid}/views/alerts` + `POST …/views/{vid}/seen` + a
+  `count_records` engine helper. Opening a view from the dropdown also marks it seen.
+- **Postgres full-text search**: cross-module + in-module search is now **dialect-aware** — on Postgres
+  it uses `to_tsvector` + a safe **prefix `to_tsquery`** (`conc beam` → `conc:* & beam:*`, so partial
+  words and multi-term queries match) ranked by **`ts_rank`**; SQLite (dev) keeps the substring-LIKE
+  fallback. No new service (per the earlier no-Elasticsearch decision) and no schema change — the FTS
+  is a query-time expression. (For very large prod tables, a GIN index on the tsvector is the natural
+  follow-up.)
+- Additive migration adds `saved_views.last_seen_at` on startup (nullable ADD COLUMN). Backend 73/73
+  (new `test_search_alerts`: alert lifecycle + prefix-tsquery builder + SQLite search); Postgres FTS
+  SQL compile-verified (`to_tsvector @@ to_tsquery` + `ts_rank`); web typecheck + 49 tests green.
+
 ## v0.3.16 — Bulk-action pickers replace raw prompts (data-entry polish)
 - The list bulk-action bar no longer uses `prompt()` for **Assign** / **Transition**: Transition is
   now a dropdown of the module's valid workflow actions + Apply, and Assign is an inline input + Apply

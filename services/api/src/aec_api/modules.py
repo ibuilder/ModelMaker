@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -206,6 +207,41 @@ def revise(db: Session, key: str, project_id: str, rid: str, actor: str, party: 
     return get_record(db, key, project_id, new_id)
 
 
+def _is_postgres(db: Session) -> bool:
+    try:
+        return bool(db.bind) and db.bind.dialect.name == "postgresql"
+    except Exception:
+        return False
+
+
+def _pg_tsquery(q: str) -> str | None:
+    """A safe prefix tsquery from arbitrary user input: alnum words AND-ed, each prefix-matched
+    (`conc & beam` -> `conc:* & beam:*`) so 'conc' finds 'concrete' and multi-word narrows."""
+    words = re.findall(r"[A-Za-z0-9]+", q.lower())
+    return " & ".join(f"{w}:*" for w in words) if words else None
+
+
+def _pg_document(t: Table):
+    """to_tsvector over ref + title + the whole field map (JSON cast to text)."""
+    return func.to_tsvector("english", func.concat_ws(
+        " ", func.coalesce(t.c.ref, ""), func.coalesce(t.c.title, ""), cast(t.c.data, String)))
+
+
+def _search_filter(db: Session, t: Table, q: str):
+    """Portable search predicate: Postgres full-text (stemmed, prefix, ranked) when available; a
+    substring LIKE over ref/title/data everywhere else (SQLite dev)."""
+    if _is_postgres(db):
+        tsq = _pg_tsquery(q)
+        if tsq:
+            return _pg_document(t).op("@@")(func.to_tsquery("english", tsq))
+    like = f"%{q.lower()}%"
+    return or_(
+        func.lower(func.coalesce(t.c.ref, "")).like(like),
+        func.lower(func.coalesce(t.c.title, "")).like(like),
+        func.lower(cast(t.c.data, String)).like(like),
+    )
+
+
 def list_records(db: Session, key: str, project_id: str, state: str | None = None,
                  q: str | None = None, limit: int = 200, offset: int = 0) -> list[dict]:
     if key not in TABLES:
@@ -216,16 +252,46 @@ def list_records(db: Session, key: str, project_id: str, state: str | None = Non
         stmt = stmt.where(t.c.workflow_state == state)
     if q:
         # filter in SQL (before LIMIT) so search scales + returns the right rows, not just matches
-        # within the first page. `data` cast to text is portable (SQLite stores JSON as text;
-        # Postgres casts JSON->text) — a substring match over ref / title / the whole field map.
-        like = f"%{q.lower()}%"
-        stmt = stmt.where(or_(
-            func.lower(func.coalesce(t.c.ref, "")).like(like),
-            func.lower(func.coalesce(t.c.title, "")).like(like),
-            func.lower(cast(t.c.data, String)).like(like),
-        ))
+        # within the first page. Postgres full-text ranks by relevance; SQLite falls back to LIKE.
+        stmt = stmt.where(_search_filter(db, t, q))
+        if _is_postgres(db) and (tsq := _pg_tsquery(q)):
+            stmt = stmt.order_by(func.ts_rank(_pg_document(t), func.to_tsquery("english", tsq)).desc())
     stmt = stmt.order_by(t.c.created_at).limit(limit).offset(offset)
     return [dict(r._mapping) for r in db.execute(stmt)]
+
+
+def count_records(db: Session, key: str, project_id: str, state: str | None = None,
+                  q: str | None = None, since: datetime | None = None) -> int:
+    """Count matches for a module filter (state / search / created-since) — for saved-view alerts."""
+    if key not in TABLES:
+        return 0
+    t = TABLES[key]
+    stmt = select(func.count()).select_from(t).where(t.c.project_id == project_id)
+    if state:
+        stmt = stmt.where(t.c.workflow_state == state)
+    if q:
+        stmt = stmt.where(_search_filter(db, t, q))
+    if since is not None:
+        stmt = stmt.where(t.c.created_at > since)
+    return int(db.execute(stmt).scalar() or 0)
+
+
+def view_alerts(db: Session, project_id: str, user: str) -> list[dict]:
+    """Saved-search alerts: for each of the user's saved views, the total matches + how many are NEW
+    since they last opened it (a never-opened view counts all matches as new). Powers the 🔔 feed."""
+    from .models import SavedView
+    views = db.query(SavedView).filter(SavedView.project_id == project_id,
+                                       SavedView.user == user).order_by(SavedView.created_at).all()
+    out = []
+    for v in views:
+        cfg = v.config or {}
+        state, q = cfg.get("state"), cfg.get("q")
+        total = count_records(db, v.module, project_id, state=state, q=q)
+        new = count_records(db, v.module, project_id, state=state, q=q, since=v.last_seen_at) \
+            if v.last_seen_at else total
+        out.append({"id": v.id, "name": v.name, "module": v.module, "total": total, "new": new,
+                    "config": cfg})
+    return out
 
 
 def state_counts(db: Session, key: str, project_id: str) -> dict[str, int]:

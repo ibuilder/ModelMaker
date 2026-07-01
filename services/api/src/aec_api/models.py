@@ -117,6 +117,7 @@ class SavedView(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     config: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # saved-search alerts
 
 
 class EnumOption(Base):

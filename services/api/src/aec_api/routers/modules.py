@@ -309,6 +309,26 @@ def save_view(pid: str, key: str, name: str = Body(..., embed=True),
     return {"id": v.id, "name": v.name, "config": v.config}
 
 
+@router.get("/projects/{pid}/views/alerts")
+def view_alerts(pid: str, db: Session = Depends(get_db), user: str = Depends(current_user)):
+    """Saved-search alert feed: each of my saved views with its total + new-since-last-seen counts."""
+    return mod_engine.view_alerts(db, pid, user)
+
+
+@router.post("/projects/{pid}/modules/{key}/views/{vid}/seen")
+def mark_view_seen(pid: str, key: str, vid: str, db: Session = Depends(get_db),
+                   user: str = Depends(current_user)):
+    """Mark a saved view as seen now — clears its 'new' alert count."""
+    from datetime import datetime, timezone
+    from ..models import SavedView
+    v = db.get(SavedView, vid)
+    if not v or v.user != user or v.project_id != pid:
+        raise HTTPException(404, "view not found")
+    v.last_seen_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"ok": True, "last_seen_at": v.last_seen_at.isoformat()}
+
+
 @router.delete("/projects/{pid}/modules/{key}/views/{vid}")
 def delete_view(pid: str, key: str, vid: str, db: Session = Depends(get_db),
                 user: str = Depends(current_user)):

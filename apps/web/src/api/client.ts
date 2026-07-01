@@ -1252,6 +1252,16 @@ export class ApiClient {
   deleteView(pid: string, key: string, vid: string) {
     return this.json<{ deleted: boolean }>(`/projects/${pid}/modules/${key}/views/${vid}`, { method: "DELETE" });
   }
+  /** Saved-search alert feed: each saved view with total + new-since-last-seen match counts. */
+  viewAlerts(pid: string) {
+    return this.json<{ id: string; name: string; module: string; total: number; new: number;
+      config: { q?: string; state?: string; sort?: unknown } }[]>(`/projects/${pid}/views/alerts`);
+  }
+  /** Mark a saved view as seen (clears its 'new' alert count). */
+  markViewSeen(pid: string, key: string, vid: string) {
+    return this.json<{ ok: boolean; last_seen_at: string }>(
+      `/projects/${pid}/modules/${key}/views/${vid}/seen`, { method: "POST" });
+  }
   /** SSE stream of the notification feed; returns the EventSource so callers can close it. */
   notificationStream(pid: string, onMessage: (d: { count: number; items: NotifItem[] }) => void): EventSource {
     const es = new EventSource(this.url(`/projects/${pid}/notifications/stream`));

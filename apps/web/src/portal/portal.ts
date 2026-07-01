@@ -247,6 +247,30 @@ export class PortalUI {
     };
     root.append(search, results);
 
+    // saved-search alerts — surface saved views that have NEW matches since last opened
+    const alertBand = el("div"); root.append(alertBand);
+    void this.host.api.viewAlerts(pid).then((alerts) => {
+      const withNew = alerts.filter((a) => a.new > 0);
+      if (!withNew.length) return;
+      const head = el("div", "meta"); head.textContent = "🔔 Saved searches with new matches";
+      head.style.cssText = "margin:4px 0";
+      alertBand.append(head);
+      const wrap = el("div"); wrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px";
+      for (const a of withNew) {
+        const m = this.mods.find((x) => x.key === a.module); if (!m) continue;
+        const chip = el("button", "tool-btn");
+        chip.innerHTML = `${a.name} <span class="badge">${a.new} new</span> <span class="meta">of ${a.total}</span>`;
+        chip.title = `${m.name} — open this saved search`;
+        chip.onclick = async () => {
+          this.sort[m.key] = a.config.sort as (typeof this.sort)[string];
+          await this.host.api.markViewSeen(pid, a.module, a.id).catch(() => {});
+          this.openModule(m, { q: a.config.q, state: a.config.state });
+        };
+        wrap.append(chip);
+      }
+      alertBand.append(wrap);
+    }).catch(() => {});
+
     // PX executive band — "are we on schedule and on budget?" — loads independently, hides if no data
     const pxBand = el("div"); root.appendChild(pxBand);
     void this.renderPxBand(pxBand, pid);
@@ -1030,7 +1054,7 @@ export class PortalUI {
     const viewSel = document.createElement("select"); viewSel.className = "sb-sel"; viewSel.title = "Saved views";
     const vNone = document.createElement("option"); vNone.value = ""; vNone.textContent = "views…"; viewSel.appendChild(vNone);
     for (const v of views) { const o = document.createElement("option"); o.value = v.id; o.textContent = v.name; viewSel.appendChild(o); }
-    viewSel.onchange = () => { const v = views.find((x) => x.id === viewSel.value); if (v) { this.sort[m.key] = v.config.sort; this.openModule(m, { q: v.config.q, state: v.config.state }); } };
+    viewSel.onchange = () => { const v = views.find((x) => x.id === viewSel.value); if (v) { this.sort[m.key] = v.config.sort; void this.host.api.markViewSeen(pid, m.key, v.id).catch(() => {}); this.openModule(m, { q: v.config.q, state: v.config.state }); } };
     const saveView = document.createElement("button"); saveView.className = "tool-btn"; saveView.textContent = "＋view";
     saveView.title = "Save current filter/sort as a view (synced to your account)";
     saveView.onclick = async () => {
