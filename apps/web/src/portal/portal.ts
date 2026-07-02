@@ -1,5 +1,5 @@
 import type { ApiClient, ModuleDef, ModuleRecord, RecordBrief } from "../api/client";
-import { toast } from "../ui/feedback";
+import { escapeHtml as esc, toast } from "../ui/feedback";
 import { progressBar, groupedBar, money as cmoney } from "../ui/charts";
 import { modalShell } from "../ui/modal";
 import { noProjectHtml } from "../ui/empty";
@@ -239,7 +239,7 @@ export class PortalUI {
         if (!hits.length) { results.innerHTML = `<div class="empty-state">No matches</div>`; return; }
         for (const h of hits) {
           const row = el("button", "portal-mod") as HTMLButtonElement;
-          row.innerHTML = `<span class="ic">${h.icon}</span> ${h.ref} ${h.title ?? ""} <span class="badge">${h.module_name}</span>`;
+          row.innerHTML = `<span class="ic">${h.icon}</span> ${esc(h.ref)} ${esc(h.title ?? "")} <span class="badge">${esc(h.module_name)}</span>`;
           row.onclick = () => { const m = this.mods.find((x) => x.key === h.module); if (m) this.openRecord(m, h.id); };
           results.appendChild(row);
         }
@@ -355,7 +355,7 @@ export class PortalUI {
       if (d.action_items.length) {
         for (const a of d.action_items.slice(0, 20)) {
           const row = el("button", "portal-mod") as HTMLButtonElement;
-          row.innerHTML = `<span class="ic">→</span> ${a.ref} ${a.title ?? ""} <span class="badge">${a.state}</span>`;
+          row.innerHTML = `<span class="ic">→</span> ${esc(a.ref)} ${esc(a.title ?? "")} <span class="badge">${esc(a.state)}</span>`;
           row.onclick = () => { const m = this.mods.find((x) => x.key === a.module); if (m) this.openRecord(m, a.id); };
           main.appendChild(row);
         }
@@ -370,7 +370,7 @@ export class PortalUI {
         const rowFor = (x: typeof due.overdue[number], overdue: boolean) => {
           const row = el("button", "portal-mod") as HTMLButtonElement;
           const when = overdue ? `${Math.abs(x.days)}d overdue` : (x.days === 0 ? "due today" : `in ${x.days}d`);
-          row.innerHTML = `<span class="ic">${x.icon}</span> <b>${x.ref}</b> ${x.title ?? ""} `
+          row.innerHTML = `<span class="ic">${x.icon}</span> <b>${esc(x.ref)}</b> ${esc(x.title ?? "")} `
             + `<span class="badge ${overdue ? "rfi" : "open"}">${when}</span>`;
           row.onclick = () => { const m = this.mods.find((mm) => mm.key === x.module); if (m) this.openRecord(m, x.id); };
           main.appendChild(row);
@@ -386,9 +386,9 @@ export class PortalUI {
         for (const n of notes.slice(0, 8)) {
           const row = el("button", "portal-mod notif") as HTMLButtonElement;
           const ago = n.ts ? new Date(n.ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
-          row.innerHTML = `<span class="ic">${n.icon}</span> <b>${n.ref}</b> ${n.action} `
-            + `<span class="badge ${n.reason === "assigned" ? "rfi" : "open"}">${n.reason}</span> `
-            + `<span class="notif-meta">${n.actor ?? ""} · ${ago}</span>`;
+          row.innerHTML = `<span class="ic">${n.icon}</span> <b>${esc(n.ref)}</b> ${esc(n.action)} `
+            + `<span class="badge ${n.reason === "assigned" ? "rfi" : "open"}">${esc(n.reason)}</span> `
+            + `<span class="notif-meta">${esc(n.actor ?? "")} · ${ago}</span>`;
           row.onclick = () => { const m = this.mods.find((x) => x.key === n.module); if (m) this.openRecord(m, n.record_id); };
           main.appendChild(row);
         }
@@ -632,7 +632,7 @@ export class PortalUI {
         if (p.id === here) tr.style.fontWeight = "700";
         const [lbl, col] = pill[p.status] ?? ["—", "var(--muted)"];
         const irrCol = p.equity_irr == null ? "var(--muted)" : p.equity_irr >= 0.15 ? "#33d17a" : p.equity_irr >= 0.12 ? "#ffd479" : "#e2554a";
-        tr.innerHTML = `<td>${p.name}${p.id === here ? " ·" : ""}</td>`
+        tr.innerHTML = `<td>${esc(p.name)}${p.id === here ? " ·" : ""}</td>`
           + `<td><span class="ball-badge" style="background:${col}22;color:${col};border-color:${col}">${lbl}</span></td>`
           + `<td style="text-align:right;color:${p.spi == null ? "var(--muted)" : p.spi >= 0.95 ? "#33d17a" : "#e2554a"}">${p.spi ?? "—"}</td>`
           + `<td style="text-align:right">${p.pct_complete}%</td><td style="text-align:right">${usd(p.gmp)}</td>`
@@ -1217,7 +1217,8 @@ export class PortalUI {
       const cb = document.createElement("input"); cb.type = "checkbox"; rowCbs.push(cb);
       cb.onclick = (e) => { e.stopPropagation(); if (cb.checked) selected.add(r.id); else selected.delete(r.id); selAll.checked = selected.size === records.length; syncBulk(); };
       cbTd.appendChild(cb); cbTd.onclick = (e) => e.stopPropagation(); tr.appendChild(cbTd);
-      const cell = (html: string) => { const td = document.createElement("td"); td.innerHTML = html; tr.appendChild(td); };
+      // textContent, not innerHTML: titles/field values are user data (stored-XSS guard)
+      const cell = (text: string) => { const td = document.createElement("td"); td.textContent = text; tr.appendChild(td); };
       cell(r.ref); cell(r.title ?? "");
       for (const c of cols) cell(this.fmtCell(c, r.data[c.name]));
       tr.appendChild(this.assigneeCell(pid, m, r));   // inline-editable
@@ -1787,9 +1788,9 @@ export class PortalUI {
 
     const head = document.createElement("div");
     const ball = this.ballInCourt(m, r.workflow_state);
-    head.innerHTML = `<div class="portal-rec-title">${r.title ?? r.ref}</div>` +
-      `<div class="meta">status <span class="badge">${r.workflow_state}</span> · ${r.party_owner ?? ""}` +
-      (ball.length ? ` · ball-in-court ${ball.map((p) => `<span class="ball-badge">${p}</span>`).join(" ")}` : "") +
+    head.innerHTML = `<div class="portal-rec-title">${esc(r.title ?? r.ref)}</div>` +
+      `<div class="meta">status <span class="badge">${esc(r.workflow_state)}</span> · ${esc(r.party_owner ?? "")}` +
+      (ball.length ? ` · ball-in-court ${ball.map((p) => `<span class="ball-badge">${esc(p)}</span>`).join(" ")}` : "") +
       `</div>`;
     // revision chain: this record's number + links to prior / superseding revision
     if (r.revision && (r.revision.number || r.revision.revises || r.revision.superseded_by)) {
@@ -1877,13 +1878,14 @@ export class PortalUI {
         fields.append(k, vd);
       } else if (f.type === "signature") {
         fields.insertAdjacentHTML("beforeend",
-          `<div class="k">${f.label}</div><div class="v"><img src="${v}" style="max-width:200px;border:1px solid var(--line);background:#fff"/></div>`);
+          `<div class="k">${esc(f.label)}</div><div class="v"><img src="${esc(v)}" style="max-width:200px;border:1px solid var(--line);background:#fff"/></div>`);
       } else {
-        let disp = String(v);
+        // field values are user data — escape everything interpolated into HTML (stored-XSS guard)
+        let disp = esc(v);
         if (f.type === "currency") disp = `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-        else if (f.type === "multiselect" && Array.isArray(v)) disp = (v as string[]).map((x) => `<span class="chip">${x}</span>`).join(" ");
+        else if (f.type === "multiselect" && Array.isArray(v)) disp = (v as string[]).map((x) => `<span class="chip">${esc(x)}</span>`).join(" ");
         else if (f.type === "rollup") disp = `<span class="computed">${Number(v).toLocaleString()}</span>`;
-        fields.insertAdjacentHTML("beforeend", `<div class="k">${f.label}</div><div class="v">${disp}</div>`);
+        fields.insertAdjacentHTML("beforeend", `<div class="k">${esc(f.label)}</div><div class="v">${disp}</div>`);
       }
     }
     this.root.appendChild(fields);

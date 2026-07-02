@@ -4,6 +4,16 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.18 — Security: fix stored XSS in portal record rendering
+- **Stored-XSS fix (high severity)**: record list cells, the record-detail title/fields, the
+  cross-module search results, action-item / due / notification feeds, and the portfolio table all
+  rendered user-entered values (titles, field data, project names) via `innerHTML` without escaping —
+  a malicious record title like `<img src=x onerror=…>` executed for every user who viewed it. List
+  cells now use `textContent`; every remaining `innerHTML` interpolation of record/user data is passed
+  through `escapeHtml()`. Verified live: a hostile-title RFI renders as literal text on both the list
+  and detail pages, injects no elements, and does not execute. (Found in a full-codebase UI/UX audit.)
+- Web typecheck + 49 tests green.
+
 ## v0.3.17 — Saved-search alerts + Postgres full-text search
 - **Saved-search alerts**: every saved view now tracks a `last_seen_at`, and the portal home shows a
   **🔔 Saved searches with new matches** band — each saved view with its **new-since-you-last-opened**
