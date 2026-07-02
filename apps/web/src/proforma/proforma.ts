@@ -700,7 +700,7 @@ export class ProformaUI {
         `<span class="meta">(bound by ${m.binding_constraint}, ${m.far_achieved} FAR)</span></div>` +
         (su ? `<div class="meta">Total cost ${money(su.total_uses ?? 0)} · equity ${money(su.equity ?? 0)} · ` +
               `IRR <b>${pct(ret?.equity_irr ?? null)}</b> · ${ret?.equity_multiple ?? "—"}× EM</div>` : "") +
-        (r.proforma.solve_error ? `<div class="meta" style="color:#e2554a">proforma: ${r.proforma.solve_error}</div>` : "") +
+        (r.proforma.solve_error ? `<div class="meta" style="color:var(--status-crit)">proforma: ${r.proforma.solve_error}</div>` : "") +
         (m.structure ? `<div class="meta">🏛 Structure: <b>${m.structure.system}</b> · ${m.structure.lateral_system}` +
               ` · cols ${m.structure.members_mm.column} mm</div>` : "") +
         (generated ? `<div class="meta" style="color:var(--accent)">✓ IFC model generated & publishing — open the Model workspace to view.</div>` : "");
@@ -711,7 +711,7 @@ export class ProformaUI {
     estBtn.onclick = async () => {
       out.innerHTML = `<span class="meta">computing…</span>`;
       try { showResult(await this.api.previewMassing(params()), false); }
-      catch (e) { out.innerHTML = `<div class="meta" style="color:#e2554a">${(e as Error).message}</div>`; }
+      catch (e) { out.innerHTML = `<div class="meta" style="color:var(--status-crit)">${(e as Error).message}</div>`; }
     };
     const genBtn = document.createElement("button"); genBtn.className = "file-btn"; genBtn.textContent = "Generate IFC model + apply";
     genBtn.onclick = async () => {
@@ -725,7 +725,7 @@ export class ProformaUI {
         this.a = structuredClone(r.proforma.assumptions) as typeof this.a;
         this.render(); void this.solve();
         this.setStatus(`generated ${r.metrics.floors}-floor massing (${r.metrics.buildable_gfa_sf.toLocaleString()} sf) → proforma seeded`);
-      } catch (e) { out.innerHTML = `<div class="meta" style="color:#e2554a">${(e as Error).message}</div>`; }
+      } catch (e) { out.innerHTML = `<div class="meta" style="color:var(--status-crit)">${(e as Error).message}</div>`; }
     };
     btnRow.append(estBtn, genBtn); host.append(btnRow, out);
     this.root.appendChild(host);
@@ -759,7 +759,7 @@ export class ProformaUI {
     const renderMix = () => {
       const total = mix.reduce((s, u) => s + (+u.mix_pct || 0), 0);
       mixBox.innerHTML = `<div class="meta" style="display:flex;justify-content:space-between"><span>Your unit mix</span>`
-        + `<span${Math.abs(total - 1) > 0.011 ? ' style="color:#e2554a"' : ""}>mix Σ ${(total * 100).toFixed(0)}%</span></div>`;
+        + `<span${Math.abs(total - 1) > 0.011 ? ' style="color:var(--status-crit)"' : ""}>mix Σ ${(total * 100).toFixed(0)}%</span></div>`;
       mix.forEach((u, idx) => {
         const row = document.createElement("div"); row.style.cssText = "display:flex;gap:4px;align-items:center;margin-top:4px";
         const nm = document.createElement("input"); nm.value = u.name; nm.className = "portal-filter"; nm.style.flex = "1"; nm.placeholder = "type";
@@ -815,7 +815,7 @@ export class ProformaUI {
             + `<b>${eg.compliant ? "✅" : "⚠️"} Egress / life-safety (A2)</b> — `
             + `${eg.occupant_load_per_floor} occ/floor · max travel ${eg.max_travel_m} m (limit ${eg.limit_m}) · `
             + `${eg.min_exits_required} exits req'd · separation ${eg.exit_separation_m}/${eg.required_separation_m} m`
-            + (eg.flags.length ? `<br><span style="color:#e2554a">${eg.flags.map((f) => "• " + f).join("<br>")}</span>` : "")
+            + (eg.flags.length ? `<br><span style="color:var(--status-crit)">${eg.flags.map((f) => "• " + f).join("<br>")}</span>` : "")
             + `</div>`
           : "";
         out.innerHTML = `<table class="sens-table" style="font-size:12px"><tr><th style="text-align:left">Scheme</th>`
@@ -980,7 +980,7 @@ export class ProformaUI {
     const refreshRecon = () => {
       void this.api.gmpReconciliation(pid).then((g) => {
         if (!g.gc_gmp) { recon.style.display = "none"; return; }
-        const col = g.in_sync ? "#33d17a" : (g.delta > 0 ? "#e2554a" : "#ffd479");
+        const col = g.in_sync ? "var(--status-good)" : (g.delta > 0 ? "var(--status-crit)" : "var(--status-warn)");
         recon.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">`
           + `<span class="meta">🤝 GC GMP <b>${money(g.gc_gmp)}</b> · EAC ${money(g.gmp_eac)} vs hard cost <b>${money(g.dev_hard_cost)}</b> · `
           + `<span style="color:${col}">${g.in_sync ? "in sync" : (g.delta > 0 ? "GMP over by " : "GMP under by ") + money(Math.abs(g.delta))}</span></span>`
@@ -1153,12 +1153,12 @@ export class ProformaUI {
       ld.innerHTML = `🏦 Construction loan: drawn <b>${money(l.drawn_to_date)}</b> of ${money(l.loan_amount + l.equity)} `
         + `(${l.pct_capital_drawn}%) — equity ${money(l.equity_drawn)}/${money(l.equity)} · `
         + `loan ${money(l.loan_drawn)}/${money(l.loan_amount)} · available ${money(l.loan_available)}`
-        + (l.accrued_interest ? ` · <span style="color:#e2554a">accrued interest ${money(l.accrued_interest)}</span> @ ${(l.interest_rate * 100).toFixed(2)}% (outstanding ${money(l.outstanding_with_interest)})` : "")
+        + (l.accrued_interest ? ` · <span style="color:var(--status-crit)">accrued interest ${money(l.accrued_interest)}</span> @ ${(l.interest_rate * 100).toFixed(2)}% (outstanding ${money(l.outstanding_with_interest)})` : "")
         + ` `;
       // interest re-forecast vs the underwritten reserve — is the live carrying cost on plan?
       if (l.budgeted_interest_reserve || l.forecast_interest) {
         const iv = l.interest_variance;
-        const ic = iv < 0 ? "#e2554a" : "#33d17a";
+        const ic = iv < 0 ? "var(--status-crit)" : "var(--status-good)";
         const il = document.createElement("div"); il.style.marginTop = "2px";
         il.innerHTML = `↳ Interest re-forecast: reserve <b>${money(l.budgeted_interest_reserve)}</b> vs forecast <b>${money(l.forecast_interest)}</b> `
           + `(accrued ${money(l.accrued_interest)} + to-go) · <span style="color:${ic}">${iv >= 0 ? "under" : "over"} ${money(Math.abs(iv))}</span>`;
@@ -1409,7 +1409,7 @@ export class ProformaUI {
     const pid = this.projectId();
     const TARGET = 0.15;                              // hurdle for the "on returns" read
     const card = () => { const d = document.createElement("div"); d.className = "dash-card"; return d; };
-    const irrColor = ret.equity_irr == null ? "var(--muted)" : ret.equity_irr >= TARGET ? "#33d17a" : ret.equity_irr >= TARGET * 0.8 ? "#ffd479" : "#e2554a";
+    const irrColor = ret.equity_irr == null ? "var(--muted)" : ret.equity_irr >= TARGET ? "var(--status-good)" : ret.equity_irr >= TARGET * 0.8 ? "var(--status-warn)" : "var(--status-crit)";
 
     // toolbar — save the current solve as a scenario (so it rolls into the Portfolio returns)
     const tools = document.createElement("div"); tools.style.cssText = "display:flex;gap:6px;align-items:center;margin-bottom:8px";
@@ -1455,7 +1455,7 @@ export class ProformaUI {
     const setPill = (onCost: boolean | null) => {
       const ok = onReturns && (onCost !== false);
       const warn = onReturns !== (onCost !== false);
-      const [lbl, col] = ok ? ["On plan", "#33d17a"] : warn ? ["Watch", "#ffd479"] : ["Off plan", "#e2554a"];
+      const [lbl, col] = ok ? ["On plan", "var(--status-good)"] : warn ? ["Watch", "var(--status-warn)"] : ["Off plan", "var(--status-crit)"];
       pillEl.textContent = lbl; pillEl.style.cssText = `background:${col}22;color:${col};border-color:${col}`;
     };
     setPill(null);
@@ -1464,7 +1464,7 @@ export class ProformaUI {
         if (g && g.gc_gmp) {
           const sync = g.in_sync ? "in sync with underwriting" : (g.delta > 0 ? `GMP ${money(Math.abs(g.delta))} over hard cost` : `GMP ${money(Math.abs(g.delta))} under hard cost`);
           cCol.innerHTML = `<div class="meta">🏗 On cost (construction)</div>`
-            + `<div style="font-size:15px;font-weight:700;color:${g.in_sync ? "#33d17a" : "#ffd479"}">GMP ${money(g.gc_gmp)}</div>`
+            + `<div style="font-size:15px;font-weight:700;color:${g.in_sync ? "var(--status-good)" : "var(--status-warn)"}">GMP ${money(g.gc_gmp)}</div>`
             + `<div class="meta">${sync}${l && l.drawn_to_date ? ` · drawn ${money(l.drawn_to_date)} (${l.pct_capital_drawn}%)` : ""}</div>`;
           setPill(g.in_sync);
         } else { cCol.innerHTML = `<div class="meta">🏗 On cost (construction)</div><div class="meta">No GC budget linked yet.</div>`; setPill(null); }
@@ -1480,7 +1480,7 @@ export class ProformaUI {
         if (!l.loan_amount && !l.equity) { cap.style.display = "none"; return; }
         cb.innerHTML = `Loan <b>${money(l.loan_amount)}</b> · equity <b>${money(l.equity)}</b> · drawn ${money(l.drawn_to_date)} (${l.pct_capital_drawn}%)`
           + ` — equity ${money(l.equity_drawn)} · loan ${money(l.loan_drawn)} · available ${money(l.loan_available)}`
-          + (l.accrued_interest ? ` · <span style="color:#e2554a">accrued interest ${money(l.accrued_interest)}</span>` : "");
+          + (l.accrued_interest ? ` · <span style="color:var(--status-crit)">accrued interest ${money(l.accrued_interest)}</span>` : "");
       }).catch(() => { cap.style.display = "none"; });
     }
 
@@ -1497,7 +1497,7 @@ export class ProformaUI {
       const gc = card();
       gc.appendChild(Object.assign(document.createElement("div"), { className: "section-title", textContent: "Underwriting guardrails" }));
       for (const f of r.guardrails.flags.slice(0, 5)) {
-        const col = f.level === "high" ? "#e2554a" : f.level === "med" ? "#ffd479" : "#33d17a";
+        const col = f.level === "high" ? "var(--status-crit)" : f.level === "med" ? "var(--status-warn)" : "var(--status-good)";
         gc.insertAdjacentHTML("beforeend", `<div class="meta" style="margin:1px 0"><span style="color:${col}">${f.level === "info" ? "✓" : "△"}</span> ${f.message}</div>`);
       }
       host.appendChild(gc);

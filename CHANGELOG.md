@@ -4,6 +4,12 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.23 — Design tokens: theme-aware status colors
+- Extracted the hardcoded traffic-light status colors (green/amber/red — 43 occurrences across the
+  portal dashboard + proforma) into CSS variables (`--status-good/warn/crit`, `--err`) defined for
+  both dark and light themes. Previously the dark-mode hexes bled into light mode; now status colors
+  adapt to the theme and there's a single place to tune them. Web typecheck + 49 tests green.
+
 ## v0.3.22 — Speed: rollup fields filter in SQL (no more full-table scan per read)
 - **Rollup fields** (e.g. a cost code's committed/budgeted/direct totals, a COR's PCO sum) previously
   loaded *every* source-module record for the project and matched the reference in Python on each

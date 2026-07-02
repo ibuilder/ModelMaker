@@ -10,6 +10,10 @@
   --control-hover: #45484f;
   --hover: #34373d;          /* row/list hover */
   --accent-soft: #23304d;    /* selected-row tint (a dim accent that works behind --text) */
+  --status-good: #33d17a;    /* traffic-light status tokens (green=good, amber=watch, red=critical) */
+  --status-warn: #ffd479;
+  --status-crit: #e2554a;
+  --err: #d9534f;
 }
 
 * { box-sizing: border-box; }
@@ -31,6 +35,7 @@ html, body, #app {
   --bg: #f4f5f7; --panel: #ffffff; --panel2: #eceef1;
   --text: #1d1f23; --muted: #5f6368; --accent: #2f6fed; --line: #d6d9de;
   --control: #ffffff; --control-hover: #e6e9ee; --hover: #eef1f5; --accent-soft: #dce8ff;
+  --status-good: #1f9d57; --status-warn: #b8860b; --status-crit: #c8402f; --err: #c8402f;  /* darker for white bg contrast */
 }
 
 /* ---- 4-zone shell: top chrome / stage / bottom settings bar ---- */

@@ -181,7 +181,7 @@ export class PortalUI {
     if (!px.schedule.activities && !px.budget.gmp) return;     // nothing to summarize yet
     const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
     const sched = px.schedule, bud = px.budget;
-    const pill = { on_track: ["On track", "#33d17a"], at_risk: ["At risk", "#ffd479"], behind: ["Behind", "#e2554a"] }[px.status];
+    const pill = { on_track: ["On track", "var(--status-good)"], at_risk: ["At risk", "var(--status-warn)"], behind: ["Behind", "var(--status-crit)"] }[px.status];
     const card = document.createElement("div"); card.className = "dash-card"; card.style.marginBottom = "10px";
     const head = document.createElement("div"); head.className = "section-title";
     head.style.cssText = "display:flex;justify-content:space-between;align-items:center";
@@ -191,15 +191,15 @@ export class PortalUI {
     head.appendChild(tag); card.appendChild(head);
 
     const cols = document.createElement("div"); cols.className = "dash-cols";
-    const spiColor = sched.spi == null ? "var(--muted)" : sched.spi >= 0.95 ? "#33d17a" : sched.spi >= 0.85 ? "#ffd479" : "#e2554a";
+    const spiColor = sched.spi == null ? "var(--muted)" : sched.spi >= 0.95 ? "var(--status-good)" : sched.spi >= 0.85 ? "var(--status-warn)" : "var(--status-crit)";
     const sCol = document.createElement("div"); sCol.className = "dash-card kpi-click"; sCol.style.flex = "1";
     sCol.innerHTML = `<div class="meta">📅 On schedule</div>`
       + `<div style="font-size:16px;font-weight:700;color:${spiColor}">SPI ${sched.spi ?? "—"}</div>`
       + `<div class="meta">${sched.pct_complete}% complete · ${sched.activities} activities · CP ${sched.critical_path_days}d</div>`
       + `<div class="meta">${sched.lookahead_3wk} in 3-wk lookahead · milestones: `
-      + `<span style="color:#e2554a">${sched.milestones.late} late</span> · ${sched.milestones.due_soon} due soon</div>`;
+      + `<span style="color:var(--status-crit)">${sched.milestones.late} late</span> · ${sched.milestones.due_soon} due soon</div>`;
     sCol.onclick = () => { const m = this.mods.find((x) => x.key === "schedule_activity"); if (m) { this.activeKey = "__schedule__"; void this.renderScheduleViews(m); this.buildNav(); } };
-    const vColor = bud.variance_at_completion < 0 ? "#e2554a" : "#33d17a";
+    const vColor = bud.variance_at_completion < 0 ? "var(--status-crit)" : "var(--status-good)";
     const bCol = document.createElement("div"); bCol.className = "dash-card kpi-click"; bCol.style.flex = "1";
     bCol.innerHTML = `<div class="meta">💰 On budget</div>`
       + `<div style="font-size:16px;font-weight:700">GMP ${usd(bud.revised_gmp || bud.gmp)}</div>`
@@ -316,7 +316,7 @@ export class PortalUI {
       const hb = el("div"); hb.id = "dash-health"; root.appendChild(hb);
       void this.host.api.projectHealth(pid).then((h) => {
         if (!h.domains.length) { hb.innerHTML = ""; return; }
-        const tone: Record<string, string> = { red: "#e2554a", amber: "#ffd479", green: "#33d17a", na: "#9aa0a6" };
+        const tone: Record<string, string> = { red: "var(--status-crit)", amber: "var(--status-warn)", green: "var(--status-good)", na: "#9aa0a6" };
         const dot = (s: string) => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${tone[s] || "#9aa0a6"};margin-right:5px"></span>`;
         const c = tone[h.overall_status] || "#9aa0a6";
         const chips = h.domains.map((d) =>
@@ -336,7 +336,7 @@ export class PortalUI {
       // risk summary (full width — owner/PM reporting)
       const risk = el("div"); risk.id = "dash-risk"; root.appendChild(risk);
       void this.host.api.riskSummary(pid).then((rs) => {
-        const colors: Record<string, string> = { high: "#e2554a", medium: "#ffd479", low: "#6cb6ff" };
+        const colors: Record<string, string> = { high: "var(--status-crit)", medium: "var(--status-warn)", low: "#6cb6ff" };
         risk.innerHTML = `<div class="section-title" style="margin-top:8px">Risk summary`
           + `<span class="meta" style="font-weight:400"> · ${rs.source === "claude" ? "AI" : "rules"}</span></div>`
           + `<div class="meta" style="margin:2px 0 6px">${rs.headline}</div>`
@@ -401,7 +401,7 @@ export class PortalUI {
         const ou = d.cost.projected_over_under;
         const cd = el("div", "meta"); cd.style.margin = "2px 0";
         cd.innerHTML = `Budget <b>$${d.cost.budget.toLocaleString()}</b> · `
-          + `<span style="color:${ou > 0 ? "#e2554a" : "#33d17a"}">${ou > 0 ? "over" : "under"} $${Math.abs(ou).toLocaleString()}</span>`;
+          + `<span style="color:${ou > 0 ? "var(--status-crit)" : "var(--status-good)"}">${ou > 0 ? "over" : "under"} $${Math.abs(ou).toLocaleString()}</span>`;
         health.appendChild(cd);
       }
       const safety = el("div", "meta"); safety.style.margin = "2px 0"; health.appendChild(safety);
@@ -414,7 +414,7 @@ export class PortalUI {
       void this.host.api.leanPpc(pid).then((l) => {
         if (!l.commitments) return;
         const top = l.top_variance_reasons[0];
-        const color = l.rating === "good" ? "#33d17a" : l.rating === "fair" ? "#ffd479" : "#e2554a";
+        const color = l.rating === "good" ? "var(--status-good)" : l.rating === "fair" ? "var(--status-warn)" : "var(--status-crit)";
         lean.innerHTML = `Lean PPC: <b style="color:${color}">${(l.ppc * 100).toFixed(0)}%</b> `
           + `(${l.completed}/${l.commitments} commitments${l.missed ? ` · ${l.missed} missed` : ""})`
           + (top ? ` · top reason: ${top.reason}` : "");
@@ -423,7 +423,7 @@ export class PortalUI {
       const comp = el("div", "meta"); comp.style.margin = "2px 0"; health.appendChild(comp);
       void this.host.api.complianceExpiring(pid, 30).then((cc) => {
         if (!cc.count) { comp.textContent = "Compliance: no COI/permit expiries ✓"; return; }
-        const color = cc.expired.length ? "#e2554a" : "#ffd479";
+        const color = cc.expired.length ? "var(--status-crit)" : "var(--status-warn)";
         comp.innerHTML = `Compliance: <b style="color:${color}">${cc.expired.length} expired · ${cc.expiring.length} expiring</b> (COI/permit) `;
         const a = document.createElement("a"); a.href = "#"; a.className = "ref-link"; a.textContent = "review";
         a.onclick = (e) => { e.preventDefault(); const m = this.mods.find((x) => x.key === (cc.expired[0] ?? cc.expiring[0])?.module); if (m) this.openModule(m); };
@@ -436,7 +436,7 @@ export class PortalUI {
         for (const [st, n] of Object.entries(bm.by_state)) states.set(st, (states.get(st) ?? 0) + n);
         if (bm.count) sections.set(bm.section || "Other", (sections.get(bm.section || "Other") ?? 0) + bm.count);
       }
-      const STATE_COLOR: Record<string, string> = { draft: "#9aa0a6", open: "#ffd479", answered: "#6cb6ff", closed: "#33d17a", void: "#e2554a", approved: "#33d17a", rejected: "#e2554a" };
+      const STATE_COLOR: Record<string, string> = { draft: "#9aa0a6", open: "var(--status-warn)", answered: "#6cb6ff", closed: "var(--status-good)", void: "var(--status-crit)", approved: "var(--status-good)", rejected: "var(--status-crit)" };
       if (states.size) side.appendChild(this.barChart("Records by status",
         [...states.entries()].sort((a, b) => b[1] - a[1]), (k) => STATE_COLOR[k] ?? "#b083d6"));
       if (sections.size) side.appendChild(this.barChart("Busiest sections",
@@ -596,8 +596,8 @@ export class PortalUI {
     this.root.innerHTML = "";
     this.root.appendChild(this.bar("Portfolio", () => { this.activeKey = null; void this.renderHome(); this.buildNav(); }));
     const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
-    const vcol = (v: number) => v < 0 ? "#e2554a" : v > 0 ? "#33d17a" : "var(--muted)";
-    const pill: Record<string, [string, string]> = { on_track: ["On track", "#33d17a"], at_risk: ["At risk", "#ffd479"], behind: ["Behind", "#e2554a"] };
+    const vcol = (v: number) => v < 0 ? "var(--status-crit)" : v > 0 ? "var(--status-good)" : "var(--muted)";
+    const pill: Record<string, [string, string]> = { on_track: ["On track", "var(--status-good)"], at_risk: ["At risk", "var(--status-warn)"], behind: ["Behind", "var(--status-crit)"] };
     const status = document.createElement("div"); status.className = "meta"; status.textContent = "loading portfolio…";
     this.root.appendChild(status);
     const here = this.host.projectId();
@@ -631,15 +631,15 @@ export class PortalUI {
         const tr = document.createElement("tr"); tr.className = "kpi-click";
         if (p.id === here) tr.style.fontWeight = "700";
         const [lbl, col] = pill[p.status] ?? ["—", "var(--muted)"];
-        const irrCol = p.equity_irr == null ? "var(--muted)" : p.equity_irr >= 0.15 ? "#33d17a" : p.equity_irr >= 0.12 ? "#ffd479" : "#e2554a";
+        const irrCol = p.equity_irr == null ? "var(--muted)" : p.equity_irr >= 0.15 ? "var(--status-good)" : p.equity_irr >= 0.12 ? "var(--status-warn)" : "var(--status-crit)";
         tr.innerHTML = `<td>${esc(p.name)}${p.id === here ? " ·" : ""}</td>`
           + `<td><span class="ball-badge" style="background:${col}22;color:${col};border-color:${col}">${lbl}</span></td>`
-          + `<td style="text-align:right;color:${p.spi == null ? "var(--muted)" : p.spi >= 0.95 ? "#33d17a" : "#e2554a"}">${p.spi ?? "—"}</td>`
+          + `<td style="text-align:right;color:${p.spi == null ? "var(--muted)" : p.spi >= 0.95 ? "var(--status-good)" : "var(--status-crit)"}">${p.spi ?? "—"}</td>`
           + `<td style="text-align:right">${p.pct_complete}%</td><td style="text-align:right">${usd(p.gmp)}</td>`
           + `<td style="text-align:right;color:${vcol(p.variance_at_completion)}">${usd(p.variance_at_completion)}</td>`
           + `<td style="text-align:right;color:${irrCol}">${irrPct(p.equity_irr)}</td>`
           + `<td style="text-align:right">${p.equity_multiple == null ? "—" : p.equity_multiple + "×"}</td>`
-          + `<td style="text-align:right;color:${p.milestones_late ? "#e2554a" : "var(--muted)"}">${p.milestones_late || "—"}</td>`;
+          + `<td style="text-align:right;color:${p.milestones_late ? "var(--status-crit)" : "var(--muted)"}">${p.milestones_late || "—"}</td>`;
         tr.onclick = () => { if (p.id !== here) window.location.search = `?project=${p.id}`; };
         tb.appendChild(tr);
       }
@@ -654,7 +654,7 @@ export class PortalUI {
     this.root.innerHTML = "";
     this.root.appendChild(this.bar("Budget", () => { this.activeKey = null; void this.renderHome(); this.buildNav(); }));
     const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
-    const vcol = (v: number) => v < 0 ? "#e2554a" : v > 0 ? "#33d17a" : "var(--muted)";
+    const vcol = (v: number) => v < 0 ? "var(--status-crit)" : v > 0 ? "var(--status-good)" : "var(--muted)";
     const jumpTo = (k: string) => { const tm = this.mods.find((x) => x.key === k); if (tm) { this.activeKey = k; this.openModule(tm); this.buildNav(); } };
 
     const intro = document.createElement("div"); intro.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:2px 0 8px";
@@ -689,7 +689,7 @@ export class PortalUI {
     // budget movement vs baseline (shown only if a baseline exists; 409 otherwise → ignored)
     const bvHolder = document.createElement("div"); this.root.appendChild(bvHolder);
     void this.host.api.budgetVariance(pid).then((v) => {
-      const col = v.total_delta > 0 ? "#e2554a" : v.total_delta < 0 ? "#33d17a" : "var(--muted)";
+      const col = v.total_delta > 0 ? "var(--status-crit)" : v.total_delta < 0 ? "var(--status-good)" : "var(--muted)";
       bvHolder.className = "meta"; bvHolder.style.margin = "0 0 6px";
       bvHolder.innerHTML = `Vs baseline (${v.captured_at}): GMP moved <span style="color:${col}">${v.total_delta > 0 ? "+" : ""}$${Math.round(v.total_delta).toLocaleString()}</span>`
         + (v.lines.length ? ` across ${v.lines.length} line${v.lines.length > 1 ? "s" : ""}` : " — no drift");
@@ -730,7 +730,7 @@ export class PortalUI {
       if (g.approved_changes) {
         const ch = document.createElement("div"); ch.className = "meta"; ch.style.margin = "0 0 6px";
         ch.innerHTML = `Approved changes <b>${usd(g.approved_changes)}</b> → revised GMP <b>${usd(g.revised ?? g.computed)}</b>`
-          + (g.unallocated_changes ? ` <span style="color:#ffd479">(${usd(g.unallocated_changes)} unallocated — assign a cost code)</span>` : "");
+          + (g.unallocated_changes ? ` <span style="color:var(--status-warn)">(${usd(g.unallocated_changes)} unallocated — assign a cost code)</span>` : "");
         this.root.appendChild(ch);
       }
 
@@ -797,7 +797,7 @@ export class PortalUI {
           r.innerHTML = `${bp.name ?? bp.ref}${bp.trade ? ` · ${bp.trade}` : ""} · budget <b>${usd(bp.budget)}</b>`
             + (bp.bought_out
                 ? ` · awarded <b>${usd(bp.awarded)}</b> · savings <span style="color:${vcol(bp.savings)}">${usd(bp.savings)}</span>`
-                : ` · ${bp.submissions || 0} bids · <span style="color:#ffd479">not bought out</span>`);
+                : ` · ${bp.submissions || 0} bids · <span style="color:var(--status-warn)">not bought out</span>`);
           bc.appendChild(r);
         }
       } else { bc.appendChild(Object.assign(document.createElement("div"), { className: "meta", textContent: "No bid packages yet." })); }
@@ -874,7 +874,7 @@ export class PortalUI {
           ? `<text x="${pad + i * bw + bw / 2}" y="${H - 6}" fill="var(--muted)" font-size="8" text-anchor="middle">${s.month.slice(2)}</text>` : "")).join("");
         cfBody.innerHTML = `<div class="meta" style="margin-bottom:4px">Total <b>${usd(cf.total)}</b> over ${cf.months} months · peak ${usd(cf.peak_month_cost)}/mo · ${cf.loaded_activities} cost-loaded activities</div>`
           + `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="cash flow curve">${bars}`
-          + `<polyline points="${pts}" fill="none" stroke="#33d17a" stroke-width="1.5"/>${ticks}</svg>`;
+          + `<polyline points="${pts}" fill="none" stroke="var(--status-good)" stroke-width="1.5"/>${ticks}</svg>`;
       }).catch(() => { cfBody.innerHTML = `<div class="meta">Cash flow unavailable.</div>`; });
 
       const foot = document.createElement("div"); foot.className = "meta"; foot.style.marginTop = "2px";
@@ -903,8 +903,8 @@ export class PortalUI {
     this.root.appendChild(intro);
 
     const statusColor = (s: string) =>
-      s === "late" ? "#e2554a" : s === "complete" || s === "met" ? "#33d17a"
-        : s === "in_progress" || s === "due_soon" ? "#ffd479" : "var(--muted)";
+      s === "late" ? "var(--status-crit)" : s === "complete" || s === "met" ? "var(--status-good)"
+        : s === "in_progress" || s === "due_soon" ? "var(--status-warn)" : "var(--muted)";
 
     // Lookahead (the field's short-interval plan) — 3 / 6 week toggle, grouped by week
     const laCard = document.createElement("div"); laCard.className = "dash-card"; laCard.style.marginBottom = "10px";
@@ -944,8 +944,8 @@ export class PortalUI {
       if (!ms.count) { msBody.innerHTML = `<div class="meta">No milestones — set an activity’s Type to “Milestone”.</div>`; return; }
       const s = ms.summary;
       msBody.innerHTML = `<div class="meta" style="margin-bottom:4px">`
-        + `<b style="color:#e2554a">${s.late || 0}</b> late · <b style="color:#ffd479">${s.due_soon || 0}</b> due soon · `
-        + `${s.upcoming || 0} upcoming · <b style="color:#33d17a">${s.met || 0}</b> met</div>`;
+        + `<b style="color:var(--status-crit)">${s.late || 0}</b> late · <b style="color:var(--status-warn)">${s.due_soon || 0}</b> due soon · `
+        + `${s.upcoming || 0} upcoming · <b style="color:var(--status-good)">${s.met || 0}</b> met</div>`;
       for (const mi of ms.milestones) {
         const row = document.createElement("div"); row.className = "meta"; row.style.margin = "1px 0";
         const out = mi.days_out == null ? "" : mi.days_out < 0 ? ` (${-mi.days_out}d ago)` : ` (in ${mi.days_out}d)`;
@@ -963,7 +963,7 @@ export class PortalUI {
       if (!c.activity_count) { cpmBox.textContent = "CPM: no activities with durations yet."; return; }
       const cp = c.critical_path.slice(0, 12).join(" → ") || "—";
       cpmBox.innerHTML = `<b>CPM</b>: project ${c.project_duration}d · ${c.critical_count}/${c.activity_count} on the `
-        + `<span style="color:#e2554a">critical path</span>${c.has_cycle ? " · ⚠ cycle broken" : ""}<br>`
+        + `<span style="color:var(--status-crit)">critical path</span>${c.has_cycle ? " · ⚠ cycle broken" : ""}<br>`
         + `<span class="meta">Critical: ${cp}</span>`;
     }).catch(() => { cpmBox.textContent = "CPM unavailable."; });
 
@@ -973,10 +973,10 @@ export class PortalUI {
     void this.host.api.scheduleEarnedValue(pid).then((e) => {
       if (!e.activity_count) { evBox.textContent = "Earned value: add a Budgeted Cost + % to activities."; return; }
       const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
-      const col = e.status === "ahead" ? "#33d17a" : e.status === "behind" ? "#e2554a" : "#ffd479";
+      const col = e.status === "ahead" ? "var(--status-good)" : e.status === "behind" ? "var(--status-crit)" : "var(--status-warn)";
       evBox.innerHTML = `<b>Earned value</b>: ${e.percent_complete}% complete · `
         + `SPI <b style="color:${col}">${e.spi ?? "—"}</b> (${e.status.replace("_", " ")}) · `
-        + `schedule variance <span style="color:${e.sv < 0 ? "#e2554a" : "#33d17a"}">${usd(e.sv)}</span><br>`
+        + `schedule variance <span style="color:${e.sv < 0 ? "var(--status-crit)" : "var(--status-good)"}">${usd(e.sv)}</span><br>`
         + `<span class="meta">EV ${usd(e.ev)} · PV ${usd(e.pv)} · BAC ${usd(e.bac)}</span>`;
     }).catch(() => { evBox.textContent = "Earned value unavailable."; });
 
@@ -993,12 +993,12 @@ export class PortalUI {
       void this.host.api.scheduleVariance(pid).then((v) => {
         const s = v.summary;
         blBody.innerHTML = `<div class="meta">Baseline ${v.captured_at} · ${v.baseline_count} activities · `
-          + `<b style="color:#e2554a">${s.slipped || 0} slipped</b> · ${s.on_baseline || 0} on plan · `
+          + `<b style="color:var(--status-crit)">${s.slipped || 0} slipped</b> · ${s.on_baseline || 0} on plan · `
           + `${s.improved || 0} improved · ${s.added || 0} added · max slip <b>${s.max_slip_days || 0}d</b></div>`;
         for (const a of v.activities.filter((x) => (x.finish_var || 0) !== 0 || x.status === "added" || x.status === "removed").slice(0, 8)) {
           const row = document.createElement("div"); row.className = "meta"; row.style.margin = "1px 0";
           const fv = a.finish_var; const tag = fv == null ? a.status : fv > 0 ? `+${fv}d late` : `${fv}d early`;
-          const col = fv != null && fv > 0 ? "#e2554a" : fv != null && fv < 0 ? "#33d17a" : "var(--muted)";
+          const col = fv != null && fv > 0 ? "var(--status-crit)" : fv != null && fv < 0 ? "var(--status-good)" : "var(--muted)";
           row.innerHTML = `<span style="color:${col}">◷</span> ${a.name} · <span style="color:${col}">${tag}</span>`;
           blBody.appendChild(row);
         }
@@ -2123,7 +2123,7 @@ export class PortalUI {
     const camBtn = document.createElement("button"); camBtn.className = "tool-btn"; camBtn.textContent = "📷 Take photo";
     camBtn.style.marginTop = "4px"; camBtn.onclick = () => cam.click();
     this.root.append(file, cam, drop, camBtn);
-    const qWarn = document.createElement("div"); qWarn.className = "meta"; qWarn.style.cssText = "color:#ffd479;margin-top:3px";
+    const qWarn = document.createElement("div"); qWarn.className = "meta"; qWarn.style.cssText = "color:var(--status-warn);margin-top:3px";
     this.root.appendChild(qWarn);
     void queuedCountForRecord(rid).then((queued) => {
       qWarn.textContent = queued
