@@ -98,5 +98,6 @@
     "manufacturer",
     "location",
     "warranty_expiry"
-  ]
+  ],
+  "workspace": "construction"
 }

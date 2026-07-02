@@ -65,5 +65,6 @@
   "list_columns": [
     "priority",
     "due_date"
-  ]
+  ],
+  "workspace": "construction"
 }

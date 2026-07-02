@@ -62,7 +62,11 @@ html, body { overflow: hidden; }   /* the app manages its own internal scrolling
   font-size: 18px; padding: 2px 6px; border-radius: 4px;
 }
 #rail-toggle:hover { background: #ffffff14; }
+/* role picker — grouped to the right, labeled so the role-gearing is discoverable */
+#persona-wrap { display: inline-flex; align-items: center; gap: 6px; padding-left: 12px; margin-left: 2px; border-left: 1px solid var(--line); }
+#persona-lead { font-size: 11px; color: var(--muted); white-space: nowrap; }
 #persona { background: var(--control); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+#persona:hover { border-color: var(--accent); }
 #status { font-size: 12px; opacity: 0.7; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 /* workspace switcher (segmented control) */
@@ -520,6 +524,8 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
   #topbar { gap: 6px; padding: 5px 8px; }
   #topbar > strong { font-size: 13px; }
   #status { display: none; }                 /* free a row — state is shown in the bottom bar */
+  #persona-lead { display: none; }           /* keep just the role dropdown on phones */
+  #persona-wrap { padding-left: 6px; }
   #workspaces { margin-left: 0; }
   .ws-btn { padding: 4px 9px; }
   .fullpanel { padding: 10px 12px; }
@@ -596,6 +602,9 @@ body[data-cap-admin="off"] [data-cap="admin"] { display: none !important; }
 .pnav-item.active { background: var(--accent); color: #fff; }
 .pnav-item .ic { width: 16px; flex: 0 0 16px; text-align: center; opacity: .85; }
 .pnav-home { font-weight: 600; margin-bottom: 2px; }
+.pnav-showall { margin-top: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); border-radius: 0; padding-top: 8px; }
+.pnav-showall:hover { color: var(--fg); }
+.pnav-showall.active { color: var(--accent); }
 .pnav-filter { margin: 6px 0 4px; width: 100%; }
 .pnav-group { margin-top: 2px; }
 .pnav-group > summary { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em;

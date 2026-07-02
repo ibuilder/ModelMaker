@@ -97,13 +97,17 @@
         "from": "planned",
         "to": "active",
         "action": "mobilize",
-        "party": ["GC"]
+        "party": [
+          "GC"
+        ]
       },
       {
         "from": "active",
         "to": "demobilized",
         "action": "demobilize",
-        "party": ["GC"]
+        "party": [
+          "GC"
+        ]
       }
     ]
   },
@@ -112,5 +116,6 @@
     "count",
     "rate",
     "start"
-  ]
+  ],
+  "workspace": "construction"
 }

@@ -2,7 +2,7 @@
   "key": "submittal",
   "name": "Submittals",
   "section": "Engineering",
-  "icon": "\u25a4",
+  "icon": "▤",
   "ref_prefix": "SUB",
   "title_field": "title",
   "pinnable": true,
@@ -191,5 +191,6 @@
       }
     ]
   },
-  "revisable": true
+  "revisable": true,
+  "workspace": "construction"
 }

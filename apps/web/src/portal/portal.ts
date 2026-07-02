@@ -32,6 +32,15 @@ export class PortalUI {
   private mods: ModuleDef[] = [];
   private nav?: HTMLElement;          // persistent left module-nav rail (built once)
   private activeKey: string | null = null;
+  // R2 — workspace split: this portal serves either the "construction" (GC build) or "developer"
+  // (real-estate) module set. `showAll` is the escape hatch so every role can still reach every
+  // register (the user's "everyone has access to all data, just a few more clicks").
+  private wsFilter: "construction" | "developer" = "construction";
+  private showAll = false;
+  /** Which workspace this portal renders. Call before init(). */
+  setWorkspace(ws: "construction" | "developer") { this.wsFilter = ws; }
+  /** True when a module belongs in the active workspace (or Show-all is on). */
+  private inWs(m: ModuleDef) { return this.showAll || (m.workspace || "construction") === this.wsFilter; }
   // field/offline: uploads attempted while offline are persisted in IndexedDB (offlineQueue) so they
   // survive a reload, and flushed on reconnect / next launch.
   private onlineHooked = false;
@@ -76,7 +85,7 @@ export class PortalUI {
   constructor(private root: HTMLElement, private host: PortalHost) {}
 
   async init() {
-    if (!this.host.projectId()) { this.root.innerHTML = noProjectHtml("the GC portal"); return; }
+    if (!this.host.projectId()) { this.root.innerHTML = noProjectHtml(this.wsFilter === "developer" ? "the developer workspace" : "the GC portal"); return; }
     this.mods = await this.host.api.modules();
     // build the persistent shell once: [nav rail | content]. `this.root` is redirected to the
     // content pane, so every existing render path writes into it while the nav rail stays put.
@@ -105,23 +114,33 @@ export class PortalUI {
     home.onclick = () => { this.activeKey = null; void this.renderHome(); this.buildNav(); };
     nav.appendChild(home);
 
-    // first-class Schedule destination — the planning hub (lookahead / milestones / EV / baseline /
-    // gantt / LOB / CPM) all over the one relational schedule that also drives the 3D 4D model
-    const schedMod = this.mods.find((x) => x.key === "schedule_activity");
-    if (schedMod) {
-      const sched = document.createElement("button");
-      sched.className = "pnav-item pnav-home" + (this.activeKey === "__schedule__" ? " active" : "");
-      sched.innerHTML = `<span class="ic">📅</span> Schedule`;
-      sched.onclick = () => { this.activeKey = "__schedule__"; void this.renderScheduleViews(schedMod); this.buildNav(); };
-      nav.appendChild(sched);
+    // first-class destinations differ by workspace: the GC build hub (Schedule / Budget / Portfolio)
+    // vs. the developer hub (Underwriting proforma). Portfolio is a cross-project roll-up shown to both.
+    if (this.wsFilter === "construction") {
+      // Schedule — the planning hub (lookahead / milestones / EV / baseline / gantt / LOB / CPM) over
+      // the one relational schedule that also drives the 3D 4D model
+      const schedMod = this.mods.find((x) => x.key === "schedule_activity");
+      if (schedMod) {
+        const sched = document.createElement("button");
+        sched.className = "pnav-item pnav-home" + (this.activeKey === "__schedule__" ? " active" : "");
+        sched.innerHTML = `<span class="ic">📅</span> Schedule`;
+        sched.onclick = () => { this.activeKey = "__schedule__"; void this.renderScheduleViews(schedMod); this.buildNav(); };
+        nav.appendChild(sched);
+      }
+      // Budget — the GMP project budget (the other half of on-schedule/on-budget)
+      const budget = document.createElement("button");
+      budget.className = "pnav-item pnav-home" + (this.activeKey === "__budget__" ? " active" : "");
+      budget.innerHTML = `<span class="ic">💰</span> Budget`;
+      budget.onclick = () => { this.activeKey = "__budget__"; void this.renderBudget(); this.buildNav(); };
+      nav.appendChild(budget);
+    } else {
+      // Developer — jump to the proforma/underwriting workspace (returns, capital stack, cash flow)
+      const uw = document.createElement("button");
+      uw.className = "pnav-item pnav-home";
+      uw.innerHTML = `<span class="ic">📊</span> Underwriting`;
+      uw.onclick = () => window.dispatchEvent(new CustomEvent("aec:goto-workspace", { detail: "finance" }));
+      nav.appendChild(uw);
     }
-
-    // first-class Budget destination — the GMP project budget (the other half of on-schedule/on-budget)
-    const budget = document.createElement("button");
-    budget.className = "pnav-item pnav-home" + (this.activeKey === "__budget__" ? " active" : "");
-    budget.innerHTML = `<span class="ic">💰</span> Budget`;
-    budget.onclick = () => { this.activeKey = "__budget__"; void this.renderBudget(); this.buildNav(); };
-    nav.appendChild(budget);
 
     // first-class Portfolio destination — cross-project executive roll-up (all jobs at a glance)
     const portfolio = document.createElement("button");
@@ -152,10 +171,29 @@ export class PortalUI {
       mods.forEach((m) => det.appendChild(item(m)));
       nav.appendChild(det);
     };
-    if (favs.size) group("★ Favorites", this.mods.filter((m) => favs.has(m.key)), true);
+    const visible = this.mods.filter((m) => this.inWs(m));
+    if (favs.size) {
+      const favMods = visible.filter((m) => favs.has(m.key));
+      if (favMods.length) group("★ Favorites", favMods, true);
+    }
     const sections = new Map<string, ModuleDef[]>();
-    for (const m of this.mods) { const s = m.section || "Other"; (sections.get(s) ?? sections.set(s, []).get(s)!).push(m); }
+    for (const m of visible) { const s = m.section || "Other"; (sections.get(s) ?? sections.set(s, []).get(s)!).push(m); }
     for (const [section, mods] of sections) group(section, mods, !openSecs || openSecs.includes(section));
+
+    // "Show all modules" — reveal the other workspace's registers so every role can reach all data
+    // (a few more clicks, per the product principle). Persisted to the toggle for the session.
+    const other = this.wsFilter === "construction" ? "developer" : "construction";
+    const otherCount = this.mods.filter((m) => (m.workspace || "construction") === other).length;
+    if (otherCount) {
+      const toggle = document.createElement("button");
+      toggle.className = "pnav-item pnav-showall" + (this.showAll ? " active" : "");
+      toggle.innerHTML = this.showAll
+        ? `<span class="ic">▾</span> Showing all modules`
+        : `<span class="ic">▸</span> Show all modules (+${otherCount})`;
+      toggle.title = this.showAll ? "Hide the other workspace's registers" : `Also show ${other} registers`;
+      toggle.onclick = () => { this.showAll = !this.showAll; this.buildNav(); };
+      nav.appendChild(toggle);
+    }
 
     filter.oninput = () => {
       const q = filter.value.trim().toLowerCase();
@@ -218,6 +256,78 @@ export class PortalUI {
     host.appendChild(card);
   }
 
+  /** Developer (real-estate) home: deal returns + RE register KPIs (listings / comps / capital /
+   *  leases / feasibility). Every card jumps to its register; underwriting lives one click away. */
+  private async renderDeveloperHome(root: HTMLElement, pid: string,
+      el: (tag: string, cls?: string) => HTMLElement, jump: (key: string, state?: string) => void) {
+    const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
+    const head = el("div", "section-title"); head.style.cssText = "display:flex;justify-content:space-between;align-items:center";
+    head.append("Developer — real estate");
+    const uw = el("button", "tool-btn") as HTMLButtonElement;
+    uw.textContent = "Underwriting →"; uw.title = "Open the proforma / underwriting workspace";
+    uw.onclick = () => window.dispatchEvent(new CustomEvent("aec:goto-workspace", { detail: "finance" }));
+    head.append(uw); root.appendChild(head);
+
+    // returns strip — blended proforma returns for the deal (hides cleanly if no proforma yet)
+    const ret = el("div"); root.appendChild(ret);
+    void this.host.api.portfolio().then((pf) => {
+      if (!pf.deal_count) return;
+      const t = pf.totals || {};
+      const irr = (t.equity_irr as number | null) ?? pf.deals[0]?.equity_irr ?? null;
+      const em = (t.equity_multiple as number | null) ?? pf.deals[0]?.equity_multiple ?? null;
+      const card = el("div", "dash-card"); card.style.marginBottom = "10px";
+      card.style.cssText += ";cursor:pointer";
+      card.title = "Open underwriting"; card.onclick = () => window.dispatchEvent(new CustomEvent("aec:goto-workspace", { detail: "finance" }));
+      const kpi = (v: string, l: string, tone?: string) =>
+        `<div class="dash-card" style="flex:1;text-align:center"><div style="font-size:18px;font-weight:700${tone ? `;color:${tone}` : ""}">${v}</div><div class="meta">${l}</div></div>`;
+      card.innerHTML = `<div class="meta" style="margin-bottom:6px">📊 Deal returns · ${pf.deal_count} scenario${pf.deal_count === 1 ? "" : "s"}</div>`
+        + `<div class="dash-cols" style="display:flex;gap:8px">`
+        + kpi(irr == null ? "—" : `${(irr * 100).toFixed(1)}%`, "Equity IRR", irr != null && irr >= 0.15 ? "var(--status-good)" : irr != null && irr < 0.08 ? "var(--status-warn)" : undefined)
+        + kpi(em == null ? "—" : `${em.toFixed(2)}×`, "Equity multiple")
+        + kpi(usd((t.equity as number) || 0), "Equity")
+        + kpi(usd((t.loan as number) || 0), "Loan")
+        + `</div>`;
+      root.insertBefore(card, ret.nextSibling);
+    }).catch(() => {});
+
+    // RE register KPIs from the dashboard's per-module counts
+    try {
+      const d = await this.host.api.dashboard(pid);
+      const cnt = (k: string) => d.by_module.find((m) => m.key === k)?.count ?? 0;
+      const active = (k: string, states: string[]) => {
+        const bm = d.by_module.find((m) => m.key === k); if (!bm) return 0;
+        return states.reduce((s, st) => s + (bm.by_state[st] ?? 0), 0);
+      };
+      const kpis = el("div", "kpi-grid");
+      const cards: [string, number, (() => void) | undefined][] = [
+        ["Active listings", active("listing", ["active", "listed", "available"]) || cnt("listing"), () => jump("listing")],
+        ["Comparables", cnt("comparable"), () => jump("comparable")],
+        ["Investors", cnt("investor"), () => jump("investor")],
+        ["Leases", cnt("lease"), () => jump("lease")],
+        ["Feasibility", cnt("zoning"), () => jump("zoning")],
+      ];
+      for (const [label, val, onClick] of cards) {
+        const c = el("div", "kpi" + (onClick ? " kpi-click" : "")) as HTMLElement;
+        c.innerHTML = `<div class="kpi-v">${val}</div><div class="kpi-l">${label}</div>`;
+        if (onClick) { c.onclick = onClick; c.tabIndex = 0; c.setAttribute("role", "button"); c.onkeydown = (e) => { if ((e as KeyboardEvent).key === "Enter") onClick(); }; }
+        kpis.appendChild(c);
+      }
+      root.appendChild(kpis);
+    } catch { /* dashboard unavailable — KPI grid just omitted */ }
+
+    // quick-create row for the common developer records
+    const quick = el("div"); quick.style.cssText = "margin-top:10px";
+    quick.innerHTML = `<div class="section-title">Quick add</div>`;
+    const qrow = el("div"); qrow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-top:4px";
+    for (const [k, lbl] of [["listing", "＋ Listing"], ["comparable", "＋ Comp"], ["investor", "＋ Investor"], ["lease", "＋ Lease"]] as const) {
+      if (!this.mods.find((m) => m.key === k)) continue;
+      const b = el("button", "tool-btn") as HTMLButtonElement; b.textContent = lbl;
+      b.onclick = () => jump(k);
+      qrow.appendChild(b);
+    }
+    quick.appendChild(qrow); root.appendChild(quick);
+  }
+
   private async renderHome() {
     this.root.innerHTML = "";
     const pid = this.host.projectId()!;
@@ -271,14 +381,18 @@ export class PortalUI {
       alertBand.append(wrap);
     }).catch(() => {});
 
-    // PX executive band — "are we on schedule and on budget?" — loads independently, hides if no data
-    const pxBand = el("div"); root.appendChild(pxBand);
-    void this.renderPxBand(pxBand, pid);
-
     const jump = (key: string, state?: string) => {
       const m = this.mods.find((x) => x.key === key); if (!m) return;
       this.activeKey = key; void this.openModule(m, state ? { state } : {}); this.buildNav();
     };
+
+    // R2 — the developer workspace gets a real-estate command center (deal returns, listings,
+    // comps, capital, leases) instead of the GC's on-schedule/on-budget PX bands.
+    if (this.wsFilter === "developer") { await this.renderDeveloperHome(root, pid, el, jump); return; }
+
+    // PX executive band — "are we on schedule and on budget?" — loads independently, hides if no data
+    const pxBand = el("div"); root.appendChild(pxBand);
+    void this.renderPxBand(pxBand, pid);
 
     try {
       const d = await this.host.api.dashboard(pid);
@@ -291,16 +405,31 @@ export class PortalUI {
       rpt.onclick = () => window.open(this.host.api.url(`/projects/${pid}/report.pdf`), "_blank");
       head.append(rpt); root.appendChild(head);
 
-      // KPI cards — clickable: jump straight to the relevant (filtered) module
+      // KPI cards — clickable: jump straight to the relevant (filtered) module.
+      // R2 — ordered by role: the superintendent lives in the field (punchlist/safety/quality first),
+      // the project manager runs controls (RFIs/COs/overdue first). Everyone sees the same cards —
+      // only the emphasis (order) changes. All data stays reachable via the nav + Show-all.
       const kpis = el("div", "kpi-grid");
-      const cards: [string, number, (() => void) | undefined][] = [
-        ["Ball in court", d.kpis.my_action_items ?? 0, undefined],
-        ["Overdue", d.kpis.overdue ?? 0, undefined],
-        ["Open RFIs", d.kpis.open_rfis ?? 0, () => jump("rfi", "open")],
-        ["Pending COs", d.kpis.pending_change_orders ?? 0, () => jump("cor")],
-        ["Quality", d.kpis.open_quality ?? 0, () => jump("ncr")],
-        ["Safety", d.kpis.open_safety ?? 0, () => jump("incident")],
-      ];
+      const pool: Record<string, [string, number, (() => void) | undefined]> = {
+        ball:   ["Ball in court", d.kpis.my_action_items ?? 0, undefined],
+        overdue:["Overdue", d.kpis.overdue ?? 0, undefined],
+        rfis:   ["Open RFIs", d.kpis.open_rfis ?? 0, () => jump("rfi", "open")],
+        cos:    ["Pending COs", d.kpis.pending_change_orders ?? 0, () => jump("cor")],
+        quality:["Quality", d.kpis.open_quality ?? 0, () => jump("ncr")],
+        safety: ["Safety", d.kpis.open_safety ?? 0, () => jump("incident")],
+        punch:  ["Open punchlist", d.kpis.open_punchlist ?? 0, () => jump("punchlist")],
+      };
+      const persona = document.body.dataset.persona || localStorage.getItem("persona") || "all";
+      const ORDER_BY_PERSONA: Record<string, string[]> = {
+        // field roles — jobsite/today first
+        superintendent: ["ball", "punch", "safety", "quality", "overdue", "rfis"],
+        subcontractor:  ["ball", "punch", "safety", "rfis", "overdue", "quality"],
+        // office/controls roles — RFIs/COs/schedule first
+        project_manager:["ball", "rfis", "cos", "overdue", "quality", "safety"],
+        gc:             ["ball", "rfis", "cos", "overdue", "quality", "safety"],
+      };
+      const order = ORDER_BY_PERSONA[persona] || ["ball", "overdue", "rfis", "cos", "quality", "safety"];
+      const cards = order.map((k) => pool[k]).filter(Boolean);
       for (const [label, val, onClick] of cards) {
         const c = el("div", "kpi" + (onClick ? " kpi-click" : "")) as HTMLElement;
         c.innerHTML = `<div class="kpi-v">${val}</div><div class="kpi-l">${label}</div>`;

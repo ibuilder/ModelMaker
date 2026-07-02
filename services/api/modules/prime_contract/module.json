@@ -2,7 +2,7 @@
   "key": "prime_contract",
   "name": "Prime Contract",
   "section": "Contracts",
-  "icon": "\u25a3",
+  "icon": "▣",
   "ref_prefix": "PC",
   "title_field": "name",
   "pinnable": false,
@@ -116,5 +116,6 @@
         ]
       }
     ]
-  }
+  },
+  "workspace": "construction"
 }

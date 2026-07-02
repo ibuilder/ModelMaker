@@ -7,27 +7,114 @@
   "title_field": "subject",
   "pinnable": true,
   "fields": [
-    {"name": "subject", "label": "Decision", "type": "text", "required": true},
-    {"name": "decision", "label": "Decision made", "type": "textarea"},
-    {"name": "rationale", "label": "Rationale", "type": "textarea"},
-    {"name": "alternatives", "label": "Alternatives considered", "type": "textarea"},
-    {"name": "category", "label": "Category", "type": "select",
-     "options": ["Design", "Scope", "Budget", "Schedule", "Systems", "Site", "Other"]},
-    {"name": "cost_impact", "label": "Cost Impact", "type": "currency"},
-    {"name": "schedule_impact_days", "label": "Schedule Impact (days)", "type": "number"},
-    {"name": "decided_by", "label": "Decided By", "type": "text"},
-    {"name": "alignment", "label": "Stakeholder Alignment", "type": "select",
-     "options": ["Aligned", "Pending", "Disputed"]},
-    {"name": "due_date", "label": "Decide By", "type": "date"}
+    {
+      "name": "subject",
+      "label": "Decision",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "decision",
+      "label": "Decision made",
+      "type": "textarea"
+    },
+    {
+      "name": "rationale",
+      "label": "Rationale",
+      "type": "textarea"
+    },
+    {
+      "name": "alternatives",
+      "label": "Alternatives considered",
+      "type": "textarea"
+    },
+    {
+      "name": "category",
+      "label": "Category",
+      "type": "select",
+      "options": [
+        "Design",
+        "Scope",
+        "Budget",
+        "Schedule",
+        "Systems",
+        "Site",
+        "Other"
+      ]
+    },
+    {
+      "name": "cost_impact",
+      "label": "Cost Impact",
+      "type": "currency"
+    },
+    {
+      "name": "schedule_impact_days",
+      "label": "Schedule Impact (days)",
+      "type": "number"
+    },
+    {
+      "name": "decided_by",
+      "label": "Decided By",
+      "type": "text"
+    },
+    {
+      "name": "alignment",
+      "label": "Stakeholder Alignment",
+      "type": "select",
+      "options": [
+        "Aligned",
+        "Pending",
+        "Disputed"
+      ]
+    },
+    {
+      "name": "due_date",
+      "label": "Decide By",
+      "type": "date"
+    }
   ],
   "workflow": {
     "initial": "open",
-    "states": ["open", "decided", "superseded"],
+    "states": [
+      "open",
+      "decided",
+      "superseded"
+    ],
     "transitions": [
-      {"from": "open", "to": "decided", "action": "decide", "party": ["GC", "OwnersRep", "Architect"]},
-      {"from": "decided", "to": "open", "action": "revisit", "party": ["GC", "OwnersRep"]},
-      {"from": "decided", "to": "superseded", "action": "supersede", "party": ["GC"]}
+      {
+        "from": "open",
+        "to": "decided",
+        "action": "decide",
+        "party": [
+          "GC",
+          "OwnersRep",
+          "Architect"
+        ]
+      },
+      {
+        "from": "decided",
+        "to": "open",
+        "action": "revisit",
+        "party": [
+          "GC",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "decided",
+        "to": "superseded",
+        "action": "supersede",
+        "party": [
+          "GC"
+        ]
+      }
     ]
   },
-  "list_columns": ["category", "alignment", "cost_impact", "due_date"]
+  "list_columns": [
+    "category",
+    "alignment",
+    "cost_impact",
+    "due_date"
+  ],
+  "workspace": "construction"
 }

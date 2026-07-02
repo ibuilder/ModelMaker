@@ -6,18 +6,77 @@
   "ref_prefix": "PER",
   "title_field": "name",
   "fields": [
-    { "name": "name", "label": "Name", "type": "text", "required": true },
-    { "name": "company", "label": "Company", "type": "reference", "module": "company" },
-    { "name": "title", "label": "Title / role", "type": "text" },
-    { "name": "email", "label": "Email", "type": "text" },
-    { "name": "phone", "label": "Phone", "type": "text" },
-    { "name": "discipline", "label": "Discipline", "type": "text" },
-    { "name": "notes", "label": "Notes", "type": "textarea" }
+    {
+      "name": "name",
+      "label": "Name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "company",
+      "label": "Company",
+      "type": "reference",
+      "module": "company"
+    },
+    {
+      "name": "title",
+      "label": "Title / role",
+      "type": "text"
+    },
+    {
+      "name": "email",
+      "label": "Email",
+      "type": "text"
+    },
+    {
+      "name": "phone",
+      "label": "Phone",
+      "type": "text"
+    },
+    {
+      "name": "discipline",
+      "label": "Discipline",
+      "type": "text"
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "textarea"
+    }
   ],
-  "workflow": { "initial": "active", "states": ["active", "inactive"],
+  "workflow": {
+    "initial": "active",
+    "states": [
+      "active",
+      "inactive"
+    ],
     "transitions": [
-      { "from": "active", "to": "inactive", "action": "deactivate", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "inactive", "to": "active", "action": "reactivate", "party": ["GC", "Owner", "OwnersRep"] }
-    ] },
-  "list_columns": ["title", "company", "email"]
+      {
+        "from": "active",
+        "to": "inactive",
+        "action": "deactivate",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "inactive",
+        "to": "active",
+        "action": "reactivate",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      }
+    ]
+  },
+  "list_columns": [
+    "title",
+    "company",
+    "email"
+  ],
+  "workspace": "construction"
 }

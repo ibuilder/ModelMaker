@@ -2,7 +2,7 @@
   "key": "equipment_log",
   "name": "Equipment Log",
   "section": "Field",
-  "icon": "\u2699",
+  "icon": "⚙",
   "ref_prefix": "EQ",
   "title_field": "equipment",
   "pinnable": false,
@@ -52,5 +52,6 @@
         ]
       }
     ]
-  }
+  },
+  "workspace": "construction"
 }

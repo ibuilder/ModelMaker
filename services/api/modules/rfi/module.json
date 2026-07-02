@@ -190,5 +190,6 @@
     "due_date",
     "cost_impact"
   ],
-  "revisable": true
+  "revisable": true,
+  "workspace": "construction"
 }

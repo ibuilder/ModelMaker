@@ -114,5 +114,6 @@
     "bidder",
     "amount",
     "status"
-  ]
+  ],
+  "workspace": "construction"
 }

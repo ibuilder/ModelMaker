@@ -86,5 +86,6 @@
   "list_columns": [
     "discipline",
     "priority"
-  ]
+  ],
+  "workspace": "construction"
 }

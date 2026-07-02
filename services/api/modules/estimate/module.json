@@ -56,5 +56,6 @@
   "list_columns": [
     "amount",
     "date"
-  ]
+  ],
+  "workspace": "construction"
 }

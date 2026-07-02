@@ -2,7 +2,7 @@
   "key": "permit",
   "name": "Permitting",
   "section": "Engineering",
-  "icon": "\u00e2\u2013\u00a3",
+  "icon": "â–£",
   "ref_prefix": "PMT",
   "title_field": "name",
   "pinnable": false,
@@ -115,5 +115,6 @@
     "permit_type",
     "status",
     "expires"
-  ]
+  ],
+  "workspace": "construction"
 }

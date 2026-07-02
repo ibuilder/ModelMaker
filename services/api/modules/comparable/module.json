@@ -1,25 +1,204 @@
 {
   "key": "comparable",
   "name": "Comparables",
-  "section": "Finance",
+  "section": "Market & Sales",
   "icon": "≈",
   "ref_prefix": "CMP",
   "title_field": "address",
   "fields": [
-    { "name": "address", "label": "Address / name", "type": "text", "required": true },
-    { "name": "asset_type", "label": "Asset type", "type": "select",
-      "options": ["Multifamily", "Office", "Retail", "Industrial", "Mixed-use", "Specialty"] },
-    { "name": "price", "label": "Sale price", "type": "currency" },
-    { "name": "price_psf", "label": "$/SF", "type": "number" },
-    { "name": "cap_rate", "label": "Cap rate %", "type": "number" },
-    { "name": "rent_psf", "label": "Rent $/SF/yr", "type": "number" },
-    { "name": "sale_date", "label": "Sale date", "type": "date" },
-    { "name": "notes", "label": "Notes", "type": "textarea" }
+    {
+      "name": "address",
+      "label": "Address / name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "comp_type",
+      "label": "Comp type",
+      "type": "select",
+      "options": [
+        "Sale",
+        "Rent",
+        "Land"
+      ]
+    },
+    {
+      "name": "asset_type",
+      "label": "Asset type",
+      "type": "select",
+      "options": [
+        "Multifamily",
+        "Office",
+        "Retail",
+        "Industrial",
+        "Mixed-use",
+        "Hospitality",
+        "Specialty",
+        "Land"
+      ]
+    },
+    {
+      "name": "price",
+      "label": "Sale price",
+      "type": "currency"
+    },
+    {
+      "name": "price_psf",
+      "label": "$/SF",
+      "type": "number"
+    },
+    {
+      "name": "price_per_unit",
+      "label": "$/unit",
+      "type": "number"
+    },
+    {
+      "name": "cap_rate",
+      "label": "Cap rate %",
+      "type": "number"
+    },
+    {
+      "name": "noi",
+      "label": "NOI (annual)",
+      "type": "currency"
+    },
+    {
+      "name": "rent_psf",
+      "label": "Rent $/SF/yr",
+      "type": "number"
+    },
+    {
+      "name": "gba",
+      "label": "Gross building area (SF)",
+      "type": "number"
+    },
+    {
+      "name": "units",
+      "label": "Units",
+      "type": "number"
+    },
+    {
+      "name": "land_area",
+      "label": "Land area (SF)",
+      "type": "number"
+    },
+    {
+      "name": "year_built",
+      "label": "Year built",
+      "type": "number"
+    },
+    {
+      "name": "occupancy",
+      "label": "Occupancy %",
+      "type": "number"
+    },
+    {
+      "name": "condition",
+      "label": "Condition",
+      "type": "select",
+      "options": [
+        "Excellent",
+        "Good",
+        "Average",
+        "Fair",
+        "Poor"
+      ]
+    },
+    {
+      "name": "sale_date",
+      "label": "Sale / effective date",
+      "type": "date"
+    },
+    {
+      "name": "distance_mi",
+      "label": "Distance to subject (mi)",
+      "type": "number"
+    },
+    {
+      "name": "net_adjustment",
+      "label": "Net adjustment %",
+      "type": "number"
+    },
+    {
+      "name": "adjusted_price",
+      "label": "Adjusted price / indicator",
+      "type": "currency"
+    },
+    {
+      "name": "source",
+      "label": "Source",
+      "type": "select",
+      "options": [
+        "Broker",
+        "CoStar",
+        "MLS",
+        "Public record",
+        "Appraisal",
+        "Owner",
+        "Other"
+      ]
+    },
+    {
+      "name": "notes",
+      "label": "Notes / adjustments narrative",
+      "type": "textarea"
+    }
   ],
   "workflow": {
     "initial": "recorded",
-    "states": ["recorded"],
-    "transitions": []
+    "states": [
+      "recorded",
+      "verified",
+      "excluded"
+    ],
+    "transitions": [
+      {
+        "from": "recorded",
+        "to": "verified",
+        "action": "verify",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "recorded",
+        "to": "excluded",
+        "action": "exclude",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "verified",
+        "to": "excluded",
+        "action": "exclude",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "excluded",
+        "to": "recorded",
+        "action": "reinstate",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      }
+    ]
   },
-  "list_columns": ["asset_type", "price_psf", "cap_rate"]
+  "list_columns": [
+    "comp_type",
+    "asset_type",
+    "price_psf",
+    "cap_rate"
+  ],
+  "workspace": "developer"
 }

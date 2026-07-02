@@ -6,20 +6,80 @@
   "ref_prefix": "WP",
   "title_field": "task",
   "fields": [
-    { "name": "task", "label": "Commitment", "type": "text", "required": true },
-    { "name": "week", "label": "Week of", "type": "date" },
-    { "name": "trade", "label": "Trade", "type": "text" },
-    { "name": "status", "label": "Status", "type": "select", "options": ["Planned", "Complete", "Missed"] },
-    { "name": "variance_reason", "label": "Reason (if missed)", "type": "select",
-      "options": ["Prerequisite work", "Materials", "Labor", "Design / RFI", "Weather", "Equipment", "Coordination", "Other"] }
+    {
+      "name": "task",
+      "label": "Commitment",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "week",
+      "label": "Week of",
+      "type": "date"
+    },
+    {
+      "name": "trade",
+      "label": "Trade",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "select",
+      "options": [
+        "Planned",
+        "Complete",
+        "Missed"
+      ]
+    },
+    {
+      "name": "variance_reason",
+      "label": "Reason (if missed)",
+      "type": "select",
+      "options": [
+        "Prerequisite work",
+        "Materials",
+        "Labor",
+        "Design / RFI",
+        "Weather",
+        "Equipment",
+        "Coordination",
+        "Other"
+      ]
+    }
   ],
   "workflow": {
     "initial": "planned",
-    "states": ["planned", "complete", "missed"],
+    "states": [
+      "planned",
+      "complete",
+      "missed"
+    ],
     "transitions": [
-      { "from": "planned", "to": "complete", "action": "complete", "party": ["GC", "Subcontractor"] },
-      { "from": "planned", "to": "missed", "action": "miss", "party": ["GC", "Subcontractor"] }
+      {
+        "from": "planned",
+        "to": "complete",
+        "action": "complete",
+        "party": [
+          "GC",
+          "Subcontractor"
+        ]
+      },
+      {
+        "from": "planned",
+        "to": "missed",
+        "action": "miss",
+        "party": [
+          "GC",
+          "Subcontractor"
+        ]
+      }
     ]
   },
-  "list_columns": ["trade", "status", "week"]
+  "list_columns": [
+    "trade",
+    "status",
+    "week"
+  ],
+  "workspace": "construction"
 }

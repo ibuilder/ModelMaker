@@ -107,5 +107,6 @@
   "list_columns": [
     "meeting_type",
     "date"
-  ]
+  ],
+  "workspace": "construction"
 }

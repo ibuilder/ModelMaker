@@ -54,5 +54,6 @@
   "list_columns": [
     "task",
     "crew_size"
-  ]
+  ],
+  "workspace": "construction"
 }

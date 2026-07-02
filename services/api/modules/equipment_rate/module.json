@@ -50,5 +50,6 @@
   "list_columns": [
     "unit",
     "rate"
-  ]
+  ],
+  "workspace": "construction"
 }

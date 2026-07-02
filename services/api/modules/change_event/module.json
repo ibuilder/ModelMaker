@@ -127,5 +127,6 @@
     "rom",
     "trades"
   ],
-  "revisable": true
+  "revisable": true,
+  "workspace": "construction"
 }

@@ -544,7 +544,8 @@ railEl.appendChild(railExpand);
 const WORKSPACES: { key: string; label: string }[] = [
   { key: "model", label: "Model" }, { key: "drawings", label: "Drawings" },
   { key: "studio", label: "Studio" },
-  { key: "construction", label: "Construction" }, { key: "finance", label: "Finance" },
+  { key: "construction", label: "Construction" },
+  { key: "developer", label: "Developer" }, { key: "finance", label: "Finance" },
 ];
 let studioUI: import("./studio/nodeEditor").NodeEditor | null = null;
 async function openStudioTab() {
@@ -566,6 +567,7 @@ function setWorkspace(key: string) {
   if (key === "drawings") openDrawingsTab();
   if (key === "studio") void openStudioTab();
   if (key === "construction") openPortalTab();
+  if (key === "developer") openDeveloperTab();
   if (key === "finance") openProformaTab();
   if (key === "model") void ensureViewer().then((v) => v.onModelShown());   // lazy-load the 3D app
   localStorage.setItem("workspace", key);
@@ -599,7 +601,7 @@ document.querySelectorAll<HTMLButtonElement>(".fintab").forEach((t) => {
 interface PersonaCfg { ws: string[] | null; rail: string[] | null; home: string; }
 const PERSONAS: Record<string, PersonaCfg> = {
   all:           { ws: null, rail: null, home: "model" },
-  developer:     { ws: ["finance", "model", "studio", "drawings", "construction"], rail: ["issues", "tools", "tree"], home: "finance" },
+  developer:     { ws: ["developer", "finance", "model", "studio", "drawings", "construction"], rail: ["issues", "tools", "tree"], home: "developer" },
   gc:            { ws: ["construction", "model", "drawings", "finance"], rail: ["tree", "layers", "issues", "tools"], home: "construction" },
   // R1 — two GC flavors: the super lives in the field (model + construction), the PM in the office
   // (construction + finance). Same construction home; the portal nav opens each role's sections first.
@@ -716,17 +718,29 @@ buildStatusBar();
 applyTheme();
 
 // ---- portal / proforma (light — no 3D) --------------------------------------
-const portal = new PortalUI($("panel-portal"), {
+// Two portals share one host config: the GC build portal (construction modules) and the developer
+// portal (real-estate registers). Same config-driven engine, different workspace filter.
+const portalHost = {
   api,
   projectId: () => projectId,
   anchorPoint: () => viewerApp?.anchorPoint() ?? null,
   selectedGuid: () => viewerApp?.selectedGuidValue() ?? null,
-  onSelectGuids: (guids) => { if (guids[0]) { setWorkspace("model"); withViewer((v) => void v.selectByGuid(guids[0], true)); } },
+  onSelectGuids: (guids: string[]) => { if (guids[0]) { setWorkspace("model"); withViewer((v) => void v.selectByGuid(guids[0], true)); } },
   onPinsChanged: () => { if (viewerApp) void viewerApp.reloadModelPins(); },
   setStatus,
-});
+};
+const portal = new PortalUI($("panel-portal"), portalHost);
+portal.setWorkspace("construction");
 let portalReady = false;
 function openPortalTab() { if (portalReady) return; portalReady = true; void portal.init(); }
+
+const developerPortal = new PortalUI($("panel-portal-dev"), portalHost);
+developerPortal.setWorkspace("developer");
+let developerReady = false;
+function openDeveloperTab() { if (developerReady) return; developerReady = true; void developerPortal.init(); }
+
+// Developer portal's "Underwriting" shortcut → the proforma workspace
+window.addEventListener("aec:goto-workspace", (e) => setWorkspace((e as CustomEvent).detail as string));
 
 const proforma = new ProformaUI($("panel-proforma"), api, setStatus, () => projectId);
 let proformaReady = false;

@@ -133,5 +133,6 @@
     "start",
     "finish",
     "percent"
-  ]
+  ],
+  "workspace": "construction"
 }

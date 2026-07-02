@@ -76,5 +76,6 @@
   "list_columns": [
     "waiver_type",
     "amount"
-  ]
+  ],
+  "workspace": "construction"
 }

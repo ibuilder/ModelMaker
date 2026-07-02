@@ -2,7 +2,7 @@
   "key": "cor",
   "name": "Change Order Requests",
   "section": "Change Management",
-  "icon": "\u271a",
+  "icon": "✚",
   "ref_prefix": "COR",
   "title_field": "subject",
   "pinnable": true,
@@ -153,5 +153,6 @@
       }
     ]
   },
-  "revisable": true
+  "revisable": true,
+  "workspace": "construction"
 }

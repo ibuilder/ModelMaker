@@ -64,5 +64,6 @@
   "list_columns": [
     "savings",
     "status"
-  ]
+  ],
+  "workspace": "construction"
 }

@@ -67,19 +67,25 @@
         "from": "submitted",
         "to": "approved",
         "action": "approve",
-        "party": ["GC"]
+        "party": [
+          "GC"
+        ]
       },
       {
         "from": "submitted",
         "to": "rejected",
         "action": "reject",
-        "party": ["GC"]
+        "party": [
+          "GC"
+        ]
       },
       {
         "from": "approved",
         "to": "paid",
         "action": "pay",
-        "party": ["GC"]
+        "party": [
+          "GC"
+        ]
       }
     ]
   },
@@ -87,5 +93,6 @@
     "subcontract",
     "amount",
     "invoice_date"
-  ]
+  ],
+  "workspace": "construction"
 }

@@ -2,7 +2,7 @@
   "key": "sov",
   "name": "Schedule of Values",
   "section": "Cost",
-  "icon": "\u25a6",
+  "icon": "▦",
   "ref_prefix": "SOV",
   "title_field": "description",
   "pinnable": false,
@@ -80,5 +80,6 @@
         ]
       }
     ]
-  }
+  },
+  "workspace": "construction"
 }

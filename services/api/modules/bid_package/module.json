@@ -97,5 +97,6 @@
   "list_columns": [
     "trade",
     "due_date"
-  ]
+  ],
+  "workspace": "construction"
 }

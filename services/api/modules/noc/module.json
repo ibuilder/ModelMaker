@@ -105,5 +105,6 @@
   "list_columns": [
     "cost_estimate",
     "schedule_days"
-  ]
+  ],
+  "workspace": "construction"
 }

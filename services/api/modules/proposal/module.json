@@ -94,5 +94,6 @@
   "list_columns": [
     "amount",
     "schedule_days"
-  ]
+  ],
+  "workspace": "construction"
 }

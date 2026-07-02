@@ -2,7 +2,7 @@
   "key": "inspection",
   "name": "Inspections",
   "section": "Quality",
-  "icon": "\u00e2\u0153\u201c",
+  "icon": "âœ“",
   "ref_prefix": "INS",
   "title_field": "subject",
   "pinnable": true,
@@ -129,5 +129,6 @@
     "inspection_type",
     "result",
     "date"
-  ]
+  ],
+  "workspace": "construction"
 }

@@ -65,5 +65,6 @@
   "list_columns": [
     "trade",
     "headcount"
-  ]
+  ],
+  "workspace": "construction"
 }

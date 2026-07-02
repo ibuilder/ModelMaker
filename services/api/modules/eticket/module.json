@@ -2,7 +2,7 @@
   "key": "eticket",
   "name": "eTickets (T&M)",
   "section": "Change Management",
-  "icon": "\u23f1",
+  "icon": "⏱",
   "ref_prefix": "TM",
   "title_field": "subject",
   "pinnable": true,
@@ -76,5 +76,6 @@
         ]
       }
     ]
-  }
+  },
+  "workspace": "construction"
 }

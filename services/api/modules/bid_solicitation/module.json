@@ -61,5 +61,6 @@
   "list_columns": [
     "trade",
     "status"
-  ]
+  ],
+  "workspace": "construction"
 }

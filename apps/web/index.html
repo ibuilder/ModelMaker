@@ -25,16 +25,25 @@
         <input id="ref-input" type="file" accept=".obj,.stl,.ply,.gltf,.glb,.pcd,.xyz,.las,.laz,.e57,.geojson,.json,.tif,.tiff" hidden />
         <div id="workspaces" role="tablist" aria-label="Workspace"></div>
         <span class="grow"></span>
-        <label id="persona-wrap" title="Show tools for your role">
-          <select id="persona" aria-label="Role — show tools for your role">
-            <option value="all">All roles</option>
-            <option value="developer">Developer</option>
-            <option value="gc">General Contractor</option>
-            <option value="superintendent">GC — Superintendent</option>
-            <option value="project_manager">GC — Project Manager</option>
-            <option value="architect">Architect</option>
-            <option value="engineer">Engineer</option>
-            <option value="subcontractor">Subcontractor</option>
+        <label id="persona-wrap" title="Gear the workspace to your role — every screen leads with what your job needs (all data stays reachable)">
+          <span id="persona-lead" aria-hidden="true">👤 Viewing as</span>
+          <select id="persona" aria-label="Role — gear the workspace to your role">
+            <optgroup label="Real estate">
+              <option value="developer">Developer</option>
+            </optgroup>
+            <optgroup label="Construction — office">
+              <option value="gc">General Contractor</option>
+              <option value="project_manager">Project Manager</option>
+            </optgroup>
+            <optgroup label="Construction — field">
+              <option value="superintendent">Superintendent</option>
+              <option value="subcontractor">Subcontractor</option>
+            </optgroup>
+            <optgroup label="Design">
+              <option value="architect">Architect</option>
+              <option value="engineer">Engineer</option>
+            </optgroup>
+            <option value="all">All roles (everything)</option>
           </select>
         </label>
         <span id="status" role="status" aria-live="polite">ready</span>
@@ -70,6 +79,11 @@
         <!-- CONSTRUCTION workspace: full-width GC portal -->
         <section id="ws-construction" class="workspace">
           <div id="panel-portal" class="fullpanel"></div>
+        </section>
+
+        <!-- DEVELOPER workspace: real-estate portal (feasibility / market / capital / operations) -->
+        <section id="ws-developer" class="workspace">
+          <div id="panel-portal-dev" class="fullpanel"></div>
         </section>
 
         <!-- STUDIO workspace: visual computational node graph (Dynamo/Hypar-style) -->

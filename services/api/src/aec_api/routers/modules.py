@@ -45,6 +45,7 @@ def list_modules():
     """Module catalog (drives dynamic UI). Returns each module.json."""
     return [
         {"key": m["key"], "name": m["name"], "section": m.get("section"), "revisable": m.get("revisable", False),
+         "workspace": m.get("workspace", "construction"),
          "icon": m.get("icon"), "pinnable": m.get("pinnable", False),
          "title_field": m.get("title_field"), "ref_prefix": m.get("ref_prefix"),
          "fields": m.get("fields", []), "workflow": m.get("workflow", {}),

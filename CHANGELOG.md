@@ -4,6 +4,26 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.24 — Construction ↔ Developer split + role-geared dashboards
+- **Workspace split.** The oversized single "Construction" portal is now two role-scoped workspaces
+  driven by a new `workspace` tag on every `module.json`: **Construction** (the GC build lifecycle —
+  Engineering, Preconstruction, Field, Cost, Change Management, Quality, Contracts, Safety, Closeout,
+  BIM, Schedule, Resources, Sustainability) and **Developer** (real estate — **Feasibility** `zoning`,
+  **Market & Sales** `comparable`/`listing`, **Capital** `investor`, **Operations** `lease`, plus the
+  proforma via a one-click **Underwriting →**). A **Show all modules** toggle keeps every register one
+  click away for every role — everyone still has access to all data.
+- **Role-geared dashboards.** The Developer workspace opens on a real-estate command center (deal
+  returns · listings · comps · capital · leases · feasibility) instead of the GC KPIs. The GC
+  dashboard now orders its KPI cards by role: the **superintendent** leads with the field
+  (punchlist/safety/quality), the **project manager** with controls (RFIs/COs/overdue). Same cards,
+  role-appropriate emphasis.
+- **Top header.** The role picker is now labeled **👤 Viewing as** and grouped by function
+  (Real estate · Construction office · Construction field · Design), set off with a divider.
+- **Deeper registers.** `comparable` rebuilt into a full appraisal-grade sales/rent comparison grid
+  (comp type, $/unit, NOI, GBA, units, land area, year built, occupancy, condition, distance to
+  subject, net adjustment, adjusted price, source + a recorded→verified→excluded workflow);
+  `investor` gains ownership %, preferred return %, and commit date. Backend 74/74 + web typecheck green.
+
 ## v0.3.23 — Design tokens: theme-aware status colors
 - Extracted the hardcoded traffic-light status colors (green/amber/red — 43 occurrences across the
   portal dashboard + proforma) into CSS variables (`--status-good/warn/crit`, `--err`) defined for

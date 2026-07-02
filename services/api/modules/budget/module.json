@@ -2,7 +2,7 @@
   "key": "budget",
   "name": "Budget & Forecast",
   "section": "Cost",
-  "icon": "\u00ce\u00a3",
+  "icon": "Î£",
   "ref_prefix": "BUD",
   "title_field": "cost_code",
   "pinnable": false,
@@ -64,5 +64,6 @@
   "list_columns": [
     "original",
     "revised"
-  ]
+  ],
+  "workspace": "construction"
 }

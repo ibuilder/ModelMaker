@@ -68,5 +68,6 @@
   "list_columns": [
     "amount",
     "status"
-  ]
+  ],
+  "workspace": "construction"
 }

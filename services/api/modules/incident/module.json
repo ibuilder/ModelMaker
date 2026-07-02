@@ -2,7 +2,7 @@
   "key": "incident",
   "name": "Incidents",
   "section": "Safety",
-  "icon": "\u00e2\u0161\u2018",
+  "icon": "âš‘",
   "ref_prefix": "INC",
   "title_field": "subject",
   "pinnable": true,
@@ -220,5 +220,6 @@
     "severity",
     "osha_recordable",
     "date"
-  ]
+  ],
+  "workspace": "construction"
 }

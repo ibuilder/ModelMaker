@@ -18,7 +18,15 @@
       "label": "Design Milestone",
       "type": "select",
       "required": true,
-      "options": ["Concept", "SD", "DD", "CD", "IFC", "GMP", "Award"]
+      "options": [
+        "Concept",
+        "SD",
+        "DD",
+        "CD",
+        "IFC",
+        "GMP",
+        "Award"
+      ]
     },
     {
       "name": "total",
@@ -40,13 +48,21 @@
       "name": "basis",
       "label": "Basis",
       "type": "select",
-      "options": ["ROM", "Budget", "Firm"]
+      "options": [
+        "ROM",
+        "Budget",
+        "Firm"
+      ]
     },
     {
       "name": "source",
       "label": "Source",
       "type": "select",
-      "options": ["Model takeoff", "Manual", "Imported"]
+      "options": [
+        "Model takeoff",
+        "Manual",
+        "Imported"
+      ]
     },
     {
       "name": "notes",
@@ -56,11 +72,35 @@
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "issued", "superseded"],
+    "states": [
+      "draft",
+      "issued",
+      "superseded"
+    ],
     "transitions": [
-      {"from": "draft", "to": "issued", "action": "issue", "party": ["GC"]},
-      {"from": "issued", "to": "superseded", "action": "supersede", "party": ["GC"]}
+      {
+        "from": "draft",
+        "to": "issued",
+        "action": "issue",
+        "party": [
+          "GC"
+        ]
+      },
+      {
+        "from": "issued",
+        "to": "superseded",
+        "action": "supersede",
+        "party": [
+          "GC"
+        ]
+      }
     ]
   },
-  "list_columns": ["milestone", "total", "basis", "estimate_date"]
+  "list_columns": [
+    "milestone",
+    "total",
+    "basis",
+    "estimate_date"
+  ],
+  "workspace": "construction"
 }

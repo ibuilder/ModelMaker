@@ -65,14 +65,20 @@
       "name": "additional_insured",
       "label": "Additional Insured?",
       "type": "select",
-      "options": ["No", "Yes"],
+      "options": [
+        "No",
+        "Yes"
+      ],
       "fieldset": "Endorsements"
     },
     {
       "name": "waiver_of_subrogation",
       "label": "Waiver of Subrogation?",
       "type": "select",
-      "options": ["No", "Yes"],
+      "options": [
+        "No",
+        "Yes"
+      ],
       "fieldset": "Endorsements"
     }
   ],
@@ -106,5 +112,6 @@
   "list_columns": [
     "carrier",
     "expires"
-  ]
+  ],
+  "workspace": "construction"
 }

@@ -49,5 +49,6 @@
   "list_columns": [
     "building",
     "level"
-  ]
+  ],
+  "workspace": "construction"
 }

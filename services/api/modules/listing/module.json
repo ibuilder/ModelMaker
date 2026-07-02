@@ -1,48 +1,241 @@
 {
   "key": "listing",
   "name": "Listings",
-  "section": "Finance",
+  "section": "Market & Sales",
   "icon": "⌂",
   "ref_prefix": "LST",
   "title_field": "address",
   "fields": [
-    { "name": "address", "label": "Address / project name", "type": "text", "required": true },
-    { "name": "asset_type", "label": "Asset type", "type": "select",
-      "options": ["Residential", "Multifamily", "Office", "Retail", "Industrial", "Mixed-use", "Land", "Specialty"] },
-    { "name": "list_price", "label": "List price", "type": "currency" },
-    { "name": "list_date", "label": "List date", "type": "date" },
-    { "name": "city", "label": "City", "type": "text" },
-    { "name": "state", "label": "State", "type": "text" },
-    { "name": "zip_code", "label": "ZIP", "type": "text" },
-    { "name": "beds", "label": "Bedrooms", "type": "number" },
-    { "name": "baths", "label": "Bathrooms", "type": "number" },
-    { "name": "sqft", "label": "Living / rentable SF", "type": "number" },
-    { "name": "lot_sqft", "label": "Lot SF", "type": "number" },
-    { "name": "year_built", "label": "Year built / completion", "type": "number" },
-    { "name": "num_units", "label": "Units", "type": "number" },
-    { "name": "unit_mix", "label": "Unit mix", "type": "textarea" },
-    { "name": "noi", "label": "Stabilized NOI", "type": "currency" },
-    { "name": "cap_rate", "label": "Cap rate %", "type": "number" },
-    { "name": "price_psf", "label": "$/SF", "type": "number" },
-    { "name": "public_description", "label": "Public description", "type": "textarea" },
-    { "name": "virtual_tour_url", "label": "Virtual tour / 3D link", "type": "text" },
-    { "name": "highlights", "label": "Feature highlights", "type": "textarea" }
+    {
+      "name": "address",
+      "label": "Address / project name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "asset_type",
+      "label": "Asset type",
+      "type": "select",
+      "options": [
+        "Residential",
+        "Multifamily",
+        "Office",
+        "Retail",
+        "Industrial",
+        "Mixed-use",
+        "Land",
+        "Specialty"
+      ]
+    },
+    {
+      "name": "list_price",
+      "label": "List price",
+      "type": "currency"
+    },
+    {
+      "name": "list_date",
+      "label": "List date",
+      "type": "date"
+    },
+    {
+      "name": "city",
+      "label": "City",
+      "type": "text"
+    },
+    {
+      "name": "state",
+      "label": "State",
+      "type": "text"
+    },
+    {
+      "name": "zip_code",
+      "label": "ZIP",
+      "type": "text"
+    },
+    {
+      "name": "beds",
+      "label": "Bedrooms",
+      "type": "number"
+    },
+    {
+      "name": "baths",
+      "label": "Bathrooms",
+      "type": "number"
+    },
+    {
+      "name": "sqft",
+      "label": "Living / rentable SF",
+      "type": "number"
+    },
+    {
+      "name": "lot_sqft",
+      "label": "Lot SF",
+      "type": "number"
+    },
+    {
+      "name": "year_built",
+      "label": "Year built / completion",
+      "type": "number"
+    },
+    {
+      "name": "num_units",
+      "label": "Units",
+      "type": "number"
+    },
+    {
+      "name": "unit_mix",
+      "label": "Unit mix",
+      "type": "textarea"
+    },
+    {
+      "name": "noi",
+      "label": "Stabilized NOI",
+      "type": "currency"
+    },
+    {
+      "name": "cap_rate",
+      "label": "Cap rate %",
+      "type": "number"
+    },
+    {
+      "name": "price_psf",
+      "label": "$/SF",
+      "type": "number"
+    },
+    {
+      "name": "public_description",
+      "label": "Public description",
+      "type": "textarea"
+    },
+    {
+      "name": "virtual_tour_url",
+      "label": "Virtual tour / 3D link",
+      "type": "text"
+    },
+    {
+      "name": "highlights",
+      "label": "Feature highlights",
+      "type": "textarea"
+    }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "coming_soon", "active", "under_contract", "sold", "leased", "withdrawn"],
+    "states": [
+      "draft",
+      "coming_soon",
+      "active",
+      "under_contract",
+      "sold",
+      "leased",
+      "withdrawn"
+    ],
     "transitions": [
-      { "from": "draft", "to": "coming_soon", "action": "tease", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "draft", "to": "active", "action": "list", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "coming_soon", "to": "active", "action": "list", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "active", "to": "under_contract", "action": "go_under_contract", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "active", "to": "leased", "action": "lease", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "active", "to": "withdrawn", "action": "withdraw", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "under_contract", "to": "sold", "action": "close_sale", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "under_contract", "to": "leased", "action": "close_lease", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "under_contract", "to": "active", "action": "reactivate", "party": ["GC", "Owner", "OwnersRep"] },
-      { "from": "withdrawn", "to": "active", "action": "relist", "party": ["GC", "Owner", "OwnersRep"] }
+      {
+        "from": "draft",
+        "to": "coming_soon",
+        "action": "tease",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "draft",
+        "to": "active",
+        "action": "list",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "coming_soon",
+        "to": "active",
+        "action": "list",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "active",
+        "to": "under_contract",
+        "action": "go_under_contract",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "active",
+        "to": "leased",
+        "action": "lease",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "active",
+        "to": "withdrawn",
+        "action": "withdraw",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "under_contract",
+        "to": "sold",
+        "action": "close_sale",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "under_contract",
+        "to": "leased",
+        "action": "close_lease",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "under_contract",
+        "to": "active",
+        "action": "reactivate",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      },
+      {
+        "from": "withdrawn",
+        "to": "active",
+        "action": "relist",
+        "party": [
+          "GC",
+          "Owner",
+          "OwnersRep"
+        ]
+      }
     ]
   },
-  "list_columns": ["asset_type", "list_price", "cap_rate"]
+  "list_columns": [
+    "asset_type",
+    "list_price",
+    "cap_rate"
+  ],
+  "workspace": "developer"
 }

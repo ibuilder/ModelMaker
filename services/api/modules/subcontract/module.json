@@ -2,7 +2,7 @@
   "key": "subcontract",
   "name": "Subcontracts",
   "section": "Contracts",
-  "icon": "\u25a4",
+  "icon": "▤",
   "ref_prefix": "SC",
   "title_field": "vendor",
   "pinnable": false,
@@ -106,5 +106,6 @@
         ]
       }
     ]
-  }
+  },
+  "workspace": "construction"
 }

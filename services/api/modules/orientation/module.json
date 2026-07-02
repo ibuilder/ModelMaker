@@ -54,5 +54,6 @@
   "list_columns": [
     "company",
     "date"
-  ]
+  ],
+  "workspace": "construction"
 }

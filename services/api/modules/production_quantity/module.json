@@ -2,7 +2,7 @@
   "key": "production_quantity",
   "name": "Production Quantities",
   "section": "Field",
-  "icon": "\u03a3",
+  "icon": "Σ",
   "ref_prefix": "PQTY",
   "title_field": "description",
   "pinnable": false,
@@ -52,5 +52,6 @@
         ]
       }
     ]
-  }
+  },
+  "workspace": "construction"
 }

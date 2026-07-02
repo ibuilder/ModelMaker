@@ -90,5 +90,6 @@
     "doc_type",
     "revision",
     "status"
-  ]
+  ],
+  "workspace": "construction"
 }

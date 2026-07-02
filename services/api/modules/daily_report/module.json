@@ -2,7 +2,7 @@
   "key": "daily_report",
   "name": "Daily Reports",
   "section": "Field",
-  "icon": "\u00e2\u02dc\u00bc",
+  "icon": "â˜¼",
   "ref_prefix": "DR",
   "title_field": "report_date",
   "pinnable": false,
@@ -33,7 +33,7 @@
     },
     {
       "name": "temp_f",
-      "label": "Temp (\u00c2\u00b0F)",
+      "label": "Temp (Â°F)",
       "type": "number",
       "fieldset": "Conditions"
     },
@@ -144,5 +144,6 @@
         ]
       }
     ]
-  }
+  },
+  "workspace": "construction"
 }

@@ -1,40 +1,159 @@
 {
   "key": "zoning",
   "name": "Zoning & Site",
-  "section": "Preconstruction",
+  "section": "Feasibility",
   "icon": "▟",
   "ref_prefix": "ZON",
   "title_field": "site",
   "pinnable": true,
   "fields": [
-    {"name": "site", "label": "Site / parcel name", "type": "text", "required": true},
-    {"name": "jurisdiction", "label": "Jurisdiction / zone", "type": "text"},
-    {"name": "use_type", "label": "Use", "type": "select", "options": ["Residential", "Commercial", "Mixed-Use", "Industrial", "Institutional"]},
-    {"name": "site_area_sf", "label": "Site area (SF)", "type": "number", "required": true},
-    {"name": "far", "label": "Allowed FAR (floor-area ratio)", "type": "number"},
-    {"name": "height_limit_ft", "label": "Height limit (ft)", "type": "number"},
-    {"name": "floor_to_floor_ft", "label": "Floor-to-floor (ft)", "type": "number"},
-    {"name": "max_floors", "label": "Max floors (explicit cap)", "type": "number"},
-    {"name": "lot_coverage_pct", "label": "Max lot coverage (%)", "type": "number"},
-    {"name": "lot_width_ft", "label": "Lot width (ft)", "type": "number"},
-    {"name": "lot_depth_ft", "label": "Lot depth (ft)", "type": "number"},
-    {"name": "front_setback_ft", "label": "Front setback (ft)", "type": "number"},
-    {"name": "side_setback_ft", "label": "Side setback (ft)", "type": "number"},
-    {"name": "rear_setback_ft", "label": "Rear setback (ft)", "type": "number"},
-    {"name": "open_space_pct", "label": "Required open space (%)", "type": "number"},
-    {"name": "parking_ratio", "label": "Parking ratio (stalls/unit)", "type": "number"},
-    {"name": "avg_unit_sf", "label": "Avg unit size (SF)", "type": "number"},
-    {"name": "efficiency_pct", "label": "Net-to-gross efficiency (%)", "type": "number"},
-    {"name": "notes", "label": "Notes", "type": "textarea"}
+    {
+      "name": "site",
+      "label": "Site / parcel name",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "jurisdiction",
+      "label": "Jurisdiction / zone",
+      "type": "text"
+    },
+    {
+      "name": "use_type",
+      "label": "Use",
+      "type": "select",
+      "options": [
+        "Residential",
+        "Commercial",
+        "Mixed-Use",
+        "Industrial",
+        "Institutional"
+      ]
+    },
+    {
+      "name": "site_area_sf",
+      "label": "Site area (SF)",
+      "type": "number",
+      "required": true
+    },
+    {
+      "name": "far",
+      "label": "Allowed FAR (floor-area ratio)",
+      "type": "number"
+    },
+    {
+      "name": "height_limit_ft",
+      "label": "Height limit (ft)",
+      "type": "number"
+    },
+    {
+      "name": "floor_to_floor_ft",
+      "label": "Floor-to-floor (ft)",
+      "type": "number"
+    },
+    {
+      "name": "max_floors",
+      "label": "Max floors (explicit cap)",
+      "type": "number"
+    },
+    {
+      "name": "lot_coverage_pct",
+      "label": "Max lot coverage (%)",
+      "type": "number"
+    },
+    {
+      "name": "lot_width_ft",
+      "label": "Lot width (ft)",
+      "type": "number"
+    },
+    {
+      "name": "lot_depth_ft",
+      "label": "Lot depth (ft)",
+      "type": "number"
+    },
+    {
+      "name": "front_setback_ft",
+      "label": "Front setback (ft)",
+      "type": "number"
+    },
+    {
+      "name": "side_setback_ft",
+      "label": "Side setback (ft)",
+      "type": "number"
+    },
+    {
+      "name": "rear_setback_ft",
+      "label": "Rear setback (ft)",
+      "type": "number"
+    },
+    {
+      "name": "open_space_pct",
+      "label": "Required open space (%)",
+      "type": "number"
+    },
+    {
+      "name": "parking_ratio",
+      "label": "Parking ratio (stalls/unit)",
+      "type": "number"
+    },
+    {
+      "name": "avg_unit_sf",
+      "label": "Avg unit size (SF)",
+      "type": "number"
+    },
+    {
+      "name": "efficiency_pct",
+      "label": "Net-to-gross efficiency (%)",
+      "type": "number"
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "textarea"
+    }
   ],
   "workflow": {
     "initial": "draft",
-    "states": ["draft", "approved", "superseded"],
+    "states": [
+      "draft",
+      "approved",
+      "superseded"
+    ],
     "transitions": [
-      {"from": "draft", "to": "approved", "action": "approve", "party": ["GC", "Developer"]},
-      {"from": "approved", "to": "superseded", "action": "supersede", "party": ["GC", "Developer"]},
-      {"from": "superseded", "to": "draft", "action": "reopen", "party": ["GC", "Developer"]}
+      {
+        "from": "draft",
+        "to": "approved",
+        "action": "approve",
+        "party": [
+          "GC",
+          "Developer"
+        ]
+      },
+      {
+        "from": "approved",
+        "to": "superseded",
+        "action": "supersede",
+        "party": [
+          "GC",
+          "Developer"
+        ]
+      },
+      {
+        "from": "superseded",
+        "to": "draft",
+        "action": "reopen",
+        "party": [
+          "GC",
+          "Developer"
+        ]
+      }
     ]
   },
-  "list_columns": ["jurisdiction", "use_type", "site_area_sf", "far"]
+  "list_columns": [
+    "jurisdiction",
+    "use_type",
+    "site_area_sf",
+    "far"
+  ],
+  "workspace": "developer"
 }
