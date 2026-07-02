@@ -12,6 +12,7 @@ import { FieldCapture } from "./field/field";
 import { modalShell } from "./ui/modal";
 import { showResult } from "./ui/result";
 import { buildMenu, closeMenus } from "./ui/menus";
+import { initCommandPalette, type Command } from "./ui/palette";
 import { buildAuthControl } from "./account/accountUI";
 import type { Settings, ViewerApp } from "./viewer/app";
 
@@ -1096,4 +1097,41 @@ function initNav() {
 // a marketing site). Read-only by nature; pair with a signed link for unauthenticated sharing.
 const _embed = new URLSearchParams(location.search).get("embed") === "1";
 if (_embed) document.body.classList.add("embed");
+
+// ---- command palette (Cmd/Ctrl-K) — jump to any workspace, module, action, or record -----------
+function openModuleFromPalette(key: string) {
+  setWorkspace("construction"); openPortalTab();
+  const go = () => portal.openModuleByKey(key);
+  if (portal.moduleList().length) go(); else setTimeout(go, 500);
+}
+if (!_embed) initCommandPalette({
+  commands: () => {
+    const cmds: Command[] = [];
+    for (const w of WORKSPACES) cmds.push({ id: "ws:" + w.key, label: "Go to " + w.label, hint: "Workspace", run: () => setWorkspace(w.key) });
+    cmds.push(
+      { id: "act:new", label: "New project", hint: "Action", run: () => void newProject() },
+      { id: "act:ifc", label: "Open IFC…", hint: "Action", run: () => openModelFile("ifc") },
+      { id: "act:ref", label: "Open mesh / point cloud / GIS…", hint: "Action", run: () => openModelFile("ref") },
+      { id: "act:reports", label: "Open Report Center", hint: "Action", run: () => void openReportCenter() },
+      { id: "act:save", label: "Save Project (.mmproj)", hint: "Action", run: () => saveProjectBundle() },
+      { id: "act:help", label: "Keyboard shortcuts / help", hint: "Action", run: () => toast(SHORTCUTS + " · ⌘K palette", "info", 6000) },
+    );
+    for (const m of portal.moduleList())
+      cmds.push({ id: "mod:" + m.key, label: m.name, hint: m.section || "Module", run: () => openModuleFromPalette(m.key) });
+    return cmds;
+  },
+  search: async (q) => {
+    if (!projectId) return [];
+    try {
+      const hits = await api.searchAll(projectId, q);
+      return hits.slice(0, 8).map((h) => ({
+        id: "rec:" + h.id, label: `${h.ref} ${h.title ?? ""}`.trim(), hint: h.module_name || "Record",
+        run: () => { setWorkspace("construction"); openPortalTab();
+          const go = () => portal.openRecordByKey(h.module, h.id);
+          if (portal.moduleList().length) go(); else setTimeout(go, 500); },
+      }));
+    } catch { return []; }
+  },
+});
+
 startup().finally(() => { initNav(); if (_embed) setWorkspace("model"); });

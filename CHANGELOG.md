@@ -4,6 +4,16 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.20 — Command palette (⌘K / Ctrl-K)
+- A global **command palette** (Cmd/Ctrl-K from anywhere) — the fast way to reach any workspace,
+  module, action, or record without hunting through menus. Fuzzy-ranked, keyboard-first (↑/↓, Enter,
+  Esc), with live **record search** (matches ref/title/data via the search endpoint) appended as you
+  type. Commands cover the 5 workspaces, shell actions (new project, open IFC/mesh, Report Center,
+  save, help), and every construction module (jump straight to its register). First of the Tier-1
+  UX-2.0 upgrades from the audit; new `ui/palette.ts` + `PortalUI` open-by-key/record hooks.
+- Verified live: opens on Ctrl-K, "fin"→Finance ranks first, Enter navigates; no console errors.
+  Web typecheck + 49 tests green.
+
 ## v0.3.19 — Fix: attachment images / thumbnails not loading (route collision + COEP/CORP)
 - **Portal record images now load.** Three compounding bugs, found by driving the app + reading
   network traces:

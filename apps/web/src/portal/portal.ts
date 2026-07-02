@@ -2037,6 +2037,18 @@ export class PortalUI {
     if (m) this.openRecord(m, id);
   }
 
+  /** Public: the loaded module definitions (for the command palette). */
+  moduleList(): { key: string; name: string; section?: string }[] {
+    return this.mods.map((m) => ({ key: m.key, name: m.name, section: m.section }));
+  }
+  /** Public: open a module's list by key (command palette / deep links). */
+  openModuleByKey(key: string) {
+    const m = this.mods.find((x) => x.key === key);
+    if (m) { this.activeKey = key; void this.openModule(m); this.buildNav(); }
+  }
+  /** Public: open a specific record by module key + id (command palette). */
+  openRecordByKey(moduleKey: string, id: string) { this.openByBrief(moduleKey, id); }
+
   /** Render the outgoing/incoming relation graph for a record into `box`. */
   private async renderRelated(box: HTMLElement, key: string, rid: string) {
     const pid = this.host.projectId()!;
