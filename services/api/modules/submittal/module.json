@@ -36,7 +36,8 @@
         "O&M Manual",
         "Warranty"
       ],
-      "fieldset": "Identification"
+      "fieldset": "Identification",
+      "required": true
     },
     {
       "name": "rev",

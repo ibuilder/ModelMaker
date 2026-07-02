@@ -2,7 +2,7 @@
   "key": "inspection",
   "name": "Inspections",
   "section": "Quality",
-  "icon": "✓",
+  "icon": "\u00e2\u0153\u201c",
   "ref_prefix": "INS",
   "title_field": "subject",
   "pinnable": true,
@@ -42,7 +42,8 @@
         "Agency",
         "Commissioning"
       ],
-      "fieldset": "Result"
+      "fieldset": "Result",
+      "required": true
     },
     {
       "name": "inspector",

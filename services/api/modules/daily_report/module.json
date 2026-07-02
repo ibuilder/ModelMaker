@@ -2,7 +2,7 @@
   "key": "daily_report",
   "name": "Daily Reports",
   "section": "Field",
-  "icon": "☼",
+  "icon": "\u00e2\u02dc\u00bc",
   "ref_prefix": "DR",
   "title_field": "report_date",
   "pinnable": false,
@@ -33,7 +33,7 @@
     },
     {
       "name": "temp_f",
-      "label": "Temp (°F)",
+      "label": "Temp (\u00c2\u00b0F)",
       "type": "number",
       "fieldset": "Conditions"
     },
@@ -54,6 +54,12 @@
       "name": "manpower",
       "label": "Manpower Count",
       "type": "number",
+      "fieldset": "Work"
+    },
+    {
+      "name": "crew_by_trade",
+      "label": "Crew by trade",
+      "type": "textarea",
       "fieldset": "Work"
     },
     {

@@ -22,7 +22,7 @@ with TestClient(app) as c:
     rfi = c.post(f"/projects/{pid}/modules/rfi", headers=BEARER(tok),
                  json={"data": {"subject": "Beam clash", "question": "Reroute duct?"}}).json()
     sub = c.post(f"/projects/{pid}/modules/submittal", headers=BEARER(tok),
-                 json={"data": {"title": "Rebar shop dwgs", "spec_section": "03 20 00"}}).json()
+                 json={"data": {"title": "Rebar shop dwgs", "spec_section": "03 20 00", "type": "Shop Drawing"}}).json()
     # a BCF topic (pin) + a drawing markup
     top = c.post(f"/projects/{pid}/topics", headers=BEARER(tok),
                  json={"type": "rfi", "title": "Pin here", "anchor": {"x": 1, "y": 2, "z": 3}}).json()

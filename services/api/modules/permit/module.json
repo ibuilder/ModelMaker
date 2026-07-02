@@ -2,7 +2,7 @@
   "key": "permit",
   "name": "Permitting",
   "section": "Engineering",
-  "icon": "▣",
+  "icon": "\u00e2\u2013\u00a3",
   "ref_prefix": "PMT",
   "title_field": "name",
   "pinnable": false,
@@ -56,6 +56,12 @@
         "Expired",
         "Closed"
       ],
+      "fieldset": "Status & dates"
+    },
+    {
+      "name": "applied_date",
+      "label": "Date Applied",
+      "type": "date",
       "fieldset": "Status & dates"
     },
     {

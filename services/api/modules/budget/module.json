@@ -2,7 +2,7 @@
   "key": "budget",
   "name": "Budget & Forecast",
   "section": "Cost",
-  "icon": "Σ",
+  "icon": "\u00ce\u00a3",
   "ref_prefix": "BUD",
   "title_field": "cost_code",
   "pinnable": false,
@@ -21,12 +21,12 @@
     {
       "name": "budget",
       "label": "Budget",
-      "type": "number"
+      "type": "currency"
     },
     {
       "name": "forecast",
       "label": "Forecast",
-      "type": "number"
+      "type": "currency"
     },
     {
       "name": "original",

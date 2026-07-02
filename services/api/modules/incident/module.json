@@ -2,7 +2,7 @@
   "key": "incident",
   "name": "Incidents",
   "section": "Safety",
-  "icon": "⚑",
+  "icon": "\u00e2\u0161\u2018",
   "ref_prefix": "INC",
   "title_field": "subject",
   "pinnable": true,
@@ -117,6 +117,12 @@
       "label": "Witnesses",
       "type": "textarea",
       "fieldset": "People"
+    },
+    {
+      "name": "reported_date",
+      "label": "Date Reported",
+      "type": "date",
+      "fieldset": "OSHA"
     },
     {
       "name": "osha_recordable",

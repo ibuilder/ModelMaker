@@ -2,7 +2,7 @@
   "key": "ncr",
   "name": "Non-Conformance Reports",
   "section": "Quality",
-  "icon": "⚠",
+  "icon": "\u00e2\u0161\u00a0",
   "ref_prefix": "NCR",
   "title_field": "subject",
   "pinnable": true,
@@ -27,7 +27,8 @@
         "Repair",
         "Use-as-is",
         "Reject"
-      ]
+      ],
+      "required": true
     },
     {
       "name": "inspection",

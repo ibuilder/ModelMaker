@@ -146,8 +146,8 @@ new("zoning", {"site": "Demo Tower parcel", "jurisdiction": "DT-3 Downtown", "us
                "parking_ratio": 0.5, "open_space_pct": 10})
 
 # --- QA / inspection chain ---------------------------------------------------
-insp = new("inspection", {"subject": "Level 2 deck pour", "location": "Grid C-E", "result": "Fail", "date": "2026-06-14"}, "qa")
-new("ncr", {"subject": "Honeycomb at column", "description": "Voids on north face", "severity": "Major", "inspection": insp}, "sub")
+insp = new("inspection", {"subject": "Level 2 deck pour", "location": "Grid C-E", "result": "Fail", "date": "2026-06-14", "inspection_type": "In-Progress"}, "qa")
+new("ncr", {"subject": "Honeycomb at column", "description": "Voids on north face", "severity": "Major", "disposition": "Rework", "inspection": insp}, "sub")
 new("deficiency", {"description": "Cold joint", "location": "Grid D3", "severity": "Minor", "inspection": insp})
 
 # --- bidding chain -----------------------------------------------------------

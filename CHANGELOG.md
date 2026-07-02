@@ -4,6 +4,21 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.21 — Forms/CRUD accuracy pass (field types, required flags, itemized costs)
+- Audited all ~80 module forms against construction best practice and fixed the concrete, verified
+  issues:
+  - **Currency types**: material/equipment/labor unit rates and `budget.budget` / `budget.forecast`
+    were plain numbers — now `currency` (proper `$` formatting, consistent with the rest of the budget).
+  - **Required flags** where the field is genuinely mandatory: `submittal.type`,
+    `inspection.inspection_type`, `ncr.disposition` — the form now blocks submit + the API validates.
+  - **Itemized change-order cost breakdown**: `cor` gains Labor / Material / Equipment / Overhead &
+    profit currency fields backing the total (standard COR format).
+  - **Process fields**: `permit.applied_date` (processing time), `incident.reported_date` (OSHA
+    reporting window), `daily_report.crew_by_trade` (manpower breakdown).
+- Demo seed + test updated to supply the newly-required fields. Backend 74/74; web typecheck + 49
+  tests green. (Riskier dedup/reference-type findings from the audit are deferred pending consumer
+  analysis.)
+
 ## v0.3.20 — Command palette (⌘K / Ctrl-K)
 - A global **command palette** (Cmd/Ctrl-K from anywhere) — the fast way to reach any workspace,
   module, action, or record without hunting through menus. Fuzzy-ranked, keyboard-first (↑/↓, Enter,

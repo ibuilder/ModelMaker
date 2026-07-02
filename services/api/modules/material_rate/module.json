@@ -16,7 +16,7 @@
     {
       "name": "rate",
       "label": "Unit Rate",
-      "type": "number"
+      "type": "currency"
     },
     {
       "name": "unit",

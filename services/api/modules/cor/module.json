@@ -56,6 +56,30 @@
       "fieldset": "Cost & schedule"
     },
     {
+      "name": "labor_cost",
+      "label": "Labor",
+      "type": "currency",
+      "fieldset": "Cost & schedule"
+    },
+    {
+      "name": "material_cost",
+      "label": "Material",
+      "type": "currency",
+      "fieldset": "Cost & schedule"
+    },
+    {
+      "name": "equipment_cost",
+      "label": "Equipment",
+      "type": "currency",
+      "fieldset": "Cost & schedule"
+    },
+    {
+      "name": "markup_cost",
+      "label": "Overhead & profit",
+      "type": "currency",
+      "fieldset": "Cost & schedule"
+    },
+    {
       "name": "justification",
       "label": "Justification",
       "type": "textarea",
