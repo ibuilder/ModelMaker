@@ -4,6 +4,23 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.19 — Fix: attachment images / thumbnails not loading (route collision + COEP/CORP)
+- **Portal record images now load.** Three compounding bugs, found by driving the app + reading
+  network traces:
+  1. **Route collision** — bim.py's `GET /attachments/{id}/download` (the `Attachment` table,
+     registered first) shadowed the module-record handler (`RecordAttachment` table), so every
+     module attachment 404'd. Moved module attachments to a distinct `/module-attachments/{id}/download`.
+  2. **Bad auth gate** — that handler used `require_role("viewer")`, which reads the project id from
+     the path; with no `pid` in the path FastAPI demanded it as a query param → 422. Now authenticated
+     like bim's download: `current_user` + the attachment's own project (+ signed-URL support).
+  3. **COEP blocked the `<img>`** — the SPA is cross-origin isolated (`require-corp`, for the viewer's
+     SharedArrayBuffer WASM), which blocks cross-origin image subresources without a
+     `Cross-Origin-Resource-Policy` header. Added `CORP: cross-origin` to the module-attachment
+     download and to `range_response` (so BIM/topic attachments **and** `model.frag` embed cross-origin too).
+- Verified live: an uploaded photo renders on the record (decodes, `naturalWidth>0`, no COEP block).
+  Backend 74/74 (new `test_attachments`: distinct path 200 + bytes + `inline` + CORP; old path 404s);
+  web typecheck + 49 tests green.
+
 ## v0.3.18 — Security: fix stored XSS in portal record rendering
 - **Stored-XSS fix (high severity)**: record list cells, the record-detail title/fields, the
   cross-module search results, action-item / due / notification feeds, and the portfolio table all

@@ -21,7 +21,10 @@ def range_response(request: Request, key: str, media_type: str,
     # `immutable` for assets that never change at a URL; otherwise revalidate so a republished model
     # (stable URL, new bytes) is refetched — a 304 keeps re-opens instant *and* correct.
     cache = "public, max-age=31536000, immutable" if immutable else "public, max-age=0, must-revalidate"
-    headers = {"Accept-Ranges": "bytes", "Cache-Control": cache, "ETag": etag}
+    # CORP so a COEP-isolated SPA (require-corp, for the viewer's SharedArrayBuffer WASM) can embed
+    # these bytes cross-origin — otherwise <img>/fetch of attachments + model.frag are blocked.
+    headers = {"Accept-Ranges": "bytes", "Cache-Control": cache, "ETag": etag,
+               "Cross-Origin-Resource-Policy": "cross-origin"}
     if filename:
         headers["Content-Disposition"] = f'{disposition}; filename="{filename}"'
 

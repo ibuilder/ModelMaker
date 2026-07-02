@@ -579,12 +579,25 @@ async def import_module_bcf(pid: str, key: str, file: UploadFile = File(...),
     return {"count": len(created), "ids": created}
 
 
-@router.get("/attachments/{att_id}/download")
-def download_attachment(att_id: str, db: Session = Depends(get_db),
-                        _: str = Depends(require_role("viewer"))):
+# NOTE: distinct path from bim.py's /attachments/{id}/download — that route (registered first) serves
+# the `Attachment` table, while module-record attachments live in `RecordAttachment`. Sharing the path
+# meant bim.py shadowed this handler and returned 404 for every module-record attachment (broken image
+# thumbnails in the portal). `inline` disposition so <img> renders it rather than forcing a download.
+@router.get("/module-attachments/{att_id}/download")
+def download_attachment(att_id: str, request: Request, db: Session = Depends(get_db),
+                        user: str = Depends(current_user)):
+    # no `pid` in the path, so gate like bim.py's attachment download (require_role needs a path pid,
+    # which is why the old shared route 422'd): current_user + the attachment's own project + a valid
+    # signed URL. Works for <img> in open mode and supports short-lived signed URLs under RBAC.
+    from .bim import _download_allowed
     att, data = mod_engine.get_attachment(db, att_id)
+    if not _download_allowed(request, db, getattr(att, "project_id", None), user):
+        raise HTTPException(403, "not a member of this attachment's project")
+    # CORP so an <img> can embed this cross-origin: the SPA is COEP-isolated (require-corp, for the
+    # viewer's SharedArrayBuffer WASM), which otherwise blocks cross-origin image subresources.
     return Response(data, media_type=att.content_type or "application/octet-stream",
-                    headers={"Content-Disposition": f'attachment; filename="{att.filename}"'})
+                    headers={"Content-Disposition": f'inline; filename="{att.filename}"',
+                             "Cross-Origin-Resource-Policy": "cross-origin"})
 
 
 @router.get("/projects/{pid}/modules/{key}/{rid}/pdf")

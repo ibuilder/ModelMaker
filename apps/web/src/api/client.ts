@@ -1336,7 +1336,9 @@ export class ApiClient {
     return res.json() as Promise<{ count: number; attachments: RecordAttachmentMeta[] }>;
   }
   attachmentUrl(attId: string) {
-    return this.url(`/attachments/${attId}/download`);
+    // module-record attachments live in RecordAttachment; this distinct path avoids bim.py's
+    // /attachments/{id}/download route (Attachment table) shadowing it (which 404'd every thumbnail).
+    return this.url(`/module-attachments/${attId}/download`);
   }
 
   // cost / financials (GC portal)
