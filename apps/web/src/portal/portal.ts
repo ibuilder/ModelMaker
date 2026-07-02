@@ -178,7 +178,10 @@ export class PortalUI {
     }
     const sections = new Map<string, ModuleDef[]>();
     for (const m of visible) { const s = m.section || "Other"; (sections.get(s) ?? sections.set(s, []).get(s)!).push(m); }
-    for (const [section, mods] of sections) group(section, mods, !openSecs || openSecs.includes(section));
+    // if the persona's preferred sections don't exist in this workspace (e.g. a GC browsing the
+    // Developer registers), open everything rather than render a fully-collapsed nav.
+    const anyMatch = !openSecs || [...sections.keys()].some((s) => openSecs.includes(s));
+    for (const [section, mods] of sections) group(section, mods, !openSecs || !anyMatch || openSecs.includes(section));
 
     // "Show all modules" — reveal the other workspace's registers so every role can reach all data
     // (a few more clicks, per the product principle). Persisted to the toggle for the session.
@@ -607,13 +610,19 @@ export class PortalUI {
   private catalogEl?: HTMLElement;
 
   /** Which sections open by default per persona (the rest collapse). Undefined persona = all open. */
+  // R2 — which nav sections open first for each role (research-backed: Procore super-vs-PM split;
+  // real-estate developer lifecycle = feasibility → market/sales → capital → operations). The section
+  // names here must match the workspace a role lives in — the developer's are the *Developer* sections,
+  // not construction ones. buildNav also falls back to "open all" when none of these match the active
+  // workspace, so a role browsing the other workspace never sees everything collapsed.
   private static SECTIONS_BY_PERSONA: Record<string, string[]> = {
     gc: ["Field", "Cost", "Change Management", "Contracts"],
-    // R1 — the super works the field (daily reports, manpower, safety, quality, schedule);
-    // the PM works the office (RFIs/submittals, cost, change, contracts).
+    // the super works the field (daily reports, manpower, safety, quality, schedule);
+    // the PM works the office (RFIs/submittals, cost, change, contracts, preconstruction).
     superintendent: ["Field", "Safety", "Quality", "Schedule"],
-    project_manager: ["Engineering", "Cost", "Change Management", "Contracts"],
-    developer: ["Cost", "Contracts", "Preconstruction", "Closeout"],
+    project_manager: ["Engineering", "Cost", "Change Management", "Contracts", "Preconstruction"],
+    // the real-estate developer lives in the Developer workspace — feasibility, market/sales, capital, ops.
+    developer: ["Feasibility", "Market & Sales", "Capital", "Operations"],
     architect: ["Engineering", "Preconstruction", "BIM", "Closeout"],
     engineer: ["Engineering", "Quality", "BIM"],
     subcontractor: ["Field", "Safety", "Quality"],
