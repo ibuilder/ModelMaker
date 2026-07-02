@@ -360,6 +360,14 @@ def get_record(db: Session, key: str, project_id: str, rid: str) -> dict:
     return rec
 
 
+def _json_text(db: Session, col, jkey: str):
+    """Portable JSON scalar-as-text extraction (Postgres ->> / SQLite json_extract). `jkey` is a
+    module-defined field name (safe to interpolate into the SQLite JSON path)."""
+    if _is_postgres(db):
+        return col.op("->>")(jkey)
+    return func.json_extract(col, f"$.{jkey}")
+
+
 def _rollup(db: Session, key: str, project_id: str, rid: str, f: dict) -> float | int:
     """Aggregate f['source_field'] over incoming records of f['source_module'] that point here."""
     src_key, field = f.get("source_module"), f.get("source_field")
@@ -370,15 +378,17 @@ def _rollup(db: Session, key: str, project_id: str, rid: str, f: dict) -> float 
     if not ref_field:
         return 0
     t = TABLES[src_key]
+    # filter the reference match in SQL (JSON extraction) so only the matching rows are fetched — the
+    # source table is no longer fully scanned + shipped to Python on every get_record/rollup.
     total, count = 0.0, 0
-    for r in db.execute(select(t.c.data).where(t.c.project_id == project_id)):
+    for r in db.execute(select(t.c.data).where(t.c.project_id == project_id,
+                                               _json_text(db, t.c.data, ref_field) == rid)):
         d = r._mapping["data"] or {}
-        if d.get(ref_field) == rid:
-            count += 1
-            try:
-                total += float(d.get(field) or 0)
-            except (TypeError, ValueError):
-                pass
+        count += 1
+        try:
+            total += float(d.get(field) or 0)
+        except (TypeError, ValueError):
+            pass
     op = f.get("op", "sum")
     if op == "count":
         return count

@@ -4,6 +4,14 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.22 — Speed: rollup fields filter in SQL (no more full-table scan per read)
+- **Rollup fields** (e.g. a cost code's committed/budgeted/direct totals, a COR's PCO sum) previously
+  loaded *every* source-module record for the project and matched the reference in Python on each
+  `get_record` — O(N) per rollup, amplified by rollup-heavy dashboards. Now the reference match runs
+  **in SQL** via portable JSON extraction (Postgres `->>` / SQLite `json_extract`), so only the
+  matching rows are fetched. Same values, far less data scanned/shipped as record counts grow.
+  Backend 74/74 (rollup-exercising tests unchanged).
+
 ## v0.3.21 — Forms/CRUD accuracy pass (field types, required flags, itemized costs)
 - Audited all ~80 module forms against construction best practice and fixed the concrete, verified
   issues:
