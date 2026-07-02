@@ -1053,6 +1053,13 @@ export class ApiClient {
       rules: { key: string; label: string; severity: string; present: number; missing: number; missing_guids: string[] }[];
       noncompliant_guids: string[] }>(`/projects/${pid}/elements/qa`);
   }
+  /** Code-readiness check: does the model carry the data a plan review needs (property-level). */
+  codeCheck(pid: string) {
+    return this.json<{ code: string; rules: number; checked: number; passed: number; readiness_pct: number;
+      checks: { id: string; label: string; code: string; note: string; applies: string; checked: number;
+        passed: number; failed: number; below_min: number; fail_guids: string[]; status: string }[];
+      fail_guids: string[] }>(`/projects/${pid}/elements/code-check`);
+  }
 
   // pins / topics (Phase 4)
   pins(pid: string) {

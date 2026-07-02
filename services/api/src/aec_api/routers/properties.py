@@ -211,6 +211,89 @@ def data_qa(pid: str, _: str = Depends(require_role("viewer"))):
     }
 
 
+# Code-readiness rules — does the model carry the DATA a code review needs? (property-level, not a
+# certified geometric code check). Each rule targets an IFC class, tries several attribute/pset keys,
+# and either checks presence or a numeric minimum (with a code reference for the reviewer).
+_CODE_RULES = [
+    {"id": "egress_door_width", "label": "Egress door width recorded", "code": "IBC 1010.1.1",
+     "applies": "IfcDoor", "keys": ["Pset_DoorCommon::Width", "OverallWidth", "Width"], "min": 0.813,
+     "note": "Egress doors need ≥ 32 in (0.813 m) clear width — record a width to review it."},
+    {"id": "fire_rating", "label": "Fire rating on walls", "code": "IBC Table 601/602",
+     "applies": "IfcWall", "keys": ["Pset_WallCommon::FireRating", "FireRating"], "min": None,
+     "note": "Rated assemblies must carry a fire-resistance rating."},
+    {"id": "space_area", "label": "Spaces carry floor area", "code": "IBC 1004.5",
+     "applies": "IfcSpace", "keys": ["Qto_SpaceBaseQuantities::NetFloorArea", "NetFloorArea", "GrossFloorArea"],
+     "min": None, "note": "Occupant load = floor area ÷ load factor; area must be present per space."},
+    {"id": "space_occupancy", "label": "Spaces classify occupancy", "code": "IBC 1004",
+     "applies": "IfcSpace", "keys": ["Pset_SpaceOccupancyRequirements::OccupancyType", "OccupancyType"],
+     "min": None, "note": "Occupancy classification drives egress + separation requirements."},
+    {"id": "stair_present", "label": "Egress stairs modelled", "code": "IBC 1011",
+     "applies": "IfcStair", "keys": ["name", "type_name"], "min": None,
+     "note": "At least one egress stair should exist and be identifiable."},
+    {"id": "classification", "label": "Elements typed/classified", "code": "BS 1192 / COBie",
+     "applies": "*", "keys": ["type_name"], "min": None,
+     "note": "Type/classification supports coordinated, checkable data."},
+]
+
+
+def _first_value(e: dict, keys: list[str]):
+    for k in keys:
+        v = _prop_value(e, k)
+        if v not in (None, ""):
+            return v
+    return None
+
+
+@router.get("/projects/{pid}/elements/code-check")
+def code_check(pid: str, _: str = Depends(require_role("viewer"))):
+    """Code-readiness check: does the model carry the data a plan review needs (egress door widths,
+    fire ratings, space areas/occupancy, egress stairs, classification)? Property-level, not a
+    certified code review. Returns per-rule pass/fail + the elements to highlight in 3D."""
+    _ensure_loaded(pid)
+    idx = _INDEX.get(pid)
+    if not idx:
+        raise HTTPException(404, "no properties index for project")
+    checks = []
+    all_fail: set[str] = set()
+    for rule in _CODE_RULES:
+        applies = rule["applies"]
+        subject = [(g, e) for g, e in idx.items() if applies == "*" or e.get("ifc_class") == applies]
+        if not subject and applies != "*":
+            checks.append({**{k: rule[k] for k in ("id", "label", "code", "note")},
+                           "applies": applies, "checked": 0, "passed": 0, "failed": 0,
+                           "below_min": 0, "fail_guids": [], "status": "n/a"})
+            continue
+        fails, below = [], 0
+        for g, e in subject:
+            v = _first_value(e, rule["keys"])
+            if v in (None, ""):
+                fails.append(g)
+                continue
+            if rule.get("min") is not None:
+                try:
+                    if float(v) < float(rule["min"]):
+                        fails.append(g)
+                        below += 1
+                except (TypeError, ValueError):
+                    pass
+        checked = len(subject)
+        passed = checked - len(fails)
+        checks.append({**{k: rule[k] for k in ("id", "label", "code", "note")},
+                       "applies": applies, "checked": checked, "passed": passed, "failed": len(fails),
+                       "below_min": below, "fail_guids": fails[:5000],
+                       "status": "pass" if not fails else "fail"})
+        all_fail.update(fails)
+    checked_rules = [c for c in checks if c["status"] != "n/a"]
+    tot_checked = sum(c["checked"] for c in checked_rules)
+    tot_passed = sum(c["passed"] for c in checked_rules)
+    return {
+        "code": "IBC (data-readiness)", "rules": len(checked_rules),
+        "checked": tot_checked, "passed": tot_passed,
+        "readiness_pct": round(100 * tot_passed / tot_checked, 1) if tot_checked else 100.0,
+        "checks": checks, "fail_guids": list(all_fail)[:5000],
+    }
+
+
 @router.get("/projects/{pid}/elements/{guid}")
 def element(pid: str, guid: str, _: str = Depends(require_role("viewer"))):
     _ensure_loaded(pid)

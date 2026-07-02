@@ -4,6 +4,17 @@ All notable changes to Massing. Releases are signed, auto-updating desktop build
 (Windows / macOS / Linux); the updater always serves the latest. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## v0.3.27 — Code-readiness check (Safety & Compliance)
+- **🏛 Code-readiness check** in the viewer — does the model carry the *data* a plan review needs?
+  A property-level rule engine (not a certified geometric code review) checks: egress door width
+  recorded (≥ 0.813 m, IBC 1010.1.1), fire rating on walls (IBC Table 601/602), spaces carry floor
+  area (IBC 1004.5) + occupancy classification (IBC 1004), egress stairs modelled (IBC 1011), and
+  elements typed/classified. Returns a readiness %, a per-rule table with code references, and a
+  one-click **3D highlight of the elements to review**. New endpoint `/elements/code-check`.
+- Extends the v0.3.25 Data-QA into rule-based checks (Kestrel-style). Rules target IFC classes,
+  try several attribute/pset keys, and check presence or a numeric minimum. `test_analytics.py`
+  covers it; web typecheck clean.
+
 ## v0.3.26 — Preconstruction intelligence: contract risk review + scope-gap + doc Q&A
 - **Risk Review** (new Construction-workspace destination — preconstruction intelligence, inspired by
   the AI pre-con review category). Upload a contract/spec PDF (or paste text) and:

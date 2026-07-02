@@ -1596,6 +1596,36 @@ export function initViewerApp(ctx: ViewerCtx): ViewerApp {
             }));
           } catch (e) { out.textContent = `QA failed: ${(e as Error).message}`; }
         }));
+
+        // Code-readiness check — does the model carry the data a plan review needs? (egress door
+        // widths, fire ratings, space area/occupancy, egress stairs, classification). Property-level.
+        b.appendChild(toolBtn2("🏛 Code-readiness check", async () => {
+          if (!projectId) { notify("connect a project first", "error"); return; }
+          out.textContent = "checking code-readiness…";
+          try {
+            const cc = await api.codeCheck(projectId);
+            const tone = cc.readiness_pct >= 90 ? "var(--status-good,#33d17a)"
+              : cc.readiness_pct >= 70 ? "var(--status-warn,#ffd479)" : "var(--status-crit,#e2554a)";
+            let html = `<div class="meta"><b style="color:${tone};font-size:14px">${cc.readiness_pct}%</b> code-data ready`
+              + ` · ${cc.passed}/${cc.checked} across ${cc.rules} rules <span class="meta">(${cc.code})</span></div>`;
+            html += `<table style="font-size:11px;margin-top:4px;border-collapse:collapse">`;
+            for (const r of cc.checks) {
+              const st = r.status === "n/a" ? "<span style='opacity:.5'>n/a</span>"
+                : r.failed ? `<span style="color:var(--status-warn,#ffd479)">${r.failed} to fix${r.below_min ? ` (${r.below_min} below min)` : ""}</span>`
+                : `<span style="color:var(--status-good,#33d17a)">✓</span>`;
+              const tt = `${r.note} — ${r.code}`.replace(/"/g, "&quot;");
+              html += `<tr title="${tt}"><td style="padding:1px 8px 1px 0">${r.label} <span style="opacity:.5">${r.code}</span></td>`
+                + `<td style="padding:1px 6px">${r.passed}/${r.checked}</td><td style="padding:1px 6px">${st}</td></tr>`;
+            }
+            html += `</table>`;
+            out.innerHTML = html;
+            if (cc.fail_guids.length) {
+              out.appendChild(toolBtn2(`🔺 Highlight ${cc.fail_guids.length} to review`, async () => {
+                await selectMap(await sets.fromGuids(cc.fail_guids), { fit: true });
+              }));
+            }
+          } catch (e) { out.textContent = `code check failed: ${(e as Error).message}`; }
+        }));
         // import a Primavera P6 .xer so the 4D scrub shows real calendar dates
         const xerInput = document.createElement("input");
         xerInput.type = "file"; xerInput.accept = ".xer"; xerInput.style.display = "none";

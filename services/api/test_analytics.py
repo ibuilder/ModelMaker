@@ -63,6 +63,15 @@ with TestClient(app) as c:
     assert by_key["type_name"]["severity"] == "recommended", by_key["type_name"]
     assert by_key["__pset"]["missing"] == 1, by_key["__pset"]      # g4 has no psets
 
+    # code-readiness: fire_rating applies to the 2 walls (both have FireRating → pass);
+    # classification (type_name) applies to all 4 (g1/g2 typed, g3/g4 not → 2 fail)
+    cc = c.get(f"/projects/{pid}/elements/code-check").json()
+    checks = {r["id"]: r for r in cc["checks"]}
+    assert checks["fire_rating"]["checked"] == 2 and checks["fire_rating"]["failed"] == 0, checks["fire_rating"]
+    assert checks["classification"]["checked"] == 4 and checks["classification"]["failed"] == 2, checks["classification"]
+    assert checks["space_area"]["status"] == "n/a", checks["space_area"]     # no IfcSpace in this set
+    assert 0 <= cc["readiness_pct"] <= 100, cc
+
 print("ANALYTICS OK - facets list attrs+pset props; colour-by buckets categorical (2 walls/2 cols) + "
       "pset FireRating (2 coloured/2 unset); data-QA 75% (g4 missing required name), type/pset recommended; "
       "404 before an index exists")
